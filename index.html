@@ -1,27 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Hallo Welt — Beauty Demo</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Start</title>
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body>
-  <main class="hero">
-    <div class="card">
-      <h1 class="title">Hallo Welt</h1>
-      <p class="subtitle">from Beauty — eine kleine Demowebseite</p>
-      <p class="lead">Sanfte Farben, elegante Typografie und ein bisschen Glanz.</p>
-      <div class="cta-row">
-        <a class="btn primary" href="#">Mehr erfahren</a>
-        <a class="btn ghost" href="#" aria-disabled="true">Demo</a>
+<body data-page="index">
+  <div class="stage">
+    <div class="preview left" id="prevL"><div class="img" id="prevLImg"></div></div>
+    <div class="preview right" id="prevR"><div class="img" id="prevRImg"></div></div>
+
+    <div class="scene" id="scene">
+      <div class="ring-wrapper" id="wrapper" style="width:var(--ring-size);height:var(--ring-size);">
+        <div class="ring" id="ring"></div>
       </div>
     </div>
-    <footer class="attribution">Made with ✨ by Alex</footer>
-  </main>
 
-  <script src="js/app.js" defer></script>
+    <div class="menu">
+      <a class="btn" href="quiz.html">Quiz</a>
+      <a class="btn" href="todo.html">1-3-5</a>
+    </div>
+  </div>
+
+  <script>
+    const ring=document.getElementById('ring');
+    const wrapper=document.getElementById('wrapper');
+    const N=9;let RADIUS=260;
+
+    // Pfad angepasst auf ./images/
+    const svgs=Array.from({length:9},(_,i)=>`./images/${i+1}.jpg`);
+
+    function computeRadius(){
+      const vmin=Math.min(innerWidth,innerHeight)/100;
+      const photoVmin=22;const photoPx=photoVmin*vmin;const gapPx=photoPx*0.28;
+      return Math.max(160,(N*(photoPx+gapPx))/(2*Math.PI));
+    }
+
+    function placePhotos(){
+      RADIUS=computeRadius();ring.innerHTML='';
+      for(let i=0;i<N;i++){
+        const el=document.createElement('div');
+        el.className='photo';el.dataset.idx=i;
+        el.style.backgroundImage=`url('${svgs[i]}')`;
+        const angle=(i/N)*360;const tilt=(i%2?-4:4);
+        el.style.transform=`rotateY(${angle}deg) translateZ(${RADIUS}px) rotateY(${tilt}deg)`;
+        el.addEventListener('click',onPhotoClick);
+        ring.appendChild(el);
+      }
+    }
+
+    placePhotos();
+    addEventListener('resize',placePhotos);
+
+    // Rotation + Wobble
+    let yaw=0;const yawSpeed=0.35;const tiltAmp=7*Math.PI/180;
+    let pre=0;const preSpeed=0.6;let last=performance.now();
+    (function loop(){
+      const now=performance.now(),dt=(now-last)/1000;last=now;
+      yaw+=yawSpeed*dt;pre+=preSpeed*dt;
+      const x=tiltAmp*Math.sin(pre),z=.6*tiltAmp*Math.cos(pre);
+      wrapper.style.transform=`translateZ(0) rotateX(${x}rad) rotateZ(${z}rad)`;
+      ring.style.transform=`rotateY(${yaw}rad)`;
+      requestAnimationFrame(loop);
+    })();
+
+    const prevL=document.getElementById('prevL'),prevR=document.getElementById('prevR');
+    const prevLImg=document.getElementById('prevLImg'),prevRImg=document.getElementById('prevRImg');
+    let nextSide='L';
+
+    function onPhotoClick(e){
+      const bg=e.currentTarget.style.backgroundImage;
+      if(nextSide==='L'){
+        prevLImg.style.backgroundImage=bg;
+        prevL.classList.add('show');
+        nextSide='R';
+      } else {
+        prevRImg.style.backgroundImage=bg;
+        prevR.classList.add('show');
+        nextSide='L';
+      }
+    }
+  </script>
 </body>
 </html>

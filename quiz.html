@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body data-page="quiz">
+  <div class="shell">
+    <div class="head" id="cats"></div>
+    <div class="question" id="qText"></div>
+    <div class="answers" id="qAnswers"></div>
+    <div class="foot">
+      <button class="btn" id="next">Weiter</button>
+      <span class="muted" id="progress"></span>
+      <div style="flex:1"></div>
+      <a class="btn" href="index.html">Zur Startseite</a>
+    </div>
+    <div class="muted" id="result" style="display:none"></div>
+  </div>
+
+  <script>
+    const QUIZZES={
+      'Eric Clapton':[
+        {q:'In welcher Band spielte Clapton mit Jack Bruce und Ginger Baker?',a:['Cream','The Yardbirds','Blind Faith','Traffic'],c:0},
+        {q:'Welche Zeile gehört zu „Wonderful Tonight“?',a:['And then she asks me, Do I look all right','We skipped the light fandango','It’s been a hard day’s night','You’re the one that I want'],c:0},
+        {q:'In welchem Jahr erschien „Unplugged“?',a:['1990','1991','1992','1994'],c:2},
+        {q:'„Layla“ wurde von welcher Formation veröffentlicht?',a:['Derek and the Dominos','Cream','Blind Faith','The Yardbirds'],c:0},
+        {q:'Wer war Claptons Partner in Blind Faith (Gesang/Keys)?',a:['Steve Winwood','David Crosby','Eric Burdon','Peter Green'],c:0}
+      ],
+      'Depeche Mode':[
+        {q:'Debütalbum von Depeche Mode?',a:['Speak & Spell','A Broken Frame','Black Celebration','Violator'],c:0},
+        {q:'„Enjoy the Silence“ ist aus …',a:['1987','1989','1990','1992'],c:2},
+        {q:'Welches Duo gründete Vince Clarke 1981?',a:['Yazoo','Erasure','The Assembly','Pet Shop Boys'],c:0},
+        {q:'Wer stieß nach Vince Clarke als festes Mitglied zur Band?',a:['Alan Wilder','Martin Gore','Andy Fletcher','Daniel Miller'],c:0},
+        {q:'Auf welchem Album ist „Enjoy the Silence“?',a:['Violator','Music for the Masses','Some Great Reward','Songs of Faith and Devotion'],c:0}
+      ],
+      'Sting':[
+        {q:'Stings bürgerlicher Name?',a:['Gordon Matthew Thomas Sumner','Matthew Gordon Thomas Summers','Gordon Thomas Matthew Summers','George Matthew Thomas Sumner'],c:0},
+        {q:'Bekannt zuerst mit …',a:['The Police','Dire Straits','The Jam','U2'],c:0},
+        {q:'„If I Ever Lose My Faith in You“ erschien …',a:['1991','1992','1993','1995'],c:2},
+        {q:'Sting stammt aus …',a:['England','Schottland','USA','Irland'],c:0},
+        {q:'Album von „If I Ever Lose My Faith in You“?',a:['Ten Summoner’s Tales','Nothing Like the Sun','The Soul Cages','Mercury Falling'],c:0}
+      ],
+      'The Cure':[
+        {q:'Debütalbum (UK) von The Cure?',a:['Three Imaginary Boys','Boys Don’t Cry','Seventeen Seconds','Faith'],c:0},
+        {q:'„Friday I’m in Love“ erschien …',a:['1989','1990','1992','1994'],c:2},
+        {q:'Frontmann von The Cure?',a:['Robert Smith','Morrissey','Ian Curtis','Siouxsie Sioux'],c:0},
+        {q:'„Disintegration“ erschien …',a:['1987','1989','1991','1993'],c:1},
+        {q:'„Lovesong“ gehört zu …',a:['Disintegration','Wish','Pornography','Faith'],c:0}
+      ],
+      'Jimi Hendrix':[
+        {q:'Geburtsort Jimi Hendrix?',a:['Seattle','Memphis','Los Angeles','New York'],c:0},
+        {q:'Debütalbum der Experience?',a:['Are You Experienced?','Axis: Bold As Love','Electric Ladyland','Band of Gypsys'],c:0},
+        {q:'US-Einheit von Hendrix?',a:['101st Airborne','82nd Airborne','1st Infantry','10th Mountain Division'],c:0},
+        {q:'Todesjahr von Hendrix?',a:['1969','1970','1971','1972'],c:1},
+        {q:'Bassist der Experience?',a:['Noel Redding','John Paul Jones','Jack Bruce','John Entwistle'],c:0}
+      ]
+    };
+
+    const cats=document.getElementById('cats');
+    const qText=document.getElementById('qText');
+    const qAnswers=document.getElementById('qAnswers');
+    const next=document.getElementById('next');
+    const progress=document.getElementById('progress');
+    const result=document.getElementById('result');
+    let current=Object.keys(QUIZZES)[0], i=0, score=0;
+
+    function updateTheme(){ document.body.setAttribute('data-quiz', current); }
+
+    function renderCats(){
+      cats.innerHTML='';
+      for(const k of Object.keys(QUIZZES)){
+        const b=document.createElement('button');
+        b.className='chip'+(k===current?' active':'');
+        b.textContent=k;
+        b.onclick=()=>{current=k;i=0;score=0;renderQ();renderCats();updateTheme();};
+        cats.appendChild(b);
+      }
+    }
+    function renderQ(){
+      const qs=QUIZZES[current];
+      const {q,a,c}=qs[i];
+      qText.textContent=q;
+      qAnswers.innerHTML='';
+      progress.textContent=`${i+1} / ${qs.length}`;
+      next.disabled=true;
+      a.forEach((txt,idx)=>{
+        const b=document.createElement('button');
+        b.className='answer';
+        b.textContent=txt;
+        b.onclick=()=>{
+          [...qAnswers.children].forEach(x=>x.disabled=true);
+          if(idx===c){b.classList.add('correct');score++;}
+          else{b.classList.add('wrong');qAnswers.children[c]?.classList.add('correct');}
+          next.disabled=false;
+        };
+        qAnswers.appendChild(b);
+      });
+    }
+    next.onclick=()=>{
+      const qs=QUIZZES[current];
+      i++;
+      if(i<qs.length){renderQ();}
+      else{
+        qText.textContent='';
+        qAnswers.innerHTML='';
+        progress.textContent='';
+        result.style.display='block';
+        result.textContent=`Ergebnis: ${score} von ${qs.length}`;
+        i=0;score=0;
+      }
+    };
+
+    renderCats();renderQ();updateTheme();
+  </script>
+</body>
+</html>

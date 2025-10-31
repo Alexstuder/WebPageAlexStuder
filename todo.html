@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>1-3-5</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body data-page="todo">
+  <header class="nav">
+    <a class="btn" href="index.html">Zur Startseite</a>
+  </header>
+  <main class="todo">
+    <div class="grid">
+      <section class="card" data-cap="1" data-key="one">
+        <h3>1 × Wichtigste</h3>
+        <small>Max. 1 Aufgabe</small>
+        <div class="task-input"><input placeholder="Aufgabe…"><button class="btn add">Add</button></div>
+        <div class="list"></div>
+      </section>
+      <section class="card" data-cap="3" data-key="three">
+        <h3>3 × Mittel</h3>
+        <small>Max. 3 Aufgaben</small>
+        <div class="task-input"><input placeholder="Aufgabe…"><button class="btn add">Add</button></div>
+        <div class="list"></div>
+      </section>
+      <section class="card" data-cap="5" data-key="five">
+        <h3>5 × Klein</h3>
+        <small>Max. 5 Aufgaben</small>
+        <div class="task-input"><input placeholder="Aufgabe…"><button class="btn add">Add</button></div>
+        <div class="list"></div>
+      </section>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn" id="clearDone">Erledigte löschen</button>
+      <button class="btn" id="resetAll">Alles zurücksetzen</button>
+    </div>
+  </main>
+
+  <script>
+    const storeKey='onesThreeFive_v1';
+    const state=JSON.parse(localStorage.getItem(storeKey)||'{}');
+    function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+    function renderCol(col){
+      const key=col.dataset.key; const cap=+col.dataset.cap; state[key]??=[];
+      const list=col.querySelector('.list'); list.innerHTML='';
+      state[key].forEach((t,i)=>{
+        const row=document.createElement('div'); row.className='task'+(t.done?' done':'');
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=t.done; cb.onchange=()=>{ t.done=cb.checked; save(); renderCol(col); };
+        const span=document.createElement('span'); span.textContent=t.text; span.style.flex='1';
+        const del=document.createElement('button'); del.className='btn'; del.textContent='Del'; del.onclick=()=>{ state[key].splice(i,1); save(); renderCol(col); };
+        row.append(cb,span,del); list.appendChild(row);
+      });
+      col.querySelector('.add').disabled = state[key].filter(t=>!t.done).length >= cap;
+    }
+
+    document.querySelectorAll('.card').forEach(col=>{
+      const key=col.dataset.key; state[key]??=[];
+      const input=col.querySelector('input'); const add=col.querySelector('.add');
+      add.onclick=()=>{ const v=input.value.trim(); if(!v) return; const cap=+col.dataset.cap; if(state[key].filter(t=>!t.done).length>=cap) return; state[key].push({text:v,done:false}); input.value=''; save(); renderCol(col); };
+      input.addEventListener('keydown',e=>{ if(e.key==='Enter') add.click(); });
+      renderCol(col);
+    });
+
+    document.getElementById('clearDone').onclick=()=>{ document.querySelectorAll('.card').forEach(col=>{ const key=col.dataset.key; state[key]=state[key].filter(t=>!t.done); renderCol(col); }); save(); };
+    document.getElementById('resetAll').onclick=()=>{ document.querySelectorAll('.card').forEach(col=>{ const key=col.dataset.key; state[key]=[]; renderCol(col); }); save(); };
+  </script>
+</body>
+</html>

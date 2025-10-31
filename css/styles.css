@@ -1,95 +1,112 @@
-/* Basis-Stile für die Beauty-Demo */
 :root{
-  --bg:#faf7f6;
-  --card:#ffffff;
-  --muted:#7b6f6a;
-  --accent:#b984d6;
-  --accent-dark:#8a57a8;
-  --shadow: 0 8px 24px rgba(16,16,24,0.08);
-  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --fg:#e8eaed;
+  --ring-size:62vmin;
+  --photo-size:22vmin;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%; margin:0; background:var(--bg); color:#222}
+/* Grundlayout */
+html,body{height:100%;margin:0;overflow:hidden;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg)}
+body{display:grid;place-items:center;position:relative;transition:background .4s ease}
 
-.hero{
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:2rem;
-  gap:1.5rem;
+/* Dynamischer Hintergrund: nur Pseudo-Element bewegt sich */
+body::before{
+  content:"";
+  position:fixed; inset:-6%; z-index:-1;
+  background:
+    radial-gradient(1200px 800px at 20% 20%, #0d1426, transparent 60%),
+    conic-gradient(from 0deg at 50% 50%, #0a1222, #12243d, #0d1426, #0a1222);
+  animation:bgDrift 60s linear infinite;
+  filter:saturate(1.05);
+}
+@keyframes bgDrift{
+  0%{ transform:translate3d(0,0,0); }
+  100%{ transform:translate3d(6%,-4%,0); }
 }
 
-.card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.9), var(--card));
-  padding:2.25rem;
-  border-radius:16px;
-  box-shadow:var(--shadow);
-  max-width:720px;
-  width:100%;
-  text-align:left;
+/* Seiten-spezifische Varianten */
+body[data-page="quiz"]::before{
+  background: conic-gradient(from 0deg at 50% 50%, #0b1224, #13243e, #0e1830, #0b1224);
+  animation: bgHue 40s linear infinite; /* sanfter Farbwechsel */
+}
+@keyframes bgHue{
+  0%{ filter:hue-rotate(0deg); }
+  100%{ filter:hue-rotate(360deg); }
 }
 
-title{
-  font-family: 'Playfair Display', serif;
-  font-weight:700;
-  font-size:2.25rem;
-  margin:0 0 0.25rem 0;
-  color:#111;
+body[data-page="todo"]::before{
+  background:
+    radial-gradient(800px 600px at 80% 20%, #0e1b2e, transparent 60%),
+    linear-gradient(135deg,#0a1324,#121b2e 60%,#0a1324);
+  animation: bgDrift 70s linear infinite;
 }
 
-.subtitle{
-  margin:0 0 0.75rem 0;
-  color:var(--muted);
-  font-weight:600;
-  letter-spacing:0.02em;
+/* STARTSEITE – Ring + Previews */
+.stage{position:relative;width:100vw;height:100vh;perspective:1200px;perspective-origin:50% 50%}
+.scene{position:absolute;inset:0;display:grid;place-items:center;z-index:10}
+.ring-wrapper{position:relative;transform-style:preserve-3d}
+.ring{transform-style:preserve-3d}
+.photo{
+  position:absolute;width:var(--photo-size);height:var(--photo-size);
+  border-radius:14px;background:#333 center/cover no-repeat;
+  box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer
 }
 
-.lead{
-  margin:0 0 1rem 0;
-  color:var(--muted);
+.preview{position:absolute;top:0;bottom:0;width:50%;pointer-events:none;opacity:0;transition:opacity .25s ease;z-index:3;transform-style:preserve-3d}
+.preview.show{opacity:1}
+.preview.left{left:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.preview.right{right:0;background:linear-gradient(270deg,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.preview .img{
+  position:absolute;top:50%;transform-style:preserve-3d;
+  height:min(84vh,900px);width:min(40vw,700px);background:center/cover no-repeat;
+  border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.06)
+}
+.preview.left .img{left:4vw;transform:translateY(-50%) rotateY(28deg) rotateX(2deg) translateZ(-240px) scale(0.96)}
+.preview.right .img{right:4vw;transform:translateY(-50%) rotateY(-28deg) rotateX(2deg) translateZ(-240px) scale(0.96)}
+
+.menu{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:20}
+.btn{padding:10px 16px;border:0;border-radius:12px;background:#1f2937;color:var(--fg);cursor:pointer;text-decoration:none}
+.btn:hover{background:#2b3444}
+
+/* QUIZ */
+.shell{width:min(960px,92vw);background:#0f141c;border:1px solid #223042;border-radius:16px;box-shadow:0 30px 120px rgba(0,0,0,.5);padding:18px}
+.head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.chip{border:1px solid #334155;background:#101720;border-radius:999px;padding:6px 10px;cursor:pointer;color:#e8eaed}
+.chip.active{border-color:#06b6d4;background:rgba(6,182,212,.12)}
+.question{font-size:18px;margin:6px 0 10px}
+.answers{display:grid;gap:10px}
+.answer{padding:12px 14px;border-radius:12px;border:1px solid #2a3648;background:#0e151d;cursor:pointer;color:#e8eaed}
+.answer.correct{border-color:#10b981;background:rgba(16,185,129,.1)}
+.answer.wrong{border-color:#ef4444;background:rgba(239,68,68,.08)}
+.foot{display:flex;gap:8px;align-items:center;margin-top:10px}
+.muted{color:#a3a9b5}
+
+/* Aktives Quiz – dezent andere BG-Töne */
+body[data-quiz="Eric Clapton"]::before{
+  background: radial-gradient(circle at 50% 50%, #1d1414, #0b0b0b);
+}
+body[data-quiz="Depeche Mode"]::before{
+  background: radial-gradient(circle at 50% 50%, #1a2028, #0d0f18);
+}
+body[data-quiz="Sting"]::before{
+  background: radial-gradient(circle at 50% 50%, #182218, #0b120a);
+}
+body[data-quiz="The Cure"]::before{
+  background: radial-gradient(circle at 50% 50%, #1c1420, #0c0810);
+}
+body[data-quiz="Jimi Hendrix"]::before{
+  background: radial-gradient(circle at 50% 50%, #24160e, #0f0804);
 }
 
-.cta-row{
-  display:flex;
-  gap:0.75rem;
-  margin-top:0.5rem;
-}
-
-.btn{
-  display:inline-block;
-  padding:0.6rem 1rem;
-  border-radius:10px;
-  text-decoration:none;
-  font-weight:600;
-  font-size:0.95rem;
-  transition:transform .12s ease, box-shadow .12s ease;
-  border:1px solid transparent;
-}
-
-.btn:active{transform:translateY(1px)}
-
-.btn.primary{
-  background:linear-gradient(90deg,var(--accent),var(--accent-dark));
-  color:white;
-  box-shadow:0 6px 18px rgba(138,87,168,0.12);
-}
-
-.btn.ghost{
-  background:transparent;
-  color:var(--accent-dark);
-  border-color:rgba(138,87,168,0.12);
-}
-
-.btn[aria-disabled="true"]{
-  opacity:0.5;
-  pointer-events:none;
-}
-
-.attribution{
-  font-size:0.85rem;
-  color:var(--muted);
-  opacity:0.9;
-}
+/* TODO 1-3-5 */
+header.nav{display:flex;gap:10px;align-items:center;justify-content:center;padding:14px 10px}
+main.todo{padding:22px;display:grid;gap:16px;place-items:center}
+.grid{width:min(1100px,94vw);display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.card{background:#0f141c;border:1px solid #223042;border-radius:16px;box-shadow:0 30px 120px rgba(0,0,0,.3);padding:18px}
+.card h3{margin:0 0 6px}
+.card small{opacity:.8}
+.task-input{display:flex;gap:8px;margin-top:8px}
+.task-input input{flex:1;border-radius:10px;border:1px solid #2a3140;background:#0f131a;padding:10px;color:var(--fg)}
+.list{margin:10px 0 0;display:grid;gap:8px}
+.task{display:flex;align-items:center;gap:10px;background:#0e141b;border:1px solid #243042;border-radius:12px;padding:10px}
+.task.done{opacity:.6;text-decoration:line-through}
+@media (max-width: 900px){ .grid{grid-template-columns:1fr} }
