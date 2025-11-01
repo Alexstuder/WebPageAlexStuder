@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sudoku</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body data-page="sudoku">
+  <div class="sudoku-shell">
+    <header class="sudoku-head">
+      <h1>Sudoku</h1>
+      <div class="sudoku-actions">
+        <button class="btn" id="newGame">Neues Spiel</button>
+        <button class="btn" id="check">Prüfen</button>
+        <button class="btn" id="tip">Tip</button>
+      </div>
+      <span class="muted" id="status">Trage die Zahlen von 1 bis 9 ein.</span>
+      <div class="sudoku-spacer"></div>
+      <a class="btn" href="index.html">Zur Startseite</a>
+    </header>
+    <div class="sudoku-grid" id="grid" aria-label="Sudoku Brett"></div>
+    <div class="sudoku-pad" id="pad" aria-label="Eingabe-Pad">
+      <button type="button" data-val="1">1</button>
+      <button type="button" data-val="2">2</button>
+      <button type="button" data-val="3">3</button>
+      <button type="button" data-val="4">4</button>
+      <button type="button" data-val="5">5</button>
+      <button type="button" data-val="6">6</button>
+      <button type="button" data-val="7">7</button>
+      <button type="button" data-val="8">8</button>
+      <button type="button" data-val="9">9</button>
+      <button type="button" data-val="clear">Löschen</button>
+    </div>
+  </div>
+
+  <script>
+    const PUZZLES=[
+      {
+        puzzle:"53..7....6..195....98....6.8...6...34..8..6.....34..8.6....28....419..5....8..79",
+        solution:"534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+      },
+      {
+        puzzle:"29..43...4..8.5.2.8.6.1..4.3.....2.6....8...55.9...7.8..3.9.1.2.2...1.5...4..8..9",
+        solution:"295743861431865927876912543387459216612387495549126738763594182928671354154238679"
+      },
+      {
+        puzzle:"..4.8..1.1..94..8..9.1..4....7..1.6...1...5...4.6..9....6..5.7..3..72..4.5..4.9..",
+        solution:"784583912152946783693172465937251648261498357548367291426819537319725846875634129"
+      }
+    ];
+
+    const grid=document.getElementById('grid');
+    const pad=document.getElementById('pad');
+    const statusEl=document.getElementById('status');
+    const newGame=document.getElementById('newGame');
+    const check=document.getElementById('check');
+    const tip=document.getElementById('tip');
+    let current=null;
+    let selected=null;
+
+    function createCell(index,char,locked){
+      const cell=document.createElement('button');
+      cell.type='button';
+      cell.className='sudoku-cell';
+      cell.dataset.index=index;
+      cell.dataset.row=Math.floor(index/9);
+      cell.dataset.col=index%9;
+      cell.dataset.box=`${Math.floor(index/27)}${Math.floor((index%9)/3)}`;
+      if(locked){
+        cell.textContent=char;
+        cell.dataset.value=char;
+        cell.dataset.locked='true';
+        cell.classList.add('locked');
+      } else if(char && char!=='.'){
+        cell.textContent=char;
+        cell.dataset.value=char;
+      }
+      cell.addEventListener('click',()=>{
+        setSelected(cell);
+      });
+      cell.addEventListener('focus',()=>{
+        setSelected(cell);
+      });
+      return cell;
+    }
+
+    function setSelected(cell){
+      if(selected===cell){return;}
+      if(selected){selected.classList.remove('active');}
+      selected=cell;
+      if(selected){selected.classList.add('active');selected.focus();}
+    }
+
+    function loadPuzzle(){
+      const order=Array.from({length:PUZZLES.length},(_,i)=>i);
+      for(let i=order.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [order[i],order[j]]=[order[j],order[i]];
+      }
+      current=null;
+      for(const idx of order){
+        const candidate=PUZZLES[idx];
+        if(!candidate){continue;}
+        const {puzzle,solution}=candidate;
+        if(typeof puzzle!=='string'||typeof solution!=='string'){continue;}
+        if(puzzle.length!==81||solution.length!==81){continue;}
+        if(!isSolutionValid(solution)){continue;}
+        current=candidate;
+        break;
+      }
+      grid.classList.remove('solved');
+      grid.innerHTML='';
+      selected=null;
+      if(!current){
+        statusEl.textContent='Keine gültigen Rätseldaten gefunden.';
+        return;
+      }
+      const puzzleChars=current.puzzle.split('');
+      const solutionChars=current.solution.split('');
+      let mismatchDetected=false;
+      puzzleChars.forEach((char,idx)=>{
+        const expected=solutionChars[idx];
+        let base='';
+        if(/[1-9]/.test(char)){
+          if(char!==expected){
+            mismatchDetected=true;
+            base=expected;
+          }else{
+            base=char;
+          }
+        }
+        const locked=base!=='';
+        const cell=createCell(idx,locked?base:'',locked);
+        grid.appendChild(cell);
+      });
+      if(mismatchDetected){
+        console.warn('Sudoku: Puzzlewerte wurden korrigiert, um mit der Lösung übereinzustimmen.');
+      }
+      statusEl.textContent='Trage die Zahlen von 1 bis 9 ein.';
+      updateConflicts();
+    }
+
+    function isSolutionValid(solution){
+      if(typeof solution!=='string'||solution.length!==81){return false;}
+      const rows=Array.from({length:9},()=>new Set());
+      const cols=Array.from({length:9},()=>new Set());
+      const boxes=Array.from({length:9},()=>new Set());
+      for(let idx=0;idx<81;idx++){
+        const char=solution[idx];
+        if(!/[1-9]/.test(char)){return false;}
+        const row=Math.floor(idx/9);
+        const col=idx%9;
+        const box=Math.floor(row/3)*3+Math.floor(col/3);
+        if(rows[row].has(char)||cols[col].has(char)||boxes[box].has(char)){
+          return false;
+        }
+        rows[row].add(char);
+        cols[col].add(char);
+        boxes[box].add(char);
+      }
+      return true;
+    }
+
+    function updateConflicts(){
+      const cells=[...grid.children];
+      cells.forEach(cell=>{
+        cell.classList.remove('error','mistake');
+      });
+      const groups=[];
+      for(let r=0;r<9;r++){
+        groups.push(cells.filter(cell=>Number(cell.dataset.row)===r));
+      }
+      for(let c=0;c<9;c++){
+        groups.push(cells.filter(cell=>Number(cell.dataset.col)===c));
+      }
+      for(let br=0;br<3;br++){
+        for(let bc=0;bc<3;bc++){
+          groups.push(cells.filter(cell=>Number(cell.dataset.box[0])===br&&Number(cell.dataset.box[1])===bc));
+        }
+      }
+      let hasConflict=false;
+      groups.forEach(group=>{
+        const seen={};
+        group.forEach(cell=>{
+          const val=cell.textContent.trim();
+          if(!val){return;}
+          if(!seen[val]){seen[val]=[];}
+          seen[val].push(cell);
+        });
+        Object.values(seen).forEach(list=>{
+          if(list.length>1){
+            list.forEach(cell=>cell.classList.add('error'));
+            hasConflict=true;
+          }
+        });
+      });
+      return hasConflict;
+    }
+
+    function writeValue(value){
+      if(!selected||selected.dataset.locked==='true'){return;}
+      selected.classList.remove('hint');
+      if(value==='clear'){
+        selected.textContent='';
+        selected.dataset.value='';
+      }else{
+        selected.textContent=value;
+        selected.dataset.value=value;
+      }
+      grid.classList.remove('solved');
+      updateConflicts();
+    }
+
+    pad.addEventListener('click',evt=>{
+      const btn=evt.target.closest('button');
+      if(!btn){return;}
+      writeValue(btn.dataset.val);
+    });
+
+    document.addEventListener('keydown',evt=>{
+      if(!selected){return;}
+      const {key}=evt;
+      if(key>='1'&&key<='9'){
+        evt.preventDefault();
+        writeValue(key);
+      }else if(key==='Backspace'||key==='Delete'||key==='0'||key===' '){
+        evt.preventDefault();
+        writeValue('clear');
+      }else if(key.startsWith('Arrow')){
+        evt.preventDefault();
+        moveSelection(key);
+      }
+    });
+
+    function moveSelection(direction){
+      if(!selected){return;}
+      const index=Number(selected.dataset.index);
+      let row=Math.floor(index/9);
+      let col=index%9;
+      if(direction==='ArrowUp'){row=Math.max(0,row-1);}
+      if(direction==='ArrowDown'){row=Math.min(8,row+1);}
+      if(direction==='ArrowLeft'){col=Math.max(0,col-1);}
+      if(direction==='ArrowRight'){col=Math.min(8,col+1);}
+      const nextIndex=row*9+col;
+      const next=grid.querySelector(`.sudoku-cell[data-index="${nextIndex}"]`);
+      if(next){setSelected(next);}
+    }
+
+    check.addEventListener('click',()=>{
+      const cells=[...grid.children];
+      let missing=false;
+      let wrong=0;
+      cells.forEach((cell,idx)=>{
+        cell.classList.remove('mistake');
+        const val=cell.textContent.trim();
+        if(!val){
+          missing=true;
+          cell.classList.add('error');
+          return;
+        }
+        if(val!==current.solution[idx]){
+          wrong++;
+          cell.classList.add('mistake');
+        }
+      });
+      if(!missing&&wrong===0){
+        statusEl.textContent='Großartig, Sudoku gelöst!';
+        grid.classList.add('solved');
+      }else if(wrong>0){
+        statusEl.textContent=`${wrong} Feld${wrong===1?' ist':'er sind'} falsch.`;
+      }else{
+        statusEl.textContent='Es fehlen noch Werte.';
+      }
+    });
+
+    newGame.addEventListener('click',loadPuzzle);
+
+    tip.addEventListener('click',()=>{
+      if(!current){return;}
+      const cells=[...grid.children];
+      const wrongFilled=cells.find((cell,idx)=>{
+        if(cell.dataset.locked==='true'){return false;}
+        const val=cell.textContent.trim();
+        return val && val!==current.solution[idx];
+      });
+      const target=wrongFilled ?? cells.find((cell,idx)=>{
+        if(cell.dataset.locked==='true'){return false;}
+        const val=cell.textContent.trim();
+        return val!==current.solution[idx];
+      });
+      if(!target){
+        statusEl.textContent='Alle Werte stimmen bereits.';
+        return;
+      }
+      const idx=Number(target.dataset.index);
+      const value=current.solution[idx];
+      target.textContent=value;
+      target.dataset.value=value;
+      target.classList.remove('error','mistake');
+      cells.forEach(cell=>cell.classList.remove('hint'));
+      target.classList.add('hint');
+      setSelected(target);
+      const conflicts=updateConflicts();
+      if(isSolved() && !conflicts){
+        statusEl.textContent='Großartig, Sudoku gelöst!';
+        grid.classList.add('solved');
+      }else if(conflicts){
+        statusEl.textContent='Tip gesetzt. Es bestehen noch Konflikte.';
+      }else{
+        statusEl.textContent='Tip gesetzt.';
+      }
+    });
+
+    function isSolved(){
+      const cells=[...grid.children];
+      return cells.every((cell,idx)=>{
+        const val=cell.textContent.trim();
+        return val && val===current.solution[idx];
+      });
+    }
+
+    loadPuzzle();
+  </script>
+</body>
+</html>
