@@ -124,9 +124,9 @@ main.todo{padding:22px;display:grid;gap:16px;place-items:center}
 .sudoku-head h1{margin:0;font-size:26px;letter-spacing:0.04em}
 .sudoku-actions{display:flex;gap:8px}
 .sudoku-spacer{flex:1}
-.sudoku-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:0;border:1px solid #314055;border-radius:12px;overflow:hidden;background:#0a1018}
+.sudoku-grid{display:grid;grid-template-columns:repeat(9,1fr);grid-auto-rows:1fr;gap:0;border:1px solid #314055;border-radius:12px;overflow:hidden;background:#0a1018;width:min(540px,92vw);margin:0 auto}
 .sudoku-grid.solved{box-shadow:0 0 0 2px rgba(16,185,129,.4)}
-.sudoku-cell{aspect-ratio:1/1;border:1px solid #1f2a3a;background:#0d151f;color:#e8eaed;font:600 20px/1 "Fira Sans",system-ui,sans-serif;display:grid;place-items:center;cursor:pointer;transition:background .15s ease,color .15s ease}
+.sudoku-cell{aspect-ratio:1/1;min-height:48px;border:1px solid #1f2a3a;background:#0d151f;color:#e8eaed;font:600 20px/1 "Fira Sans",system-ui,sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s ease,color .15s ease}
 .sudoku-cell:nth-child(3n+1){border-left-width:2px}
 .sudoku-cell:nth-child(-n+9){border-top-width:2px}
 .sudoku-cell:nth-child(9n){border-right-width:2px}
