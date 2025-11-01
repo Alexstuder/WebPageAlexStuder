@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sudoku</title>
-  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
 </head>
 <body data-page="sudoku">
   <div class="sudoku-shell">
@@ -34,6 +34,7 @@
     </div>
   </div>
 
+  <script src="js/celebration.js"></script>
   <script>
     const PUZZLES=[
       {
@@ -265,8 +266,10 @@
         }
       });
       if(!missing&&wrong===0){
+        const alreadySolved=grid.classList.contains('solved');
         statusEl.textContent='Großartig, Sudoku gelöst!';
         grid.classList.add('solved');
+        if(!alreadySolved&&typeof triggerCelebration==='function'){triggerCelebration();}
       }else if(wrong>0){
         statusEl.textContent=`${wrong} Feld${wrong===1?' ist':'er sind'} falsch.`;
       }else{
@@ -302,9 +305,11 @@
       target.classList.add('hint');
       setSelected(target);
       const conflicts=updateConflicts();
+      const alreadySolved=grid.classList.contains('solved');
       if(isSolved() && !conflicts){
         statusEl.textContent='Großartig, Sudoku gelöst!';
         grid.classList.add('solved');
+        if(!alreadySolved&&typeof triggerCelebration==='function'){triggerCelebration();}
       }else if(conflicts){
         statusEl.textContent='Tip gesetzt. Es bestehen noch Konflikte.';
       }else{
