@@ -47,6 +47,13 @@ body[data-page="sudoku"]::before{
   animation: bgDrift 65s linear infinite;
 }
 
+body[data-page="bier"]::before{
+  background:
+    radial-gradient(840px 640px at 72% 18%, rgba(255,196,86,.4), transparent 62%),
+    linear-gradient(135deg,#0f172a 20%,#111827 60%,#0b1221);
+  animation: bgDrift 70s linear infinite;
+}
+
 /* STARTSEITE – Ring + Previews */
 .stage{position:relative;width:100vw;height:100vh;perspective:1200px;perspective-origin:50% 50%}
 .scene{position:absolute;inset:0;display:grid;place-items:center;z-index:10}
@@ -238,4 +245,25 @@ main.todo{padding:22px;display:grid;gap:16px;place-items:center}
     animation-iteration-count:1 !important;
     transition-duration:0.01ms !important;
   }
+}
+
+/* GPT LANDING */
+.gpt-shell{width:min(920px,94vw);margin:40px auto;background:rgba(10,15,24,.88);border:1px solid rgba(60,82,110,.6);border-radius:24px;box-shadow:0 40px 140px rgba(0,0,0,.45);padding:28px 32px;display:grid;gap:26px}
+.gpt-head h1{margin:8px 0 10px;font-size:36px;letter-spacing:.04em}
+.gpt-head p{margin:0;color:#cbd5f5;max-width:640px}
+.gpt-badge{display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(34,197,94,.18);color:#34d399;border:1px solid rgba(52,211,153,.35);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.gpt-preview{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.gpt-preview-card{background:rgba(15,22,34,.82);border:1px solid rgba(73,99,128,.55);border-radius:18px;padding:22px 24px;box-shadow:0 22px 60px rgba(0,0,0,.3);display:grid;gap:12px}
+.gpt-preview-card h2{margin:0;font-size:22px}
+.gpt-preview-card p{margin:0;color:#d1d6ed}
+.gpt-preview-card ul{margin:0;padding-left:20px;display:grid;gap:8px;color:#c6cde6}
+.gpt-preview-card li{line-height:1.5}
+.gpt-icon{font-size:42px;line-height:1}
+.gpt-foot{display:flex;justify-content:flex-end}
+.gpt-foot .btn{min-width:160px;text-align:center}
+.btn.primary{background:#2563eb;color:#e8eaed;border:1px solid transparent}
+.btn.primary:hover{background:#1d4ed8}
+@media (max-width:600px){
+  .gpt-shell{padding:22px}
+  .gpt-head h1{font-size:30px}
 }
