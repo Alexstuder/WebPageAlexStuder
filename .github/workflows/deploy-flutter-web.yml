@@ -34,7 +34,7 @@ jobs:
         working-directory: flutter_brew_assistent
 
       - name: Deploy to VPS via rsync
-        uses: burnett01/rsync-deployments@v3.1
+        uses: burnett01/rsync-deployments@7.1.0
         with:
           switches: -avz --delete
           path: flutter_brew_assistent/build/web/
