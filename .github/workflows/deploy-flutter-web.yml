@@ -39,9 +39,7 @@ jobs:
         run: |
           PORT=${SSH_PORT:-22}
           mkdir -p ~/.ssh
-          cat <<'EOF' > ~/.ssh/id_deploy_key
-${{ secrets.SSH_KEY }}
-EOF
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy_key
           chmod 600 ~/.ssh/id_deploy_key
           ssh-keyscan -p $PORT ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
