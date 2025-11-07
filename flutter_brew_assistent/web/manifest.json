@@ -1,6 +1,6 @@
 {
-    "name": "BrewGenius",
-    "short_name": "BrewGenius",
+    "name": "AiBrewGenius",
+    "short_name": "AiBrewGenius",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

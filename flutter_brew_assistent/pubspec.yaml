@@ -1,5 +1,5 @@
 name: brew_genius
-description: BrewGenius – dein smarter Brau-Assistent mit OpenAI.
+description: AiBrewGenius – dein smarter Brau-Assistent mit OpenAI.
 publish_to: "none"
 version: 0.1.0+1
 

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "BrewGenius" "\0"
+            VALUE "FileDescription", "AiBrewGenius" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "BrewGenius" "\0"
+            VALUE "InternalName", "AiBrewGenius" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "BrewGenius.exe" "\0"
-            VALUE "ProductName", "BrewGenius" "\0"
+            VALUE "OriginalFilename", "AiBrewGenius.exe" "\0"
+            VALUE "ProductName", "AiBrewGenius" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

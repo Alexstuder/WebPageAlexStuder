@@ -16,7 +16,7 @@ class BrewMateApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BrewGenius',
+      title: 'AiBrewGenius',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         colorScheme: const ColorScheme.dark(
@@ -97,7 +97,7 @@ class _BrewHomePageState extends State<BrewHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BrewGenius'),
+        title: const Text('AiBrewGenius'),
         centerTitle: true,
       ),
       body: Center(

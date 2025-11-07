@@ -1,6 +1,6 @@
-# BrewGenius 🍺
+# AiBrewGenius 🍺
 
-Ein kleines Flutter-Projekt, das jetzt als BrewGenius individuelle Bierrezepte über die OpenAI API generiert. Die App läuft auf Android, iOS und im Web und bietet eine Eingabemaske für einen Prompt sowie die Darstellung der erzeugten Antwort.
+Ein kleines Flutter-Projekt, das jetzt als AiBrewGenius individuelle Bierrezepte über die OpenAI API generiert. Die App läuft auf Android, iOS und im Web und bietet eine Eingabemaske für einen Prompt sowie die Darstellung der erzeugten Antwort.
 
 ## Voraussetzungen
 
