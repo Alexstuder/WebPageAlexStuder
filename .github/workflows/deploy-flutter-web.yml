@@ -21,10 +21,10 @@ jobs:
         with:
           flutter-version: '3.35.7'
 
-      - name: Create .env from secret
+      - name: Create Flutter .env
         run: |
           cat <<'EOF' > flutter_brew_assistent/.env
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          PROXY_URL=${{ secrets.PROXY_URL }}
           EOF
 
       - name: Install dependencies
@@ -43,12 +43,17 @@ jobs:
           chmod 600 ~/.ssh/id_deploy_key
           ssh-keyscan -p $PORT ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to VPS via rsync
+      - name: Deploy Flutter web to VPS
         run: |
           PORT=${SSH_PORT:-22}
           rsync -avz --delete -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" flutter_brew_assistent/build/web/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
-      - name: Write .env on server
+      - name: Deploy proxy to VPS
+        run: |
+          PORT=${SSH_PORT:-22}
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" proxy/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/proxy/
+
+      - name: Write proxy .env on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -56,6 +61,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cat <<'EOF' > ${{ secrets.DEPLOY_PATH }}/.env
+            mkdir -p ${{ secrets.DEPLOY_PATH }}/proxy
+            cat <<'EOF' > ${{ secrets.DEPLOY_PATH }}/proxy/.env
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
             EOF

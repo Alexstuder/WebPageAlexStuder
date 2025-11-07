@@ -21,7 +21,6 @@ class BrewMateApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF2563EB),
         ),
-        useMaterial3: true,
         inputDecorationTheme: const InputDecorationTheme(
           filled: true,
           fillColor: Color(0xFF1E293B),
@@ -103,7 +102,8 @@ class _BrewHomePageState extends State<BrewHomePage> {
                   minLines: 3,
                   textInputAction: TextInputAction.newline,
                   decoration: const InputDecoration(
-                    hintText: 'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
+                    hintText:
+                        'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -112,7 +112,8 @@ class _BrewHomePageState extends State<BrewHomePage> {
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _requestRecipe,
                     icon: const Icon(Icons.local_drink),
-                    label: Text(_isLoading ? 'Braut Rezept …' : 'Rezept erstellen'),
+                    label: Text(
+                        _isLoading ? 'Braut Rezept …' : 'Rezept erstellen'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -175,7 +176,8 @@ class _ErrorNotice extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.warning_amber_rounded, size: 48, color: Colors.amber.shade300),
+        Icon(Icons.warning_amber_rounded,
+            size: 48, color: Colors.amber.shade300),
         const SizedBox(height: 12),
         Text(
           message,

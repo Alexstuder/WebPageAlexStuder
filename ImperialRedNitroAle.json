@@ -1,0 +1,98 @@
+{
+  "_type": "recipe",
+  "name": "Imperial Red Nitro Ale",
+  "author": "Alexander Studer",
+  "type": "All Grain",
+  "style": {
+    "name": "Imperial Red Ale (Nitro)",
+    "category": "Strong British Ale",
+    "type": "Ale",
+    "abvMin": 7.5,
+    "abvMax": 8.0,
+    "ibuMin": 40,
+    "ibuMax": 45,
+    "colorMin": 35,
+    "colorMax": 40,
+    "profile": "Kräftig malzig, karamellig, rundes Hopfenprofil, cremig durch Nitro-Ausschank."
+  },
+  "batchSize": 22.0,
+  "boilTime": 90,
+  "efficiency": 75,
+  "equipment": {
+    "name": "Brewtools B40",
+    "batchSize": 22.0,
+    "boilSize": 30.2,
+    "boilTime": 90,
+    "efficiency": 75,
+    "fermenterVolume": 22.0,
+    "spargeTemperature": 68.0,
+    "hopstandTemperature": 90.0
+  },
+  "hopStandMinutes": 10,
+  "fermentables": [
+    { "name": "Maris Otter Pale Malt", "amount": 6.0, "unit": "kg", "yield": 80, "color": 6 },
+    { "name": "CaraRed", "amount": 0.9, "unit": "kg", "yield": 74, "color": 40 },
+    { "name": "Crystal 120L", "amount": 0.6, "unit": "kg", "yield": 72, "color": 120 },
+    { "name": "Special B", "amount": 0.25, "unit": "kg", "yield": 68, "color": 180 },
+    { "name": "Melanoidin Malt", "amount": 0.2, "unit": "kg", "yield": 78, "color": 70 },
+    { "name": "Oat Flakes", "amount": 0.25, "unit": "kg", "yield": 70, "color": 2 }
+  ],
+  "hops": [
+    { "name": "East Kent Goldings", "use": "Boil", "time": 60, "alpha": 5.0, "amount": 40, "unit": "g", "form": "Pellet" },
+    { "name": "Fuggles", "use": "Boil", "time": 20, "alpha": 4.5, "amount": 25, "unit": "g", "form": "Pellet" },
+    { "name": "East Kent Goldings", "use": "Boil", "time": 5,  "alpha": 5.0, "amount": 15, "unit": "g", "form": "Pellet" }
+  ],
+  "yeasts": [
+    { "name": "Wyeast 1084 Irish Ale", "type": "Ale", "form": "Liquid", "attenuation": 70, "amount": 0.125, "unit": "l" }
+  ],
+  "mash": {
+    "name": "Imperial Red Mash",
+    "steps": [
+      { "name": "Einmaischen",  "type": "Infusion",   "stepTemp": 64, "stepTime": 0 },
+      { "name": "Maltoserast",  "type": "Temperature","stepTemp": 64, "stepTime": 45 },
+      { "name": "Dextrinrast",  "type": "Temperature","stepTemp": 70, "stepTime": 25 },
+      { "name": "Abmaischen",   "type": "Temperature","stepTemp": 78, "stepTime": 10 }
+    ]
+  },
+  "fermentation": {
+    "name": "Irish Ale Fermentation",
+    "steps": [
+      { "name": "Hauptgärung",       "stepTemp": 19, "stepTime": 10 },
+      { "name": "Diacetylrast",      "stepTemp": 21, "stepTime": 2 },
+      { "name": "Nachgärung/Reifung","stepTemp": 14, "stepTime": 7 },
+      { "name": "Cold Crash",        "stepTemp": 2,  "stepTime": 2 }
+    ]
+  },
+  "carbonation": {
+    "method": "Nitro + CO2",
+    "vols": 1.2,
+    "details": "Vorkarbonisierung 1,2 Vol. CO₂, danach 70:30 N₂/CO₂ bei 3,2 bar, 48 h."
+  },
+  "water": {
+    "notes": "Boilerwasser-Nachguss berücksichtigt. Malzbetontes Profil (Cl:SO₄ ≈ 2:1).",
+    "mash":   { "volume": 24.5, "calciumChloride": 1.90, "calciumSulfate": 0.80, "sodiumBicarbonate": 0.40, "magnesiumSulfate": 0.25, "ph": 5.35 },
+    "sparge": { "volume": 12.5, "temperature": 68.0, "calciumChloride": 0.60, "calciumSulfate": 0.25, "magnesiumSulfate": 0.10, "sodiumBicarbonate": 0.00 }
+  },
+  "og": 1.080,
+  "fg": 1.026,
+  "abv": 7.8,
+  "ibu": 42,
+  "color": 38,
+  "notes": "Kräftig malziges, cremiges Imperial Red Ale mit Nitro-Schankmethode. Rundes Malzprofil, karamellig, samtiger Körper.",
+  "labels": {
+    "keg": {
+      "beerName": "Imperial Red Nitro Ale",
+      "abv": "7.8%",
+      "stammwuerze": "1.080",
+      "restextrakt": "1.026",
+      "ibu": "42",
+      "ebc": "38",
+      "menge": "22L",
+      "karbonisierung": "1.2 Vol CO₂ + 70:30 N₂/CO₂",
+      "lagerung": "12–14°C, dunkel",
+      "brautag": "",
+      "abfuellung": "",
+      "ersterAntrunk": "nach 5 Wochen"
+    }
+  }
+}
