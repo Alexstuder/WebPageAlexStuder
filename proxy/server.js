@@ -9,6 +9,11 @@ const LOCAL_ENV = process.env.PROXY_ENV ?? path.join(BASE_PATH, '.env');
 loadEnvFile(LOCAL_ENV);
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const RAPT_USERNAME = process.env.RAPT_USERNAME;
+const RAPT_API_KEY = process.env.RAPT_API_KEY;
+const RAPT_TOKEN_ENDPOINT = process.env.RAPT_TOKEN_ENDPOINT ?? 'https://id.rapt.io/connect/token';
+const RAPT_API_BASE = process.env.RAPT_API_BASE ?? 'https://api.rapt.io';
+const RAPT_PROFILE_ENDPOINT = process.env.RAPT_PROFILE_ENDPOINT ?? '/api/Profiles/GetProfiles';
 const PORT = Number(process.env.PORT ?? 3000);
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*';
 
@@ -32,6 +37,14 @@ const server = http.createServer(async (req, res) => {
     await handleBrewRequest(req, res);
     return;
   }
+  if (url.pathname === '/api/rapt/token' && req.method === 'POST') {
+    await handleRaptTokenRequest(res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/profiles' && req.method === 'GET') {
+    await handleRaptProfilesRequest(res);
+    return;
+  }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -43,7 +56,7 @@ server.listen(PORT, () => {
 
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
@@ -99,6 +112,75 @@ async function handleBrewRequest(req, res) {
     console.error('Proxy error:', error);
     respondJson(res, 500, { error: 'Interner Proxy-Fehler.' });
   }
+}
+
+async function handleRaptTokenRequest(res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const tokenData = await requestRaptToken();
+    respondJson(res, 200, tokenData);
+  } catch (error) {
+    console.error('RAPT token error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message ?? 'RAPT token request failed.' });
+  }
+}
+
+async function handleRaptProfilesRequest(res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    if (!token?.access_token) {
+      respondJson(res, 502, { error: 'Token response invalid.' });
+      return;
+    }
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const apiResponse = await fetch(`${base}${RAPT_PROFILE_ENDPOINT}`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const payload = await apiResponse.json().catch(() => ({}));
+    if (!apiResponse.ok) {
+      respondJson(res, apiResponse.status, payload);
+      return;
+    }
+    respondJson(res, 200, payload);
+  } catch (error) {
+    console.error('RAPT devices error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message ?? 'RAPT devices request failed.' });
+  }
+}
+
+async function requestRaptToken() {
+  const body = new URLSearchParams({
+    client_id: 'rapt-user',
+    grant_type: 'password',
+    username: RAPT_USERNAME,
+    password: RAPT_API_KEY,
+  });
+
+  const response = await fetch(RAPT_TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data.error_description || data.error || 'Failed to fetch RAPT token.');
+    error.statusCode = response.status;
+    throw error;
+  }
+  return data;
 }
 
 function readBody(req) {

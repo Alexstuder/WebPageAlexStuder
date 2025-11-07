@@ -77,6 +77,8 @@ jobs:
             cat <<'EOF' > ${{ secrets.DEPLOY_PATH }}/proxy/.env
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+            RAPT_API_KEY=${{ secrets.RAPT_API_KEY }}
+            RAPT_USERNAME=${{ secrets.RAPT_USERNAME }}
             EOF
 
       - name: Restart proxy service

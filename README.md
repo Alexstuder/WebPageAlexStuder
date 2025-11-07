@@ -10,6 +10,7 @@ Projektstruktur (empfohlen)
 │  ├─ images/        (Bilder)
 │  └─ fonts/         (falls lokal benötigt)
 ├─ flutter_brew_assistent/   (Flutter-Web-App "AiBrewGenius")
+├─ rapt.html                 (RAPT API Explorer)
 └─ proxy/                    (Node Proxy für OpenAI)
 
 Kurzanleitung (Landing Page):
@@ -42,8 +43,11 @@ Kurzanleitung (Landing Page):
   - `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT` (wie bisher)
   - `DEPLOY_PATH` (Root-Verzeichnis auf dem Server)
   - `OPENAI_API_KEY` (wird in `proxy/.env` geschrieben)
-- `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+  - `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+  - `RAPT_API_KEY` & `RAPT_USERNAME` (für den RAPT Explorer; nur serverseitig genutzt)
 - Öffentliche AiBrewGenius-Web-App: `https://alexstuder.run.place/brew_app/`
+- RAPT API Explorer lokal via `rapt.html` oder live über deine Domain.
+  - Enthält einen integrierten Token-Generator (`https://id.rapt.io/connect/token`), der deinen Benutzer/API-Key nutzt und den erhaltenen JWT automatisch als Bearer-Token einträgt.
 - Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).
   - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
 - Workflow-Schritte:

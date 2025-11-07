@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AiBrewGenius · RAPT Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <style>
+    body {background:#020617;color:#f1f5f9;}
+    .rapt-panel {max-width: 960px;margin: 0 auto;background: rgba(15,23,42,0.9);padding: 28px;border-radius: 20px;box-shadow: 0 25px 60px rgba(0,0,0,0.45);backdrop-filter: blur(10px);} 
+    .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;} 
+    .rapt-status {margin-bottom:12px;color:#fbbf24;} 
+    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;margin-bottom:10px;padding:10px;background:#0b1120;} 
+    summary {cursor:pointer;font-weight:600;color:#bae6fd;} 
+    .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;} 
+    .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;} 
+    code {color:#facc15;} 
+  </style>
+</head>
+<body data-page="rapt">
+  <main class="gpt-shell">
+    <header class="gpt-head">
+      <div class="gpt-badge">Automatisch</div>
+      <h1>RAPT Geräteübersicht</h1>
+      <p>Die Seite ruft serverseitig die RAPT REST-API auf (Nutzerdaten aus der sicheren Proxy-Konfiguration) und zeigt die Ergebnisse als aufklappbare Liste.</p>
+    </header>
+
+    <section class="gpt-preview">
+      <div class="rapt-panel" style="margin-bottom:28px;">
+        <h2>Aktueller Bearer Token</h2>
+        <p>Serverseitig generiert (60 Minuten gültig). Kein Benutzer-Eingriff nötig.</p>
+        <div class="rapt-actions">
+          <button class="btn" id="btn-token">Token anzeigen</button>
+        </div>
+        <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
+        <div id="token-data" class="rapt-result">-</div>
+      </div>
+
+      <div class="rapt-panel">
+        <div class="rapt-meta">
+          <span>🌐 API: <strong>https://api.rapt.io/api/Profiles/GetProfiles</strong></span>
+          <span>🔐 Auth: Bearer Token (vom Proxy generiert)</span>
+        </div>
+        <div class="rapt-actions">
+          <button class="btn primary" id="btn-refresh">Profile laden</button>
+        </div>
+        <div class="rapt-status" id="rapt-status">⏳ Lade Daten ...</div>
+        <div id="rapt-list">Noch keine Daten.</div>
+      </div>
+    </section>
+
+    <footer class="gpt-foot">
+      <a class="btn" href="index.html">Zur Startseite</a>
+    </footer>
+  </main>
+
+  <script>
+    const statusEl=document.getElementById('rapt-status');
+    const listEl=document.getElementById('rapt-list');
+    const refreshBtn=document.getElementById('btn-refresh');
+    const tokenBtn=document.getElementById('btn-token');
+    const tokenStatus=document.getElementById('token-status');
+    const tokenData=document.getElementById('token-data');
+
+    refreshBtn.addEventListener('click',loadDevices);
+    tokenBtn.addEventListener('click',loadToken);
+    loadToken();
+    loadDevices();
+
+    async function loadDevices(){
+      statusEl.textContent='⏳ Lade Daten ...';
+      listEl.textContent='';
+      try{
+        const response=await fetch('/api/rapt/profiles');
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          statusEl.textContent=`❗ HTTP ${response.status}`;
+          listEl.textContent=JSON.stringify(data,null,2);
+          return;
+        }
+        statusEl.textContent='✅ Daten geladen';
+        listEl.innerHTML = renderNodes(data);
+      }catch(error){
+        statusEl.textContent='❗ Abruf fehlgeschlagen';
+        listEl.textContent=error.message;
+      }
+    }
+
+    async function loadToken(){
+      tokenStatus.textContent='⏳ Token wird abgerufen ...';
+      tokenData.textContent='';
+      try{
+        const response=await fetch('/api/rapt/token',{method:'POST'});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          tokenStatus.textContent=`❗ HTTP ${response.status}`;
+          tokenData.textContent=JSON.stringify(data,null,2);
+          return;
+        }
+        tokenStatus.textContent='✅ Token erfolgreich geladen';
+        tokenData.innerHTML=renderNodes(data,'token');
+      }catch(error){
+        tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
+        tokenData.textContent=error.message;
+      }
+    }
+
+    function renderNodes(node,label='root'){
+      if(Array.isArray(node)){
+        if(!node.length) return `<p><strong>${label}</strong>: []</p>`;
+        return node.map((item,idx)=>renderNodes(item,`${label}[${idx}]`)).join('');
+      }
+      if(node && typeof node==='object'){
+        const entries=Object.entries(node).map(([key,val])=>renderNodes(val,key)).join('');
+        return `<details open><summary>${escapeHtml(label)}</summary>${entries}</details>`;
+      }
+      return `<p><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
+    }
+
+    function escapeHtml(str){
+      return str
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+  </script>
+</body>
+</html>
