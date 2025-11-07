@@ -30,10 +30,17 @@
   <script>
     const ring=document.getElementById('ring');
     const wrapper=document.getElementById('wrapper');
-    const N=9;let RADIUS=260;
 
-    // Pfad angepasst auf ./images/
-    const svgs=Array.from({length:9},(_,i)=>`./images/${i+1}.jpg`);
+    const galleryItems=[
+      ...Array.from({length:9},(_,i)=>({src:`./images/${i+1}.jpg`})),
+      {
+        src:'./images/aibrewgenius-icon.png',
+        link:'https://alexstuder.run.place/brew_app/'
+      }
+    ];
+
+    const N=galleryItems.length;
+    let RADIUS=260;
 
     function computeRadius(){
       const vmin=Math.min(innerWidth,innerHeight)/100;
@@ -43,15 +50,15 @@
 
     function placePhotos(){
       RADIUS=computeRadius();ring.innerHTML='';
-      for(let i=0;i<N;i++){
+      galleryItems.forEach((item,i)=>{
         const el=document.createElement('div');
         el.className='photo';el.dataset.idx=i;
-        el.style.backgroundImage=`url('${svgs[i]}')`;
+        el.style.backgroundImage=`url('${item.src}')`;
         const angle=(i/N)*360;const tilt=(i%2?-4:4);
         el.style.transform=`rotateY(${angle}deg) translateZ(${RADIUS}px) rotateY(${tilt}deg)`;
-        el.addEventListener('click',onPhotoClick);
+        el.addEventListener('click',()=>onPhotoClick(item));
         ring.appendChild(el);
-      }
+      });
     }
 
     placePhotos();
@@ -73,8 +80,12 @@
     const prevLImg=document.getElementById('prevLImg'),prevRImg=document.getElementById('prevRImg');
     let nextSide='L';
 
-    function onPhotoClick(e){
-      const bg=e.currentTarget.style.backgroundImage;
+    function onPhotoClick(item){
+      if(item.link){
+        window.open(item.link,'_blank','noopener');
+        return;
+      }
+      const bg=`url('${item.src}')`;
       if(nextSide==='L'){
         prevLImg.style.backgroundImage=bg;
         prevL.classList.add('show');
