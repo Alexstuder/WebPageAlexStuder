@@ -14,6 +14,8 @@ const RAPT_API_KEY = process.env.RAPT_API_KEY;
 const RAPT_TOKEN_ENDPOINT = process.env.RAPT_TOKEN_ENDPOINT ?? 'https://id.rapt.io/connect/token';
 const RAPT_API_BASE = process.env.RAPT_API_BASE ?? 'https://api.rapt.io';
 const RAPT_PROFILE_ENDPOINT = process.env.RAPT_PROFILE_ENDPOINT ?? '/api/Profiles/GetProfiles';
+const RAPT_HYDR_ENDPOINT = process.env.RAPT_HYDR_ENDPOINT ?? '/api/Hydrometers/GetHydrometers';
+const RAPT_TELEMETRY_ENDPOINT = process.env.RAPT_TELEMETRY_ENDPOINT ?? '/api/Hydrometers/GetTelemetry';
 const PORT = Number(process.env.PORT ?? 3000);
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*';
 
@@ -43,6 +45,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/api/rapt/profiles' && req.method === 'GET') {
     await handleRaptProfilesRequest(res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/telemetry' && req.method === 'GET') {
+    await handleRaptTelemetryRequest(res);
     return;
   }
 
@@ -157,6 +163,98 @@ async function handleRaptProfilesRequest(res) {
     console.error('RAPT devices error:', error);
     const status = error.statusCode ?? 500;
     respondJson(res, status, { error: error.message ?? 'RAPT devices request failed.' });
+  }
+}
+
+async function handleRaptTelemetryRequest(res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    if (!token?.access_token) {
+      respondJson(res, 502, { error: 'Token response invalid.' });
+      return;
+    }
+
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const hydromRes = await fetch(`${base}${RAPT_HYDR_ENDPOINT}`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const hydromData = await hydromRes.json().catch(() => []);
+    if (!hydromRes.ok) {
+      respondJson(res, hydromRes.status, hydromData);
+      return;
+    }
+
+    const hydrometers = Array.isArray(hydromData) ? hydromData : [];
+    const nowIso = new Date().toISOString();
+    const rows = [];
+
+    for (const hydrometer of hydrometers) {
+      const hydrometerId =
+        hydrometer?.hydrometerId ||
+        hydrometer?.HydrometerId ||
+        hydrometer?.id ||
+        hydrometer?.Id;
+      const startDate =
+        hydrometer?.startDate ||
+        hydrometer?.StartDate ||
+        hydrometer?.createdOn ||
+        hydrometer?.CreatedOn;
+      if (!hydrometerId || !startDate) {
+        continue;
+      }
+
+      const telemetryUrl = new URL(`${base}${RAPT_TELEMETRY_ENDPOINT}`);
+      telemetryUrl.searchParams.set('hydrometerId', hydrometerId);
+      telemetryUrl.searchParams.set('startDate', startDate);
+      telemetryUrl.searchParams.set('endDate', nowIso);
+
+      const teleRes = await fetch(telemetryUrl, {
+        headers: {
+          'Authorization': `Bearer ${token.access_token}`,
+          'Accept': 'application/json',
+        },
+      });
+      const teleData = await teleRes.json().catch(() => []);
+      if (!teleRes.ok) {
+        rows.push({
+          hydrometerId,
+          error: teleData,
+        });
+        continue;
+      }
+
+      const entries = Array.isArray(teleData) ? teleData : [teleData];
+      for (const entry of entries) {
+        rows.push({
+          hydrometerId,
+          createdOn: entry?.createdOn || entry?.CreatedOn || null,
+          temperature: entry?.temperature ?? entry?.Temperature ?? null,
+          gravity: entry?.gravity ?? entry?.Gravity ?? null,
+          gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
+          battery: entry?.battery ?? entry?.Battery ?? null,
+          macAddress: entry?.macAddress || entry?.MacAddress || null,
+        });
+      }
+    }
+
+    rows.sort((a, b) => {
+      const da = new Date(a.createdOn || 0).getTime();
+      const db = new Date(b.createdOn || 0).getTime();
+      return da - db;
+    });
+
+    respondJson(res, 200, { rows, generatedAt: nowIso });
+  } catch (error) {
+    console.error('RAPT telemetry error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message ?? 'RAPT telemetry request failed.' });
   }
 }
 

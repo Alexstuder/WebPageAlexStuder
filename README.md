@@ -48,6 +48,7 @@ Kurzanleitung (Landing Page):
 - Öffentliche AiBrewGenius-Web-App: `https://alexstuder.run.place/brew_app/`
 - RAPT API Explorer lokal via `rapt.html` oder live über deine Domain.
   - Enthält einen integrierten Token-Generator (`https://id.rapt.io/connect/token`), der deinen Benutzer/API-Key nutzt und den erhaltenen JWT automatisch als Bearer-Token einträgt.
+  - Ruft automatisch `GetProfiles`, `GetHydrometers`, `GetTelemetry` ab und zeigt Token + Messwerte tabellarisch an.
 - Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).
   - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
 - Workflow-Schritte:
