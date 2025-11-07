@@ -34,7 +34,7 @@ Kurzanleitung (Landing Page):
    cd flutter_brew_assistent
    flutter run -d chrome
    ```
-5. Für Produktions-Deploy den Proxy auf dem Server laufen lassen und `PROXY_URL` auf die öffentliche Proxy-URL setzen.
+5. Für Produktions-Deploy den Proxy auf dem Server laufen lassen und `PROXY_URL` auf die öffentliche Proxy-URL setzen. Wenn du den Web-Build manuell erstellst, nutze `flutter build web --wasm --base-href /brew_app/`, damit alle Assets unter dem Unterpfad gefunden werden.
 
 ## Deployment via GitHub Actions
 
@@ -47,6 +47,7 @@ Kurzanleitung (Landing Page):
   - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
 - Workflow-Schritte:
   1. Flutter `.env` mit `PROXY_URL` erzeugen, Build erstellen und nach `${DEPLOY_PATH}` hochladen.
+     - Da die Web-App unter `/brew_app/` ausgeliefert wird, verwendet der Workflow automatisch `flutter build web --wasm --base-href /brew_app/`.
   2. Proxy-Verzeichnis nach `${DEPLOY_PATH}/proxy` syncen.
   3. Per SSH eine `.env` im Proxy-Ordner schreiben (`OPENAI_API_KEY` + optional `CORS_ORIGIN`).
 - Auf dem Server muss ein Node-Prozess (z.B. systemd/pm2) `node proxy/server.js` im `proxy`-Ordner starten bzw. nach jedem Deploy neu starten. Der Workflow erzeugt nur Dateien; das Starten/Neustarten des Dienstes muss serverseitig konfiguriert sein.
