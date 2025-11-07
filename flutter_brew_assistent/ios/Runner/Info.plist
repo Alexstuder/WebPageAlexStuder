@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Flutter Brew Assistent</string>
+	<string>AiBrewGenius</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,6 +15,8 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
+	<string>AiBrewGenius</string>
+	<key>CFBundleDisplayName</key>
 	<string>AiBrewGenius</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>

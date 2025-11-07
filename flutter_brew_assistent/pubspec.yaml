@@ -10,15 +10,31 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
-  flutter_dotenv: ^5.1.0
+  flutter_dotenv: ^6.0.0
   url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/icon.png
+
+flutter_launcher_icons:
+  image_path: "assets/icon.png"
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: "assets/icon.png"
+    background_color: "#0F172A"
+    theme_color: "#2563EB"
+  macos:
+    generate: true
+  windows:
+    generate: true

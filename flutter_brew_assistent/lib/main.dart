@@ -107,6 +107,14 @@ class _BrewHomePageState extends State<BrewHomePage> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Image.asset(
+                    'assets/icon.png',
+                    height: 96,
+                    semanticLabel: 'AiBrewGenius',
+                  ),
+                ),
                 TextField(
                   controller: _promptController,
                   maxLines: 5,
