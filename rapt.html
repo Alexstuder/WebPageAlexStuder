@@ -7,15 +7,15 @@
   <link rel="stylesheet" href="css/styles.css?v=4" />
   <style>
     body {background:#020617;color:#f1f5f9;}
-    .rapt-panel {max-width: 960px;margin: 0 auto;background: rgba(15,23,42,0.9);padding: 28px;border-radius: 20px;box-shadow: 0 25px 60px rgba(0,0,0,0.45);backdrop-filter: blur(10px);} 
+    .rapt-panel {max-width: 1100px;margin: 0 auto;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);} 
     .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;} 
     .rapt-status {margin-bottom:12px;color:#fbbf24;} 
-    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;margin-bottom:10px;padding:10px;background:#0b1120;} 
+    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;margin-bottom:10px;padding:16px;background:#0b1120;} 
     summary {cursor:pointer;font-weight:600;color:#bae6fd;} 
     .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;} 
     .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;} 
     code {color:#facc15;} 
-    canvas {max-height:420px;}
+    #telemetry-chart {width:100%;max-height:none;height:520px;}
   </style>
 </head>
 <body data-page="rapt">
@@ -27,15 +27,15 @@
     </header>
 
     <section class="gpt-preview">
-      <div class="rapt-panel" style="margin-bottom:28px;">
-        <h2>Aktueller Bearer Token</h2>
-        <p>Serverseitig generiert (60 Minuten gültig). Kein Benutzer-Eingriff nötig.</p>
+      <details open class="rapt-panel" style="margin-bottom:28px;">
+        <summary>Aktueller Bearer Token (60 min gültig)</summary>
+        <p style="margin:12px 0;">Serverseitig generiert – kein Benutzer-Eingriff nötig.</p>
         <div class="rapt-actions">
-          <button class="btn" id="btn-token">Token anzeigen</button>
+          <button class="btn" id="btn-token">Token aktualisieren</button>
         </div>
         <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
         <div id="token-data" class="rapt-result">-</div>
-      </div>
+      </details>
 
       <div class="rapt-panel">
         <div class="rapt-meta">
@@ -179,9 +179,9 @@
             tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
           },
           scales:{
-            y1:{type:'linear',position:'left',title:{display:true,text:'°C',color:'#fbbf24'},ticks:{color:'#fbbf24'},grid:{color:'rgba(251,191,36,0.1)'}},
-            y2:{type:'linear',position:'right',title:{display:true,text:'Gravity',color:'#22d3ee'},ticks:{color:'#22d3ee'},grid:{drawOnChartArea:false}},
-            x:{ticks:{color:'#cbd5f5',maxRotation:45,minRotation:45}}
+            y1:{type:'linear',position:'left',min:0,max:30,title:{display:true,text:'°C',color:'#fbbf24'},ticks:{color:'#fbbf24'},grid:{color:'rgba(251,191,36,0.1)'}},
+            y2:{type:'linear',position:'right',min:1.0,max:1.1,title:{display:true,text:'Gravity',color:'#22d3ee'},ticks:{color:'#22d3ee'},grid:{drawOnChartArea:false}},
+            x:{ticks:{color:'#cbd5f5',callback:(value,index)=>{const label=labels[index]||'';return label.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,16);},maxRotation:0,minRotation:0}}
           }
         }
       };
