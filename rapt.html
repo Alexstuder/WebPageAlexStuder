@@ -15,11 +15,7 @@
     .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;} 
     .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;} 
     code {color:#facc15;} 
-    table {width:100%;border-collapse: collapse;margin-top:8px;}
-    th, td {padding:8px;border-bottom:1px solid rgba(148,163,184,0.2);text-align:left;font-size:14px;}
-    th {color:#a5b4fc;font-size:12px;text-transform: uppercase;letter-spacing:0.05em;}
-    tbody tr:hover {background:rgba(148,163,184,0.08);}
-    .table-wrapper {max-height:420px;overflow:auto;}
+    canvas {max-height:420px;}
   </style>
 </head>
 <body data-page="rapt">
@@ -43,42 +39,14 @@
 
       <div class="rapt-panel">
         <div class="rapt-meta">
-          <span>🌐 API: <strong>https://api.rapt.io/api/Profiles/GetProfiles</strong></span>
-          <span>🔐 Auth: Bearer Token (vom Proxy generiert)</span>
-        </div>
-        <div class="rapt-actions">
-          <button class="btn primary" id="btn-refresh">Profile laden</button>
-        </div>
-        <div class="rapt-status" id="rapt-status">⏳ Lade Daten ...</div>
-        <div id="rapt-list">Noch keine Daten.</div>
-      </div>
-
-      <div class="rapt-panel">
-        <div class="rapt-meta">
           <span>📈 Telemetrie: <strong>https://api.rapt.io/api/Hydrometers/GetTelemetry</strong></span>
-          <span>⏱️ Chronologisch nach <code>createdOn</code></span>
+          <span>⏱️ Zeitachse nach <code>createdOn</code></span>
         </div>
         <div class="rapt-actions">
           <button class="btn primary" id="btn-telemetry">Telemetry laden</button>
         </div>
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Hydrometer</th>
-                <th>Zeitpunkt</th>
-                <th>Temperatur</th>
-                <th>Gravity</th>
-                <th>Gravity Δ</th>
-                <th>Batterie</th>
-              </tr>
-            </thead>
-            <tbody id="telemetry-body">
-              <tr><td colspan="6">Keine Daten.</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <canvas id="telemetry-chart"></canvas>
       </div>
     </section>
 
@@ -87,41 +55,19 @@
     </footer>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const statusEl=document.getElementById('rapt-status');
-    const listEl=document.getElementById('rapt-list');
-    const refreshBtn=document.getElementById('btn-refresh');
     const tokenBtn=document.getElementById('btn-token');
     const tokenStatus=document.getElementById('token-status');
     const tokenData=document.getElementById('token-data');
     const telemetryBtn=document.getElementById('btn-telemetry');
     const telemetryStatus=document.getElementById('telemetry-status');
-    const telemetryBody=document.getElementById('telemetry-body');
+    const chartCanvas=document.getElementById('telemetry-chart');
+    let telemetryChart=null;
 
-    refreshBtn.addEventListener('click',loadDevices);
     tokenBtn.addEventListener('click',loadToken);
     telemetryBtn.addEventListener('click',loadTelemetry);
     loadToken();
-    loadDevices();
-
-    async function loadDevices(){
-      statusEl.textContent='⏳ Lade Daten ...';
-      listEl.textContent='';
-      try{
-        const response=await fetch('/api/rapt/profiles');
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok){
-          statusEl.textContent=`❗ HTTP ${response.status}`;
-          listEl.textContent=JSON.stringify(data,null,2);
-          return;
-        }
-        statusEl.textContent='✅ Daten geladen';
-        listEl.innerHTML = renderNodes(data);
-      }catch(error){
-        statusEl.textContent='❗ Abruf fehlgeschlagen';
-        listEl.textContent=error.message;
-      }
-    }
 
     async function loadToken(){
       tokenStatus.textContent='⏳ Token wird abgerufen ...';
@@ -166,39 +112,86 @@
 
     async function loadTelemetry(){
       telemetryStatus.textContent='⏳ Telemetrie wird geladen ...';
-      telemetryBody.innerHTML='<tr><td colspan="6">Lade ...</td></tr>';
       try{
         const response=await fetch('/api/rapt/telemetry');
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
-          telemetryBody.innerHTML=`<tr><td colspan="6"><pre>${escapeHtml(JSON.stringify(data,null,2))}</pre></td></tr>`;
+          renderChart([]);
           return;
         }
         const rows=Array.isArray(data.rows)?data.rows:[];
         if(!rows.length){
           telemetryStatus.textContent='Keine Telemetriedaten vorhanden.';
-          telemetryBody.innerHTML='<tr><td colspan="6">Keine Daten.</td></tr>';
+          renderChart([]);
           return;
         }
         telemetryStatus.textContent=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
-        telemetryBody.innerHTML=rows.map(row=>{
-          const temp = row.temperature!=null ? Number(row.temperature).toFixed(2) : '-';
-          const gravity = row.gravity!=null ? Number(row.gravity).toFixed(3) : '-';
-          const gravVel = row.gravityVelocity!=null ? Number(row.gravityVelocity).toFixed(3) : '-';
-          const battery = row.battery!=null ? Number(row.battery).toFixed(1) : '-';
-          return `<tr>
-            <td>${escapeHtml(row.hydrometerId || '')}</td>
-            <td>${escapeHtml(row.createdOn || '')}</td>
-            <td>${temp}</td>
-            <td>${gravity}</td>
-            <td>${gravVel}</td>
-            <td>${battery}</td>
-          </tr>`;
-        }).join('');
+        renderChart(rows);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
-        telemetryBody.innerHTML=`<tr><td colspan="6">${escapeHtml(error.message)}</td></tr>`;
+        renderChart([]);
+      }
+    }
+
+    function renderChart(rows){
+      const labels=rows.map(r=>r.createdOn || '');
+      const temps=rows.map(r=>r.temperature ?? null);
+      const gravs=rows.map(r=>r.gravity ?? null);
+      const gravVel=rows.map(r=>r.gravityVelocity ?? null);
+
+      const datasets=[
+        {
+          label:'Temperatur (°C)',
+          data:temps,
+          borderColor:'#fbbf24',
+          backgroundColor:'rgba(251,191,36,0.15)',
+          yAxisID:'y1',
+          spanGaps:true,
+        },
+        {
+          label:'Gravity',
+          data:gravs,
+          borderColor:'#22d3ee',
+          backgroundColor:'rgba(34,211,238,0.1)',
+          yAxisID:'y2',
+          spanGaps:true,
+        },
+        {
+          label:'Gravity Δ',
+          data:gravVel,
+          borderColor:'#f472b6',
+          borderDash:[5,5],
+          backgroundColor:'rgba(244,114,182,0.1)',
+          yAxisID:'y2',
+          spanGaps:true,
+        }
+      ];
+
+      const config={
+        type:'line',
+        data:{labels,datasets},
+        options:{
+          responsive:true,
+          interaction:{mode:'index',intersect:false},
+          plugins:{
+            legend:{position:'bottom',labels:{color:'#f1f5f9'}},
+            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
+          },
+          scales:{
+            y1:{type:'linear',position:'left',title:{display:true,text:'°C',color:'#fbbf24'},ticks:{color:'#fbbf24'},grid:{color:'rgba(251,191,36,0.1)'}},
+            y2:{type:'linear',position:'right',title:{display:true,text:'Gravity',color:'#22d3ee'},ticks:{color:'#22d3ee'},grid:{drawOnChartArea:false}},
+            x:{ticks:{color:'#cbd5f5',maxRotation:45,minRotation:45}}
+          }
+        }
+      };
+
+      if(telemetryChart){
+        telemetryChart.data=config.data;
+        telemetryChart.options=config.options;
+        telemetryChart.update();
+      } else {
+        telemetryChart=new Chart(chartCanvas.getContext('2d'),config);
       }
     }
   </script>
