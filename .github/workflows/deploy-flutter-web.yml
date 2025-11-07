@@ -51,7 +51,7 @@ jobs:
       - name: Deploy static site root to VPS
         run: |
           PORT=${SSH_PORT:-22}
-          rsync -avz --delete \
+          rsync -avz \
             --exclude '.git/' \
             --exclude 'flutter_brew_assistent/' \
             --exclude 'proxy/' \
