@@ -1,6 +1,6 @@
 {
-    "name": "flutter_brew_assistent",
-    "short_name": "flutter_brew_assistent",
+    "name": "BrewGenius",
+    "short_name": "BrewGenius",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

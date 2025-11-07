@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'services/openai_service.dart';
 
@@ -15,7 +16,7 @@ class BrewMateApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bier Rezept Ersteller',
+      title: 'BrewGenius',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         colorScheme: const ColorScheme.dark(
@@ -79,6 +80,16 @@ class _BrewHomePageState extends State<BrewHomePage> {
     }
   }
 
+  Future<void> _openHomepage() async {
+    final uri = Uri.parse('https://alexstuder.run.place/');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Konnte Hauptseite nicht öffnen.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -86,7 +97,7 @@ class _BrewHomePageState extends State<BrewHomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bier Rezept Assistent'),
+        title: const Text('BrewGenius'),
         centerTitle: true,
       ),
       body: Center(
@@ -114,6 +125,15 @@ class _BrewHomePageState extends State<BrewHomePage> {
                     icon: const Icon(Icons.local_drink),
                     label: Text(
                         _isLoading ? 'Braut Rezept …' : 'Rezept erstellen'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openHomepage,
+                    icon: const Icon(Icons.home),
+                    label: const Text('Zur Hauptseite'),
                   ),
                 ),
                 const SizedBox(height: 16),

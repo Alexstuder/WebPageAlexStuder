@@ -1,5 +1,5 @@
-name: flutter_brew_assistent
-description: Ein schlanker Assistent, der Bierrezepte über die OpenAI API generiert.
+name: brew_genius
+description: BrewGenius – dein smarter Brau-Assistent mit OpenAI.
 publish_to: "none"
 version: 0.1.0+1
 
@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   http: ^1.2.0
   flutter_dotenv: ^5.1.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

@@ -9,7 +9,7 @@ Projektstruktur (empfohlen)
 ├─ assets/
 │  ├─ images/        (Bilder)
 │  └─ fonts/         (falls lokal benötigt)
-├─ flutter_brew_assistent/   (Flutter-Web-App)
+├─ flutter_brew_assistent/   (Flutter-Web-App "BrewGenius")
 └─ proxy/                    (Node Proxy für OpenAI)
 
 Kurzanleitung (Landing Page):
@@ -34,7 +34,7 @@ Kurzanleitung (Landing Page):
    cd flutter_brew_assistent
    flutter run -d chrome
    ```
-5. Für Produktions-Deploy den Proxy auf dem Server laufen lassen und `PROXY_URL` auf die öffentliche Proxy-URL setzen. Wenn du den Web-Build manuell erstellst, nutze `flutter build web --wasm --base-href /brew_app/`, damit alle Assets unter dem Unterpfad gefunden werden.
+5. Für Produktions-Deploy den Proxy auf dem Server laufen lassen und `PROXY_URL` auf die öffentliche BrewGenius-Proxy-URL setzen. Wenn du den Web-Build manuell erstellst, nutze `flutter build web --wasm --base-href /brew_app/`, damit alle Assets unter dem Unterpfad gefunden werden.
 
 ## Deployment via GitHub Actions
 
@@ -43,6 +43,7 @@ Kurzanleitung (Landing Page):
   - `DEPLOY_PATH` (Root-Verzeichnis auf dem Server)
   - `OPENAI_API_KEY` (wird in `proxy/.env` geschrieben)
 - `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+- Öffentliche BrewGenius-Web-App: `https://alexstuder.run.place/brew_app/`
 - Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).
   - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
 - Workflow-Schritte:
