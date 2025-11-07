@@ -28,7 +28,7 @@ Kurzanleitung (Landing Page):
    npm start   # nutzt node server.js
    ```
 3. Flutter-Web-App konfigurieren:
-   - In `flutter_brew_assistent/.env` die Proxy-URL setzen, z.B. `PROXY_URL=http://localhost:3000/api/brew`.
+- In `flutter_brew_assistent/.env` die Proxy-URL setzen, z.B. `PROXY_URL=http://localhost:3000/api/brew`.
 4. Flutter lokal starten:
    ```bash
    cd flutter_brew_assistent
@@ -42,7 +42,8 @@ Kurzanleitung (Landing Page):
   - `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT` (wie bisher)
   - `DEPLOY_PATH` (Root-Verzeichnis auf dem Server)
   - `OPENAI_API_KEY` (wird in `proxy/.env` geschrieben)
-  - `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+- `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+- Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).
   - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
 - Workflow-Schritte:
   1. Flutter `.env` mit `PROXY_URL` erzeugen, Build erstellen und nach `${DEPLOY_PATH}` hochladen.
