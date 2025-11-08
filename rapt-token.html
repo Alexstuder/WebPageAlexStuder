@@ -6,6 +6,7 @@
   <title>AiBrewGenius · RAPT Bearer</title>
   <link rel="stylesheet" href="css/styles.css?v=4" />
   <style>
+    html,body {min-height:100%;overflow:auto;}
     body {background:#020617;color:#f1f5f9;}
     .rapt-stack {display:flex;flex-direction:column;gap:20px;}
     .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
@@ -15,6 +16,8 @@
     details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;padding:16px;background:#0b1120;margin-bottom:12px;}
     summary {cursor:pointer;font-weight:600;color:#bae6fd;}
     code {color:#facc15;}
+    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
+    .btn.ghost:hover {background:rgba(148,163,184,0.1);}
   </style>
 </head>
 <body data-page="rapt">
@@ -29,6 +32,7 @@
       <div class="rapt-panel">
         <div class="rapt-actions">
           <button class="btn primary" id="btn-token">Token aktualisieren</button>
+          <a class="btn ghost" href="https://api.rapt.io/swagger/index.html" target="_blank" rel="noopener">RAPT OpenAPI</a>
           <a class="btn" href="rapt.html">Zurück zum Dashboard</a>
         </div>
         <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>

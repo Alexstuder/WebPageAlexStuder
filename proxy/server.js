@@ -234,6 +234,7 @@ async function handleRaptTelemetryRequest(res) {
       for (const entry of entries) {
         rows.push({
           hydrometerId,
+          startDate: entry?.startDate || entry?.StartDate || startDate || null,
           createdOn: entry?.createdOn || entry?.CreatedOn || null,
           temperature: entry?.temperature ?? entry?.Temperature ?? null,
           gravity: entry?.gravity ?? entry?.Gravity ?? null,
@@ -245,8 +246,8 @@ async function handleRaptTelemetryRequest(res) {
     }
 
     rows.sort((a, b) => {
-      const da = new Date(a.createdOn || 0).getTime();
-      const db = new Date(b.createdOn || 0).getTime();
+      const da = new Date(a.startDate || a.createdOn || 0).getTime();
+      const db = new Date(b.startDate || b.createdOn || 0).getTime();
       return da - db;
     });
 

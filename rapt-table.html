@@ -43,7 +43,7 @@
           <table id="telemetry-table">
             <thead>
               <tr>
-                <th><button type="button" data-field="createdOn">Zeitpunkt <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="startDate">Startdatum <span class="sort-indicator">↕</span></button></th>
                 <th><button type="button" data-field="temperature">Temperatur (°C) <span class="sort-indicator">↕</span></button></th>
                 <th><button type="button" data-field="gravity">Gravity <span class="sort-indicator">↕</span></button></th>
                 <th><button type="button" data-field="gravityVelocity">Gravity Velocity <span class="sort-indicator">↕</span></button></th>
@@ -70,7 +70,7 @@
     const sortButtons=document.querySelectorAll('th button[data-field]');
 
     let tableRows=[];
-    let currentSort={field:'createdOn',direction:'desc'};
+    let currentSort={field:'startDate',direction:'desc'};
 
     reloadBtn.addEventListener('click',loadTelemetry);
     downloadBtn.addEventListener('click',downloadCsv);
@@ -109,7 +109,7 @@
         currentSort.direction=currentSort.direction==='asc'?'desc':'asc';
       }else{
         currentSort.field=field;
-        currentSort.direction=field==='createdOn'?'desc':'asc';
+        currentSort.direction=field==='startDate'?'desc':'asc';
       }
       renderTable();
       updateSortIndicators();
@@ -123,7 +123,7 @@
       const sorted=[...tableRows].sort((a,b)=>compareValues(a,b,currentSort.field,currentSort.direction));
       tableBody.innerHTML=sorted.map(row=>`
         <tr>
-          <td>${formatTimestamp(row.createdOn)}</td>
+          <td>${formatTimestamp(row.startDate || row.createdOn)}</td>
           <td>${formatNumber(row.temperature,'°C')}</td>
           <td>${formatNumber(row.gravity)}</td>
           <td>${formatNumber(row.gravityVelocity)}</td>
@@ -132,11 +132,19 @@
     }
 
     function compareValues(a,b,field,direction){
-      const aVal=normalizeValue(a?.[field]);
-      const bVal=normalizeValue(b?.[field]);
+      const aVal=normalizeValue(resolveFieldValue(a,field));
+      const bVal=normalizeValue(resolveFieldValue(b,field));
       if(aVal === bVal) return 0;
       const order=aVal > bVal ? 1 : -1;
       return direction==='asc'?order:-order;
+    }
+
+    function resolveFieldValue(row,field){
+      if(!row) return undefined;
+      if(field==='startDate'){
+        return row.startDate || row.createdOn;
+      }
+      return row[field];
     }
 
     function normalizeValue(value){
@@ -174,9 +182,9 @@
 
     function downloadCsv(){
       if(!tableRows.length) return;
-      const columns=['createdOn','temperature','gravity','gravityVelocity'];
+      const columns=['startDate','temperature','gravity','gravityVelocity'];
       const header=columns.join(';');
-      const lines=tableRows.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
+      const lines=tableRows.map(row=>columns.map(col=>escapeCsv(resolveFieldValue(row,col))).join(';'));
       const csv=[header,...lines].join('\\r\\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const url=URL.createObjectURL(blob);

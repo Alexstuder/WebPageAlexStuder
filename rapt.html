@@ -6,6 +6,7 @@
   <title>AiBrewGenius · RAPT Dashboard</title>
   <link rel="stylesheet" href="css/styles.css?v=4" />
   <style>
+    html,body {min-height:100%;overflow:auto;}
     body {background:#020617;color:#f1f5f9;}
     .rapt-stack {display:flex;flex-direction:column;gap:20px;}
     .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
@@ -19,8 +20,8 @@
     .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
     .chart-card h3 {margin:0 0 8px;font-size:18px;font-weight:600;}
     .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
-    .chart-frame {height:clamp(320px,45vh,520px);}
-    canvas {width:100%;height:100%;}
+    .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
+    .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
   </style>
 </head>
 <body data-page="rapt">
@@ -35,7 +36,7 @@
       <div class="rapt-panel">
         <div class="rapt-meta">
           <span>📈 Telemetrie: <strong>https://api.rapt.io/api/Hydrometers/GetTelemetry</strong></span>
-          <span>⏱️ Zeitachse nach <code>createdOn</code></span>
+          <span>⏱️ Zeitachse nach <code>startDate</code></span>
         </div>
         <div class="rapt-links">
           <a class="btn ghost" href="rapt-token.html">Bearer-Details</a>
@@ -103,7 +104,7 @@
     function renderChart(rows){
       latestTelemetry=rows;
       downloadBtn.disabled=!rows.length;
-      const labels=rows.map(r=>r.createdOn || '');
+      const labels=rows.map(r=>r.startDate || r.createdOn || '');
       const datasets=[
         {
           label:'Temperatur (°C)',
@@ -188,7 +189,7 @@
 
     function downloadCsv(){
       if(!latestTelemetry.length) return;
-      const columns=['createdOn','temperature','gravity','gravityVelocity'];
+      const columns=['startDate','temperature','gravity','gravityVelocity'];
       const header=columns.join(';');
       const lines=latestTelemetry.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
       const csv=[header,...lines].join('\\r\\n');
