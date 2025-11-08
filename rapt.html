@@ -7,15 +7,16 @@
   <link rel="stylesheet" href="css/styles.css?v=4" />
   <style>
     body {background:#020617;color:#f1f5f9;}
-    .rapt-panel {max-width: 1100px;margin: 0 auto;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);} 
+    .rapt-stack {display:flex;flex-direction:column;gap:20px;}
+    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);} 
     .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;} 
     .rapt-status {margin-bottom:12px;color:#fbbf24;} 
-    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;margin-bottom:10px;padding:16px;background:#0b1120;} 
+    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;padding:16px;background:#0b1120;} 
     summary {cursor:pointer;font-weight:600;color:#bae6fd;} 
     .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;} 
     .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;} 
     code {color:#facc15;} 
-    #telemetry-chart {width:100%;max-height:none;height:520px;}
+    #telemetry-chart {width:100%;max-height:none;height:680px;}
   </style>
 </head>
 <body data-page="rapt">
@@ -26,8 +27,8 @@
       <p>Die Seite ruft serverseitig die RAPT REST-API auf (Nutzerdaten aus der sicheren Proxy-Konfiguration) und zeigt die Ergebnisse als aufklappbare Liste.</p>
     </header>
 
-    <section class="gpt-preview">
-      <details open class="rapt-panel" style="margin-bottom:28px;">
+    <section class="gpt-preview rapt-stack">
+      <details open class="rapt-panel">
         <summary>Aktueller Bearer Token (60 min gültig)</summary>
         <p style="margin:12px 0;">Serverseitig generiert – kein Benutzer-Eingriff nötig.</p>
         <div class="rapt-actions">
