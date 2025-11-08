@@ -39,17 +39,11 @@
 <body data-page="rapt">
   <main class="gpt-shell">
     <header class="gpt-head">
-      <div class="gpt-badge">Automatisch</div>
-      <h1>RAPT Geräteübersicht</h1>
-      <p>Die Seite ruft serverseitig die RAPT REST-API auf (Nutzerdaten aus der sicheren Proxy-Konfiguration) und visualisiert die Messwerte je Metrik.</p>
+      <h1 id="page-title">Gesammelte Telemetrie</h1>
     </header>
 
     <section class="gpt-preview rapt-stack">
       <div class="rapt-panel">
-        <div class="rapt-meta">
-          <span>📈 Telemetrie: <strong>https://api.rapt.io/api/Hydrometers/GetTelemetry</strong></span>
-          <span>⏱️ Zeitachse nach <code>startDate</code></span>
-        </div>
         <div class="rapt-links">
           <a class="btn ghost" href="rapt-token.html">Bearer-Details</a>
           <a class="btn ghost" href="rapt-table.html">Tabellenansicht</a>
@@ -62,7 +56,7 @@
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
         <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
         <div class="chart-card">
-          <h3 id="profile-title">Gesammelte Telemetrie</h3>
+          <h3 id="profile-title"></h3>
           <div class="chart-frame">
             <canvas id="telemetry-chart"></canvas>
           </div>
@@ -125,6 +119,7 @@
     const downloadBtn=document.getElementById('btn-download');
     const chartCanvas=document.getElementById('telemetry-chart');
     const profileTitle=document.getElementById('profile-title');
+    const pageTitle=document.getElementById('page-title');
     const summaryTemp=document.getElementById('summary-temp');
     const summaryGravity=document.getElementById('summary-gravity');
     let telemetryChart=null;
@@ -199,6 +194,11 @@
       latestTelemetry=rows;
       downloadBtn.disabled=!rows.length;
       const labels=rows.map(r=>r.startDate || '');
+      const gravityValues=rows
+        .map(r=>normalizeGravity(r?.gravity))
+        .filter(v=>v!==null && Number.isFinite(v));
+      const gravityMax=gravityValues.length?Math.max(...gravityValues):1.05;
+      const gravityMin=1.0;
       const datasets=[
         {
           label:'Temperatur (°C)',
@@ -255,8 +255,8 @@
             yGravity:{
               type:'linear',
               position:'right',
-              min:1.0,
-              max:1.2,
+              min:gravityMin,
+              max:Math.max(gravityMin,gravityMax),
               grid:{drawOnChartArea:false},
               ticks:{color:'#ef4444'},
               title:{display:true,text:'Gravity',color:'#ef4444'}
@@ -317,7 +317,10 @@
 
     function updateProfileHeading(name){
       if(profileTitle){
-        profileTitle.textContent=name || 'Gesammelte Telemetrie';
+        profileTitle.textContent=name || '';
+      }
+      if(pageTitle){
+        pageTitle.textContent=name || 'Gesammelte Telemetrie';
       }
     }
 
