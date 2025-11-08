@@ -14,7 +14,8 @@
     .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;}
     .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
     .rapt-links {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
-    .rapt-status {margin-bottom:12px;color:#fbbf24;}
+    .rapt-status {margin-bottom:8px;color:#fbbf24;}
+    .rapt-range {margin-bottom:16px;font-size:14px;color:#cbd5f5;}
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
     .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
@@ -47,6 +48,7 @@
           <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
         </div>
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
+        <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
         <div class="chart-card">
           <h3>Gesammelte Telemetrie</h3>
           <p>Zwei Linien (Temperatur & Gravity) teilen sich ein Diagramm, behalten aber eigene Skalen.</p>
@@ -66,6 +68,7 @@
   <script>
     const telemetryBtn=document.getElementById('btn-telemetry');
     const telemetryStatus=document.getElementById('telemetry-status');
+    const telemetryRange=document.getElementById('telemetry-range');
     const downloadBtn=document.getElementById('btn-download');
     const chartCanvas=document.getElementById('telemetry-chart');
     let telemetryChart=null;
@@ -79,32 +82,50 @@
 
     async function loadTelemetry(){
       telemetryStatus.textContent='⏳ Telemetrie wird geladen ...';
+      telemetryRange.textContent='Zeitraum wird geladen ...';
       try{
         const response=await fetch('/api/rapt/telemetry');
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
           renderChart([]);
+          updateRangeInfo();
           return;
         }
-        const rows=Array.isArray(data.rows)?data.rows:[];
+        const allRows=Array.isArray(data.rows)?data.rows:[];
+        const errorRows=allRows.filter(r=>r?.error);
+        if(errorRows.length){
+          console.warn('Gefilterte RAPT-Einträge wegen Fehlern:',errorRows);
+        }
+        const rows=allRows.filter(r=>!r?.error);
         if(!rows.length){
-          telemetryStatus.textContent='Keine Telemetriedaten vorhanden.';
+          telemetryStatus.textContent=errorRows.length
+            ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
+            : 'Keine Telemetriedaten vorhanden.';
           renderChart([]);
+          updateRangeInfo();
           return;
         }
-        telemetryStatus.textContent=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
+        let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
+        if(errorRows.length){
+          statusMsg+=` · ${errorRows.length} ohne Startdatum ignoriert`;
+        }
+        telemetryStatus.textContent=statusMsg;
+        const start=data.startDate || rows[0]?.startDate || '';
+        const end=data.endDate || data.generatedAt || rows[rows.length-1]?.startDate || '';
+        updateRangeInfo(start,end);
         renderChart(rows);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
         renderChart([]);
+        updateRangeInfo();
       }
     }
 
     function renderChart(rows){
       latestTelemetry=rows;
       downloadBtn.disabled=!rows.length;
-      const labels=rows.map(r=>r.startDate || r.createdOn || '');
+      const labels=rows.map(r=>r.startDate || '');
       const datasets=[
         {
           label:'Temperatur (°C)',
@@ -185,6 +206,24 @@
       const num=Number(value);
       if(!Number.isFinite(num)) return null;
       return num/1000;
+    }
+
+    function updateRangeInfo(start,end){
+      if(!telemetryRange) return;
+      if(!start && !end){
+        telemetryRange.textContent='Zeitraum unbekannt.';
+        return;
+      }
+      const startLabel=formatRangeDate(start);
+      const endLabel=formatRangeDate(end);
+      telemetryRange.textContent=`Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
+    }
+
+    function formatRangeDate(value){
+      if(!value) return '';
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString('de-CH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     }
 
     function downloadCsv(){

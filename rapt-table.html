@@ -88,8 +88,23 @@
           applyRows([]);
           return;
         }
-        const rows=Array.isArray(data.rows)?data.rows:[];
-        tableStatus.textContent=rows.length?`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`:'Keine Telemetriedaten vorhanden.';
+        const allRows=Array.isArray(data.rows)?data.rows:[];
+        const errorRows=allRows.filter(r=>r?.error);
+        const rows=allRows.filter(r=>!r?.error);
+        if(errorRows.length){
+          console.warn('Gefilterte RAPT-Einträge wegen Fehlern:',errorRows);
+        }
+        if(!rows.length){
+          tableStatus.textContent=errorRows.length
+            ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
+            : 'Keine Telemetriedaten vorhanden.';
+        }else{
+          let status=`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`;
+          if(errorRows.length){
+            status+=` · ${errorRows.length} ohne Startdatum ignoriert`;
+          }
+          tableStatus.textContent=status;
+        }
         applyRows(rows);
       }catch(error){
         tableStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
@@ -123,7 +138,7 @@
       const sorted=[...tableRows].sort((a,b)=>compareValues(a,b,currentSort.field,currentSort.direction));
       tableBody.innerHTML=sorted.map(row=>`
         <tr>
-          <td>${formatTimestamp(row.startDate || row.createdOn)}</td>
+          <td>${formatTimestamp(row.startDate)}</td>
           <td>${formatNumber(row.temperature,'°C')}</td>
           <td>${formatNumber(row.gravity)}</td>
           <td>${formatNumber(row.gravityVelocity)}</td>
@@ -142,7 +157,7 @@
     function resolveFieldValue(row,field){
       if(!row) return undefined;
       if(field==='startDate'){
-        return row.startDate || row.createdOn;
+        return row.startDate;
       }
       return row[field];
     }

@@ -202,11 +202,21 @@ async function handleRaptTelemetryRequest(res) {
         hydrometer?.id ||
         hydrometer?.Id;
       const startDate =
-        hydrometer?.startDate ||
-        hydrometer?.StartDate ||
-        hydrometer?.createdOn ||
-        hydrometer?.CreatedOn;
-      if (!hydrometerId || !startDate) {
+        hydrometer?.activeProfileSession?.startDate ||
+        hydrometer?.activeProfileSession?.StartDate;
+      if (!hydrometerId) {
+        rows.push({
+          hydrometerId: '(unbekannt)',
+          error: 'Hydrometer ohne gültige ID im Response.',
+        });
+        continue;
+      }
+
+      if (!startDate) {
+        rows.push({
+          hydrometerId,
+          error: 'Kein Startdatum in activeProfileSession gefunden.',
+        });
         continue;
       }
 
@@ -235,7 +245,6 @@ async function handleRaptTelemetryRequest(res) {
         rows.push({
           hydrometerId,
           startDate: entry?.startDate || entry?.StartDate || startDate || null,
-          createdOn: entry?.createdOn || entry?.CreatedOn || null,
           temperature: entry?.temperature ?? entry?.Temperature ?? null,
           gravity: entry?.gravity ?? entry?.Gravity ?? null,
           gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
@@ -246,12 +255,18 @@ async function handleRaptTelemetryRequest(res) {
     }
 
     rows.sort((a, b) => {
-      const da = new Date(a.startDate || a.createdOn || 0).getTime();
-      const db = new Date(b.startDate || b.createdOn || 0).getTime();
+      const da = new Date(a.startDate || 0).getTime();
+      const db = new Date(b.startDate || 0).getTime();
       return da - db;
     });
 
-    respondJson(res, 200, { rows, generatedAt: nowIso });
+    const firstStart = rows[0]?.startDate || null;
+    respondJson(res, 200, {
+      rows,
+      generatedAt: nowIso,
+      startDate: firstStart,
+      endDate: nowIso,
+    });
   } catch (error) {
     console.error('RAPT telemetry error:', error);
     const status = error.statusCode ?? 500;
