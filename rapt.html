@@ -219,6 +219,7 @@
       downloadBtn.disabled=!rows.length;
       const labels=rows.map(r=>r.startDate || '');
       Object.keys(dayTickCache).forEach(key=>delete dayTickCache[key]);
+      Object.keys(chartLabelCache).forEach(key=>delete chartLabelCache[key]);
       const gravityValues=rows
         .map(r=>normalizeGravity(r?.gravity))
         .filter(v=>v!==null && Number.isFinite(v));
@@ -298,7 +299,7 @@
               callbacks:{
                 title:items=>{
                   const idx=items[0]?.dataIndex ?? 0;
-                  const label=labels[idx] || '';
+                  const label=chartLabelCache[idx] || labels[idx] || '';
                   return formatFullTimestamp(label);
                 },
                 label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`
@@ -356,15 +357,17 @@
       if(!label) return '';
       const date=new Date(label);
       if(Number.isNaN(date.getTime())) return label;
-      const prevIndex=index-1;
-      const prevLabel=prevIndex>=0?dayTickCache[prevIndex]:null;
       const dayStr=date.toISOString().slice(0,10);
+      chartLabelCache[index]=label;
+      const prevIndex=index-1;
+      const prevDay=prevIndex>=0?dayTickCache[prevIndex]:null;
       dayTickCache[index]=dayStr;
-      if(dayStr===prevLabel) return '';
+      if(dayStr===prevDay) return '';
       return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
     }
 
     const dayTickCache={};
+    const chartLabelCache={};
 
     function formatFullTimestamp(label){
       if(!label) return '';
