@@ -66,6 +66,35 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    const dayMarkerPlugin={
+      id:'dayMarkers',
+      afterDatasetsDraw(chart){
+        const opts=chart.options?.plugins?.dayMarkers;
+        const labels=opts?.labels;
+        if(!labels?.length) return;
+        const xScale=chart.scales?.x;
+        const ctx=chart.ctx;
+        if(!xScale||!ctx) return;
+        let lastDay=null;
+        ctx.save();
+        ctx.strokeStyle=opts?.color || 'rgba(148,163,184,0.35)';
+        ctx.lineWidth=opts?.width || 1;
+        labels.forEach((label,idx)=>{
+          const day=(label||'').split('T')[0];
+          if(!day || day===lastDay) return;
+          lastDay=day;
+          const x=xScale.getPixelForValue(idx);
+          if(Number.isNaN(x)) return;
+          ctx.beginPath();
+          ctx.moveTo(x,chart.chartArea.top);
+          ctx.lineTo(x,chart.chartArea.bottom);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+    };
+    Chart.register(dayMarkerPlugin);
+
     const telemetryBtn=document.getElementById('btn-telemetry');
     const telemetryStatus=document.getElementById('telemetry-status');
     const telemetryRange=document.getElementById('telemetry-range');
@@ -130,22 +159,28 @@
         {
           label:'Temperatur (°C)',
           data:rows.map(r=>r?.temperature ?? null),
-          borderColor:'#fbbf24',
-          backgroundColor:'rgba(251,191,36,0.08)',
+          borderColor:'#3b82f6',
+          backgroundColor:'rgba(59,130,246,0.05)',
           yAxisID:'yTemp',
           fill:false,
           tension:0.25,
-          spanGaps:true
+          spanGaps:true,
+          borderWidth:1,
+          pointRadius:2,
+          pointHoverRadius:4
         },
         {
           label:'Gravity',
           data:rows.map(r=>normalizeGravity(r?.gravity)),
-          borderColor:'#22d3ee',
-          backgroundColor:'rgba(34,211,238,0.05)',
+          borderColor:'#ef4444',
+          backgroundColor:'rgba(239,68,68,0.05)',
           yAxisID:'yGravity',
           fill:false,
           tension:0.25,
-          spanGaps:true
+          spanGaps:true,
+          borderWidth:1,
+          pointRadius:2,
+          pointHoverRadius:4
         }
       ];
 
@@ -157,8 +192,9 @@
           maintainAspectRatio:false,
           interaction:{mode:'index',intersect:false},
           plugins:{
-            legend:{position:'bottom',labels:{color:'#f1f5f9'}},
-            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
+            legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
+            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}},
+            dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8}
           },
           scales:{
             yTemp:{
@@ -166,9 +202,9 @@
               position:'left',
               suggestedMin:0,
               suggestedMax:30,
-              grid:{color:'rgba(251,191,36,0.12)'},
-              ticks:{color:'#fbbf24'},
-              title:{display:true,text:'°C',color:'#fbbf24'}
+              grid:{color:'rgba(59,130,246,0.12)'},
+              ticks:{color:'#3b82f6'},
+              title:{display:true,text:'°C',color:'#3b82f6'}
             },
             yGravity:{
               type:'linear',
@@ -176,8 +212,8 @@
               min:1.0,
               max:1.2,
               grid:{drawOnChartArea:false},
-              ticks:{color:'#22d3ee'},
-              title:{display:true,text:'Gravity',color:'#22d3ee'}
+              ticks:{color:'#ef4444'},
+              title:{display:true,text:'Gravity',color:'#ef4444'}
             },
             x:{
               ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
