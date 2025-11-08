@@ -50,9 +50,12 @@
   <main class="gpt-shell">
     <section class="gpt-preview rapt-stack">
       <div class="page-panel">
-        <header class="gpt-head panel-head">
-          <div class="gpt-badge gpt-badge--brew">Currently Brewing</div>
-          <h1 id="page-title">Gesammelte Telemetrie</h1>
+        <header class="gpt-head panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+          <div>
+            <div class="gpt-badge gpt-badge--brew">Currently Brewing</div>
+            <h1 id="page-title">Gesammelte Telemetrie</h1>
+          </div>
+          <img src="images/aibrewgenius-icon.png" alt="AiBrewGenius" style="width:68px;height:68px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.45);object-fit:cover;">
         </header>
         <div class="rapt-panel">
           <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
@@ -101,21 +104,19 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const dayMarkerPlugin={
+    Chart.register({
       id:'dayMarkers',
       afterDatasetsDraw(chart){
-        const opts=chart.options?.plugins?.dayMarkers;
-        const labels=opts?.labels;
-        if(!labels?.length) return;
+        const labels=chart.config.options.plugins.dayMarkers?.labels || [];
         const xScale=chart.scales?.x;
         const ctx=chart.ctx;
-        if(!xScale||!ctx) return;
+        if(!labels.length || !xScale || !ctx) return;
         let lastDay=null;
         ctx.save();
-        ctx.strokeStyle=opts?.color || 'rgba(148,163,184,0.35)';
-        ctx.lineWidth=opts?.width || 1;
+        ctx.strokeStyle='rgba(255,255,255,0.2)';
+        ctx.lineWidth=1;
         labels.forEach((label,idx)=>{
-          const day=(label||'').split('T')[0];
+          const day=new Date(label).toDateString();
           if(!day || day===lastDay) return;
           lastDay=day;
           const x=xScale.getPixelForValue(idx);
@@ -127,8 +128,7 @@
         });
         ctx.restore();
       }
-    };
-    Chart.register(dayMarkerPlugin);
+    });
 
     const reloadBtn=document.getElementById('btn-reload');
     const telemetryStatus=document.getElementById('telemetry-status');
@@ -326,7 +326,7 @@
               title:{display:true,text:'Alkohol %',color:'#facc15'}
             },
             x:{
-              ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
+              ticks:{color:'#cbd5f5',callback:(value,index)=>formatDayLabel(labels[index]||''),autoSkip:true,maxRotation:0},
               grid:{color:'rgba(148,163,184,0.08)'}
             }
           }
@@ -342,9 +342,11 @@
       }
     }
 
-    function formatTimestamp(label){
+    function formatDayLabel(label){
       if(!label) return '';
-      return label.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,16);
+      const date=new Date(label);
+      if(Number.isNaN(date.getTime())) return label;
+      return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
     }
 
     function normalizeGravity(value){
