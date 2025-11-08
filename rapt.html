@@ -118,7 +118,8 @@
         ctx.fillStyle='rgba(255,255,255,0.65)';
         ctx.font='12px "DM Sans", sans-serif';
         ctx.textAlign='center';
-        ctx.textBaseline='top';
+        ctx.textBaseline='bottom';
+        const bottom=chart.chartArea.bottom;
         labels.forEach((label,idx)=>{
           const day=new Date(label).toDateString();
           if(!day || day===lastDay) return;
@@ -127,11 +128,11 @@
           if(Number.isNaN(x)) return;
           ctx.beginPath();
           ctx.moveTo(x,chart.chartArea.top);
-          ctx.lineTo(x,chart.chartArea.bottom);
+          ctx.lineTo(x,bottom);
           ctx.stroke();
           const labelText=formatDayShort(label);
           if(labelText){
-            ctx.fillText(labelText,x,chart.chartArea.top+4);
+            ctx.fillText(labelText,x,bottom-4);
           }
         });
         ctx.restore();
