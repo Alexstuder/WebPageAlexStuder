@@ -8,15 +8,19 @@
   <style>
     body {background:#020617;color:#f1f5f9;}
     .rapt-stack {display:flex;flex-direction:column;gap:20px;}
-    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);} 
-    .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;} 
-    .rapt-status {margin-bottom:12px;color:#fbbf24;} 
-    details {border:1px solid rgba(148,163,184,0.35);border-radius:12px;padding:16px;background:#0b1120;} 
-    summary {cursor:pointer;font-weight:600;color:#bae6fd;} 
-    .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;} 
-    .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;} 
-    code {color:#facc15;} 
-    #telemetry-chart {width:100%;max-height:none;height:680px;}
+    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
+    .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;}
+    .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;}
+    .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .rapt-links {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+    .rapt-status {margin-bottom:12px;color:#fbbf24;}
+    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
+    .btn.ghost:hover {background:rgba(148,163,184,0.08);}
+    .chart-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
+    .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
+    .chart-card h3 {margin:0 0 8px;font-size:18px;font-weight:600;}
+    .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
+    .chart-canvas {width:100%;height:360px;}
   </style>
 </head>
 <body data-page="rapt">
@@ -24,30 +28,41 @@
     <header class="gpt-head">
       <div class="gpt-badge">Automatisch</div>
       <h1>RAPT Geräteübersicht</h1>
-      <p>Die Seite ruft serverseitig die RAPT REST-API auf (Nutzerdaten aus der sicheren Proxy-Konfiguration) und zeigt die Ergebnisse als aufklappbare Liste.</p>
+      <p>Die Seite ruft serverseitig die RAPT REST-API auf (Nutzerdaten aus der sicheren Proxy-Konfiguration) und visualisiert die Messwerte je Metrik.</p>
     </header>
 
     <section class="gpt-preview rapt-stack">
-      <details open class="rapt-panel">
-        <summary>Aktueller Bearer Token (60 min gültig)</summary>
-        <p style="margin:12px 0;">Serverseitig generiert – kein Benutzer-Eingriff nötig.</p>
-        <div class="rapt-actions">
-          <button class="btn" id="btn-token">Token aktualisieren</button>
-        </div>
-        <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
-        <div id="token-data" class="rapt-result">-</div>
-      </details>
-
       <div class="rapt-panel">
         <div class="rapt-meta">
           <span>📈 Telemetrie: <strong>https://api.rapt.io/api/Hydrometers/GetTelemetry</strong></span>
           <span>⏱️ Zeitachse nach <code>createdOn</code></span>
         </div>
+        <div class="rapt-links">
+          <a class="btn ghost" href="rapt-token.html">Bearer-Details</a>
+          <a class="btn ghost" href="rapt-table.html">Tabellenansicht</a>
+        </div>
         <div class="rapt-actions">
           <button class="btn primary" id="btn-telemetry">Telemetry laden</button>
+          <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
         </div>
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
-        <canvas id="telemetry-chart"></canvas>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h3>Temperatur</h3>
+            <p>Alle Temperaturwerte in °C als eigenständiger Verlauf.</p>
+            <canvas id="chart-temperature" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Gravity</h3>
+            <p>Refraktometerwerte ohne andere Metriken vermischt.</p>
+            <canvas id="chart-gravity" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Gravity Velocity</h3>
+            <p>Bewertet den zeitlichen Verlauf der Gravity-Änderung.</p>
+            <canvas id="chart-velocity" class="chart-canvas"></canvas>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -58,58 +73,44 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const tokenBtn=document.getElementById('btn-token');
-    const tokenStatus=document.getElementById('token-status');
-    const tokenData=document.getElementById('token-data');
     const telemetryBtn=document.getElementById('btn-telemetry');
     const telemetryStatus=document.getElementById('telemetry-status');
-    const chartCanvas=document.getElementById('telemetry-chart');
-    let telemetryChart=null;
+    const downloadBtn=document.getElementById('btn-download');
+    const chartDefinitions={
+      temperature:{
+        canvas:document.getElementById('chart-temperature'),
+        field:'temperature',
+        label:'Temperatur (°C)',
+        borderColor:'#fbbf24',
+        backgroundColor:'rgba(251,191,36,0.15)',
+        y:{title:'°C',suggestedMin:0,suggestedMax:30}
+      },
+      gravity:{
+        canvas:document.getElementById('chart-gravity'),
+        field:'gravity',
+        label:'Gravity',
+        borderColor:'#22d3ee',
+        backgroundColor:'rgba(34,211,238,0.1)',
+        y:{title:'Gravity',suggestedMin:0.99,suggestedMax:1.1}
+      },
+      velocity:{
+        canvas:document.getElementById('chart-velocity'),
+        field:'gravityVelocity',
+        label:'Gravity Velocity',
+        borderColor:'#f472b6',
+        backgroundColor:'rgba(244,114,182,0.1)',
+        borderDash:[5,5],
+        y:{title:'Δ Gravity',suggestedMin:-0.02,suggestedMax:0.02}
+      }
+    };
+    const charts={};
+    let latestTelemetry=[];
 
-    tokenBtn.addEventListener('click',loadToken);
     telemetryBtn.addEventListener('click',loadTelemetry);
-    loadToken();
+    downloadBtn.addEventListener('click',downloadCsv);
+    downloadBtn.disabled=true;
 
-    async function loadToken(){
-      tokenStatus.textContent='⏳ Token wird abgerufen ...';
-      tokenData.textContent='';
-      try{
-        const response=await fetch('/api/rapt/token',{method:'POST'});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok){
-          tokenStatus.textContent=`❗ HTTP ${response.status}`;
-          tokenData.textContent=JSON.stringify(data,null,2);
-          return;
-        }
-        tokenStatus.textContent='✅ Token erfolgreich geladen';
-        tokenData.innerHTML=renderNodes(data,'token');
-        loadTelemetry();
-      }catch(error){
-        tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
-        tokenData.textContent=error.message;
-      }
-    }
-
-    function renderNodes(node,label='root'){
-      if(Array.isArray(node)){
-        if(!node.length) return `<p><strong>${label}</strong>: []</p>`;
-        return node.map((item,idx)=>renderNodes(item,`${label}[${idx}]`)).join('');
-      }
-      if(node && typeof node==='object'){
-        const entries=Object.entries(node).map(([key,val])=>renderNodes(val,key)).join('');
-        return `<details open><summary>${escapeHtml(label)}</summary>${entries}</details>`;
-      }
-      return `<p><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
-    }
-
-    function escapeHtml(str){
-      return str
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#39;');
-    }
+    loadTelemetry();
 
     async function loadTelemetry(){
       telemetryStatus.textContent='⏳ Telemetrie wird geladen ...';
@@ -118,82 +119,112 @@
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
-          renderChart([]);
+          renderCharts([]);
           return;
         }
         const rows=Array.isArray(data.rows)?data.rows:[];
         if(!rows.length){
           telemetryStatus.textContent='Keine Telemetriedaten vorhanden.';
-          renderChart([]);
+          renderCharts([]);
           return;
         }
         telemetryStatus.textContent=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
-        renderChart(rows);
+        renderCharts(rows);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
-        renderChart([]);
+        renderCharts([]);
       }
     }
 
-    function renderChart(rows){
+    function renderCharts(rows){
+      latestTelemetry=rows;
+      downloadBtn.disabled=!rows.length;
       const labels=rows.map(r=>r.createdOn || '');
-      const temps=rows.map(r=>r.temperature ?? null);
-      const gravs=rows.map(r=>r.gravity ?? null);
-      const gravVel=rows.map(r=>r.gravityVelocity ?? null);
 
-      const datasets=[
-        {
-          label:'Temperatur (°C)',
-          data:temps,
-          borderColor:'#fbbf24',
-          backgroundColor:'rgba(251,191,36,0.15)',
-          yAxisID:'y1',
-          spanGaps:true,
-        },
-        {
-          label:'Gravity',
-          data:gravs,
-          borderColor:'#22d3ee',
-          backgroundColor:'rgba(34,211,238,0.1)',
-          yAxisID:'y2',
-          spanGaps:true,
-        },
-        {
-          label:'Gravity Δ',
-          data:gravVel,
-          borderColor:'#f472b6',
-          borderDash:[5,5],
-          backgroundColor:'rgba(244,114,182,0.1)',
-          yAxisID:'y2',
-          spanGaps:true,
-        }
-      ];
+      Object.entries(chartDefinitions).forEach(([key,definition])=>{
+        const datasetValues=rows.map(r=>{
+          const value=r?.[definition.field];
+          return value===undefined?null:value;
+        });
 
-      const config={
-        type:'line',
-        data:{labels,datasets},
-        options:{
-          responsive:true,
-          interaction:{mode:'index',intersect:false},
-          plugins:{
-            legend:{position:'bottom',labels:{color:'#f1f5f9'}},
-            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
+        const config={
+          type:'line',
+          data:{
+            labels,
+            datasets:[
+              {
+                label:definition.label,
+                data:datasetValues,
+                borderColor:definition.borderColor,
+                backgroundColor:definition.backgroundColor,
+                borderDash:definition.borderDash || [],
+                fill:true,
+                spanGaps:true,
+                tension:0.25
+              }
+            ]
           },
-          scales:{
-            y1:{type:'linear',position:'left',min:0,max:30,title:{display:true,text:'°C',color:'#fbbf24'},ticks:{color:'#fbbf24'},grid:{color:'rgba(251,191,36,0.1)'}},
-            y2:{type:'linear',position:'right',min:1.0,max:1.1,title:{display:true,text:'Gravity',color:'#22d3ee'},ticks:{color:'#22d3ee'},grid:{drawOnChartArea:false}},
-            x:{ticks:{color:'#cbd5f5',callback:(value,index)=>{const label=labels[index]||'';return label.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,16);},maxRotation:0,minRotation:0}}
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{
+              legend:{display:false},
+              tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
+            },
+            scales:{
+              y:{
+                title:{display:true,text:definition.y.title,color:'#f1f5f9'},
+                ticks:{color:'#f1f5f9'},
+                grid:{color:'rgba(148,163,184,0.12)'},
+                suggestedMin:definition.y.suggestedMin,
+                suggestedMax:definition.y.suggestedMax
+              },
+              x:{
+                ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
+                grid:{color:'rgba(148,163,184,0.06)'}
+              }
+            }
           }
-        }
-      };
+        };
 
-      if(telemetryChart){
-        telemetryChart.data=config.data;
-        telemetryChart.options=config.options;
-        telemetryChart.update();
-      } else {
-        telemetryChart=new Chart(chartCanvas.getContext('2d'),config);
+        if(charts[key]){
+          charts[key].data=config.data;
+          charts[key].options=config.options;
+          charts[key].update();
+        }else if(definition.canvas){
+          charts[key]=new Chart(definition.canvas.getContext('2d'),config);
+        }
+      });
+    }
+
+    function formatTimestamp(label){
+      if(!label) return '';
+      return label.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,16);
+    }
+
+    function downloadCsv(){
+      if(!latestTelemetry.length) return;
+      const columns=['createdOn','temperature','gravity','gravityVelocity'];
+      const header=columns.join(';');
+      const lines=latestTelemetry.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
+      const csv=[header,...lines].join('\\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download=`rapt-telemetrie-${new Date().toISOString().slice(0,19)}.csv`;
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+
+    function escapeCsv(value){
+      if(value===undefined || value===null) return '';
+      const str=String(value);
+      if(/[\";\\n]/.test(str)){
+        return `"${str.replace(/\"/g,'""')}"`;
       }
+      return str;
     }
   </script>
 </body>

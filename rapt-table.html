@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AiBrewGenius · RAPT Tabelle</title>
+  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <style>
+    body {background:#020617;color:#f1f5f9;}
+    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
+    .table-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .rapt-status {margin-bottom:12px;color:#fbbf24;}
+    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
+    .btn.ghost:hover {background:rgba(148,163,184,0.08);}
+    .table-wrapper {border:1px solid rgba(148,163,184,0.3);border-radius:18px;overflow:auto;max-height:65vh;}
+    table {width:100%;border-collapse:collapse;min-width:640px;}
+    thead {position:sticky;top:0;background:#0b1120;}
+    th,td {padding:14px 16px;border-bottom:1px solid rgba(148,163,184,0.15);text-align:left;}
+    th button {background:none;border:0;color:#e2e8f0;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:15px;}
+    th button .sort-indicator {font-size:12px;color:#94a3b8;}
+    tbody tr:nth-child(odd) {background:rgba(15,23,42,0.35);}
+    tbody tr:hover {background:rgba(59,130,246,0.12);}
+    td {font-size:14px;color:#cbd5f5;}
+  </style>
+</head>
+<body data-page="rapt">
+  <main class="gpt-shell">
+    <header class="gpt-head">
+      <div class="gpt-badge">Automatisch</div>
+      <h1>Telemetrie als Tabelle</h1>
+      <p>Alle Messwerte in einer sortierbaren Tabelle mit direktem Zugriff auf das Dashboard und CSV-Export.</p>
+    </header>
+
+    <section class="gpt-preview">
+      <div class="rapt-panel">
+        <div class="table-actions">
+          <button class="btn primary" id="btn-table-reload">Telemetry laden</button>
+          <button class="btn ghost" id="btn-table-download" disabled>CSV herunterladen</button>
+          <a class="btn" href="rapt.html">Zurück zum Dashboard</a>
+        </div>
+        <div class="rapt-status" id="table-status">Noch nicht geladen.</div>
+        <div class="table-wrapper">
+          <table id="telemetry-table">
+            <thead>
+              <tr>
+                <th><button type="button" data-field="createdOn">Zeitpunkt <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="temperature">Temperatur (°C) <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="gravity">Gravity <span class="sort-indicator">↕</span></button></th>
+                <th><button type="button" data-field="gravityVelocity">Gravity Velocity <span class="sort-indicator">↕</span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4">Keine Daten.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="gpt-foot">
+      <a class="btn" href="index.html">Zur Startseite</a>
+    </footer>
+  </main>
+
+  <script>
+    const reloadBtn=document.getElementById('btn-table-reload');
+    const downloadBtn=document.getElementById('btn-table-download');
+    const tableStatus=document.getElementById('table-status');
+    const tableBody=document.querySelector('#telemetry-table tbody');
+    const sortButtons=document.querySelectorAll('th button[data-field]');
+
+    let tableRows=[];
+    let currentSort={field:'createdOn',direction:'desc'};
+
+    reloadBtn.addEventListener('click',loadTelemetry);
+    downloadBtn.addEventListener('click',downloadCsv);
+    sortButtons.forEach(btn=>btn.addEventListener('click',()=>setSort(btn.dataset.field)));
+
+    loadTelemetry();
+
+    async function loadTelemetry(){
+      tableStatus.textContent='⏳ Telemetrie wird geladen ...';
+      try{
+        const response=await fetch('/api/rapt/telemetry');
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          tableStatus.textContent=`❗ HTTP ${response.status}`;
+          applyRows([]);
+          return;
+        }
+        const rows=Array.isArray(data.rows)?data.rows:[];
+        tableStatus.textContent=rows.length?`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`:'Keine Telemetriedaten vorhanden.';
+        applyRows(rows);
+      }catch(error){
+        tableStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
+        applyRows([]);
+      }
+    }
+
+    function applyRows(rows){
+      tableRows=rows;
+      downloadBtn.disabled=!rows.length;
+      renderTable();
+      updateSortIndicators();
+    }
+
+    function setSort(field){
+      if(currentSort.field===field){
+        currentSort.direction=currentSort.direction==='asc'?'desc':'asc';
+      }else{
+        currentSort.field=field;
+        currentSort.direction=field==='createdOn'?'desc':'asc';
+      }
+      renderTable();
+      updateSortIndicators();
+    }
+
+    function renderTable(){
+      if(!tableRows.length){
+        tableBody.innerHTML='<tr><td colspan="4">Keine Daten vorhanden.</td></tr>';
+        return;
+      }
+      const sorted=[...tableRows].sort((a,b)=>compareValues(a,b,currentSort.field,currentSort.direction));
+      tableBody.innerHTML=sorted.map(row=>`
+        <tr>
+          <td>${formatTimestamp(row.createdOn)}</td>
+          <td>${formatNumber(row.temperature,'°C')}</td>
+          <td>${formatNumber(row.gravity)}</td>
+          <td>${formatNumber(row.gravityVelocity)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function compareValues(a,b,field,direction){
+      const aVal=normalizeValue(a?.[field]);
+      const bVal=normalizeValue(b?.[field]);
+      if(aVal === bVal) return 0;
+      const order=aVal > bVal ? 1 : -1;
+      return direction==='asc'?order:-order;
+    }
+
+    function normalizeValue(value){
+      if(value===undefined || value===null) return -Infinity;
+      if(typeof value==='number') return value;
+      const asNumber=Number(value);
+      if(!Number.isNaN(asNumber) && value!=='' && value!==null) return asNumber;
+      const time=Date.parse(value);
+      if(!Number.isNaN(time)) return time;
+      return String(value);
+    }
+
+    function formatTimestamp(value){
+      if(!value) return '-';
+      return value.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,19);
+    }
+
+    function formatNumber(value,unit=''){
+      if(value===undefined || value===null || value==='') return '-';
+      const num=Number(value);
+      const formatted=Number.isFinite(num)?num.toFixed(unit?'1':'3'):value;
+      return unit?`${formatted} ${unit}`:formatted;
+    }
+
+    function updateSortIndicators(){
+      sortButtons.forEach(btn=>{
+        const indicator=btn.querySelector('.sort-indicator');
+        if(btn.dataset.field===currentSort.field){
+          indicator.textContent=currentSort.direction==='asc'?'↑':'↓';
+        }else{
+          indicator.textContent='↕';
+        }
+      });
+    }
+
+    function downloadCsv(){
+      if(!tableRows.length) return;
+      const columns=['createdOn','temperature','gravity','gravityVelocity'];
+      const header=columns.join(';');
+      const lines=tableRows.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
+      const csv=[header,...lines].join('\\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a');
+      link.href=url;
+      link.download=`rapt-tabelle-${new Date().toISOString().slice(0,19)}.csv`;
+      link.click();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+
+    function escapeCsv(value){
+      if(value===undefined || value===null) return '';
+      const str=String(value);
+      if(/[\";\\n]/.test(str)){
+        return `"${str.replace(/\"/g,'""')}"`;
+      }
+      return str;
+    }
+  </script>
+</body>
+</html>
