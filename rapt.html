@@ -115,6 +115,10 @@
         ctx.save();
         ctx.strokeStyle='rgba(255,255,255,0.2)';
         ctx.lineWidth=1;
+        ctx.fillStyle='rgba(255,255,255,0.65)';
+        ctx.font='12px "DM Sans", sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='top';
         labels.forEach((label,idx)=>{
           const day=new Date(label).toDateString();
           if(!day || day===lastDay) return;
@@ -125,6 +129,10 @@
           ctx.moveTo(x,chart.chartArea.top);
           ctx.lineTo(x,chart.chartArea.bottom);
           ctx.stroke();
+          const labelText=formatDayShort(label);
+          if(labelText){
+            ctx.fillText(labelText,x,chart.chartArea.top+4);
+          }
         });
         ctx.restore();
       }
@@ -359,10 +367,17 @@
       const dayStr=date.toISOString().slice(0,10);
       if(lastDayTick===dayStr) return '';
       lastDayTick=dayStr;
-      return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+      return formatDayShort(label);
     }
 
     let lastDayTick=null;
+
+    function formatDayShort(label){
+      if(!label) return '';
+      const date=new Date(label);
+      if(Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+    }
 
     function formatFullTimestamp(label){
       if(!label) return '';
