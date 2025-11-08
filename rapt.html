@@ -115,10 +115,6 @@
         ctx.save();
         ctx.strokeStyle='rgba(255,255,255,0.2)';
         ctx.lineWidth=1;
-        ctx.fillStyle='rgba(255,255,255,0.65)';
-        ctx.font='12px "DM Sans", sans-serif';
-        ctx.textAlign='center';
-        ctx.textBaseline='bottom';
         const bottom=chart.chartArea.bottom;
         labels.forEach((label,idx)=>{
           const day=new Date(label).toDateString();
@@ -130,10 +126,6 @@
           ctx.moveTo(x,chart.chartArea.top);
           ctx.lineTo(x,bottom);
           ctx.stroke();
-          const labelText=formatDayShort(label);
-          if(labelText){
-            ctx.fillText(labelText,x,bottom-4);
-          }
         });
         ctx.restore();
       }
@@ -303,7 +295,7 @@
           interaction:{mode:'index',intersect:false},
           layout:{padding:{top:28}},
           plugins:{
-            legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
+          legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
             tooltip:{
               callbacks:{
                 title:items=>{
@@ -346,8 +338,11 @@
               title:{display:true,text:'Alkohol %',color:'#facc15'}
             },
             x:{
-              ticks:{color:'#cbd5f5',callback:(val,idx)=>labelDayTick(labels[idx]),autoSkip:true,maxRotation:0},
-              grid:{color:'rgba(148,163,184,0.08)'}
+              ticks:{color:'#cbd5f5',callback:(val,idx)=>labelDayTick(labels[idx],idx),autoSkip:true,maxRotation:0},
+              grid:{color:'rgba(148,163,184,0.08)'},
+              afterFit(scale){
+                scale.height+=18;
+              }
             }
           }
         }
@@ -362,11 +357,15 @@
       }
     }
 
-    function labelDayTick(label){
+    function labelDayTick(label,index){
       if(!label) return '';
       const date=new Date(label);
-      if(Number.isNaN(date.getTime())) return label;
+      if(Number.isNaN(date.getTime())) return '';
       const dayStr=date.toISOString().slice(0,10);
+      if(index===0){
+        lastDayTick=dayStr;
+        return '';
+      }
       if(lastDayTick===dayStr) return '';
       lastDayTick=dayStr;
       return formatDayShort(label);
