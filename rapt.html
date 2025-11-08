@@ -217,9 +217,8 @@
     function renderChart(rows){
       latestTelemetry=rows;
       downloadBtn.disabled=!rows.length;
-      const labels=rows.map(r=>r.startDate || '');
-      Object.keys(dayTickCache).forEach(key=>delete dayTickCache[key]);
-      Object.keys(chartLabelCache).forEach(key=>delete chartLabelCache[key]);
+      const labels=rows.map(r=>r.createdOn || r.startDate || '');
+      lastDayTick=null;
       const gravityValues=rows
         .map(r=>normalizeGravity(r?.gravity))
         .filter(v=>v!==null && Number.isFinite(v));
@@ -299,7 +298,7 @@
               callbacks:{
                 title:items=>{
                   const idx=items[0]?.dataIndex ?? 0;
-                  const label=chartLabelCache[idx] || labels[idx] || '';
+                  const label=labels[idx] || '';
                   return formatFullTimestamp(label);
                 },
                 label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`
@@ -337,7 +336,7 @@
               title:{display:true,text:'Alkohol %',color:'#facc15'}
             },
             x:{
-              ticks:{color:'#cbd5f5',callback:(val,idx)=>labelDayTick(labels[idx],idx),autoSkip:true,maxRotation:0},
+              ticks:{color:'#cbd5f5',callback:(val)=>labelDayTick(val),autoSkip:true,maxRotation:0},
               grid:{color:'rgba(148,163,184,0.08)'}
             }
           }
@@ -353,21 +352,17 @@
       }
     }
 
-    function labelDayTick(label,index){
+    function labelDayTick(label){
       if(!label) return '';
       const date=new Date(label);
       if(Number.isNaN(date.getTime())) return label;
       const dayStr=date.toISOString().slice(0,10);
-      chartLabelCache[index]=label;
-      const prevIndex=index-1;
-      const prevDay=prevIndex>=0?dayTickCache[prevIndex]:null;
-      dayTickCache[index]=dayStr;
-      if(dayStr===prevDay) return '';
+      if(lastDayTick===dayStr) return '';
+      lastDayTick=dayStr;
       return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
     }
 
-    const dayTickCache={};
-    const chartLabelCache={};
+    let lastDayTick=null;
 
     function formatFullTimestamp(label){
       if(!label) return '';
@@ -456,7 +451,7 @@
 
     function downloadCsv(){
       if(!latestTelemetry.length) return;
-      const columns=['startDate','temperature','gravity','gravityVelocity'];
+      const columns=['createdOn','startDate','temperature','gravity','gravityVelocity'];
       const header=columns.join(';');
       const lines=latestTelemetry.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
       const csv=[header,...lines].join('\\r\\n');

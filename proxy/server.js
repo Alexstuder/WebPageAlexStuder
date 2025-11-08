@@ -342,16 +342,17 @@ async function refreshTelemetryCache() {
 
     const entries = Array.isArray(teleData) ? teleData : [teleData];
     for (const entry of entries) {
-      rows.push({
-        hydrometerId,
-        startDate: entry?.startDate || entry?.StartDate || startDate || null,
-        temperature: entry?.temperature ?? entry?.Temperature ?? null,
-        gravity: entry?.gravity ?? entry?.Gravity ?? null,
-        gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
-        battery: entry?.battery ?? entry?.Battery ?? null,
-        macAddress: entry?.macAddress || entry?.MacAddress || null,
-        profileName,
-      });
+        rows.push({
+          hydrometerId,
+          startDate: entry?.startDate || entry?.StartDate || startDate || null,
+          createdOn: entry?.createdOn || entry?.CreatedOn || null,
+          temperature: entry?.temperature ?? entry?.Temperature ?? null,
+          gravity: entry?.gravity ?? entry?.Gravity ?? null,
+          gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
+          battery: entry?.battery ?? entry?.Battery ?? null,
+          macAddress: entry?.macAddress || entry?.MacAddress || null,
+          profileName,
+        });
     }
   }
 
