@@ -179,8 +179,6 @@
           setLoadingState(false);
           return;
         }
-          return;
-        }
         let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
         if(errorRows.length){
           statusMsg+=` · ${errorRows.length} ohne Startdatum ignoriert`;
