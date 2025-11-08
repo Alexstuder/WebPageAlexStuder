@@ -31,14 +31,18 @@
     .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
     .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
     .telemetry-summary {display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;margin-bottom:26px;}
-    .summary-tile {flex:1;min-width:200px;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:6px;}
+    .summary-tiles{display:flex;flex-wrap:nowrap;gap:16px;}
+    .summary-tile {flex:1;min-width:0;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:6px;}
     .summary-label {font-size:15px;color:#cbd5f5;text-transform:uppercase;letter-spacing:0.08em;}
     .summary-value {font-size:clamp(36px,6vw,64px);font-weight:700;line-height:1;color:#f8fafc;}
     .summary-unit {font-size:16px;color:rgba(241,245,249,0.7);}
     .summary-tile.blue {border-color:rgba(59,130,246,0.4);}
     .summary-tile.red {border-color:rgba(239,68,68,0.4);}
+    .summary-tile.yellow {border-color:rgba(251,191,36,0.45);}
     @media (max-width:640px){
       .summary-value {font-size:42px;}
+      .summary-tiles{flex-wrap:wrap;}
+      .summary-tile{min-width:200px;}
     }
   </style>
 </head>
@@ -46,30 +50,32 @@
   <main class="gpt-shell">
     <section class="gpt-preview rapt-stack">
       <div class="page-panel">
-        <div class="panel-label">Page Header</div>
         <header class="gpt-head panel-head">
           <div class="gpt-badge gpt-badge--brew">Currently Brewing</div>
           <h1 id="page-title">Gesammelte Telemetrie</h1>
         </header>
         <div class="rapt-panel">
-          <div class="panel-label">Outer Panel</div>
           <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
           <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
           <div class="chart-card">
-            <div class="panel-label">Inner Panel</div>
             <h3 id="profile-title"></h3>
-            <div class="telemetry-summary">
-              <div class="summary-tile blue">
-                <span class="summary-label">Temperatur</span>
-                <span class="summary-value" id="summary-temp">–</span>
-                <span class="summary-unit">°C</span>
-              </div>
-              <div class="summary-tile red">
-                <span class="summary-label">Gravity</span>
-                <span class="summary-value" id="summary-gravity">–</span>
-                <span class="summary-unit">SG</span>
-              </div>
+          <div class="telemetry-summary summary-tiles">
+            <div class="summary-tile blue">
+              <span class="summary-label">Temperatur</span>
+              <span class="summary-value" id="summary-temp">–</span>
+              <span class="summary-unit">°C</span>
             </div>
+            <div class="summary-tile red">
+              <span class="summary-label">Gravity</span>
+              <span class="summary-value" id="summary-gravity">–</span>
+              <span class="summary-unit">SG</span>
+            </div>
+            <div class="summary-tile yellow">
+              <span class="summary-label">Alkohol</span>
+              <span class="summary-value" id="summary-abv">–</span>
+              <span class="summary-unit">Vol.%</span>
+            </div>
+          </div>
           <div class="chart-frame">
             <canvas id="telemetry-chart"></canvas>
           </div>
@@ -133,14 +139,18 @@
     const pageTitle=document.getElementById('page-title');
     const summaryTemp=document.getElementById('summary-temp');
     const summaryGravity=document.getElementById('summary-gravity');
+    const summaryAbv=document.getElementById('summary-abv');
+    const reloadInfo=document.getElementById('reload-info');
     let telemetryChart=null;
     let latestTelemetry=[];
+    let initialGravityValue=null;
 
     reloadBtn.addEventListener('click',()=>loadTelemetry(true));
     downloadBtn.addEventListener('click',downloadCsv);
     downloadBtn.disabled=true;
     updateProfileHeading();
     updateSummary([]);
+    updateReloadInfo(null,false);
 
     loadTelemetry();
 
@@ -213,6 +223,13 @@
         .filter(v=>v!==null && Number.isFinite(v));
       const gravityMax=gravityValues.length?Math.max(...gravityValues):1.05;
       const gravityMin=1.0;
+      initialGravityValue=gravityValues.length?gravityValues[0]:null;
+      const abvSeries=rows.map(r=>{
+        const g=normalizeGravity(r?.gravity);
+        return computeAbv(initialGravityValue,g);
+      });
+      const validAbv=abvSeries.filter(v=>Number.isFinite(v));
+      const abvMax=validAbv.length?Math.max(...validAbv):0;
       const datasets=[
         {
           label:'Temperatur (°C)',
@@ -234,6 +251,20 @@
           borderColor:'#ef4444',
           backgroundColor:'rgba(239,68,68,0.05)',
           yAxisID:'yGravity',
+          fill:false,
+          tension:0.25,
+          spanGaps:true,
+          borderWidth:1,
+          pointRadius:0,
+          pointHitRadius:8,
+          pointHoverRadius:4
+        },
+        {
+          label:'Alkohol (Vol.%)',
+          data:abvSeries,
+          borderColor:'#facc15',
+          backgroundColor:'rgba(250,204,21,0.12)',
+          yAxisID:'yAbv',
           fill:false,
           tension:0.25,
           spanGaps:true,
@@ -275,6 +306,16 @@
               ticks:{color:'#ef4444'},
               title:{display:true,text:'Gravity',color:'#ef4444'}
             },
+            yAbv:{
+              type:'linear',
+              position:'right',
+              offset:true,
+              min:0,
+              max:Math.max(5,Math.ceil(abvMax+0.5)),
+              grid:{drawOnChartArea:false},
+              ticks:{color:'#facc15'},
+              title:{display:true,text:'Alkohol %',color:'#facc15'}
+            },
             x:{
               ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
               grid:{color:'rgba(148,163,184,0.08)'}
@@ -304,6 +345,13 @@
       return num/1000;
     }
 
+    function computeAbv(initial,current){
+      if(!Number.isFinite(initial) || !Number.isFinite(current)) return null;
+      const diff=initial-current;
+      if(diff<=0) return 0;
+      return diff*131.25;
+    }
+
     function updateSummary(rows){
       const latest=Array.isArray(rows) && rows.length?rows[rows.length-1]:null;
       if(summaryTemp){
@@ -312,6 +360,11 @@
       if(summaryGravity){
         const gravityValue=latest?normalizeGravity(latest?.gravity):null;
         summaryGravity.textContent=formatGravityDisplay(gravityValue);
+      }
+      if(summaryAbv){
+        const gravityValue=latest?normalizeGravity(latest?.gravity):null;
+        const abv=computeAbv(initialGravityValue,gravityValue);
+        summaryAbv.textContent=formatAbvDisplay(abv);
       }
     }
 
@@ -327,6 +380,13 @@
       const num=Number(value);
       if(!Number.isFinite(num)) return '–';
       return num.toFixed(3);
+    }
+
+    function formatAbvDisplay(value){
+      if(value===undefined || value===null) return '–';
+      const num=Number(value);
+      if(!Number.isFinite(num)) return '–';
+      return `${num.toFixed(1)}%`;
     }
 
     function updateProfileHeading(name){
@@ -377,18 +437,18 @@
     }
 
     function updateReloadInfo(timestamp,isFresh){
-      const info=document.getElementById('reload-info');
-      if(!info){
-        return;
-      }
+      if(!reloadInfo) return;
       if(!timestamp){
-        info.textContent=isFresh?'Gerade aktualisiert':'Keine Daten';
+        reloadInfo.textContent=isFresh?'Gerade aktualisiert':'Keine Daten';
         return;
       }
       const date=new Date(timestamp);
-      info.textContent=isFresh
-        ? `Stand ${date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'})}`
-        : `Letzter Stand ${date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'})}`;
+      if(Number.isNaN(date.getTime())){
+        reloadInfo.textContent='Zeit unbekannt';
+        return;
+      }
+      const label=date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'});
+      reloadInfo.textContent=isFresh?`Stand ${label}`:`Letzter Stand ${label}`;
     }
 
     function escapeCsv(value){
