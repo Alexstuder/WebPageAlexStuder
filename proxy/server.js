@@ -17,12 +17,17 @@ const RAPT_PROFILE_ENDPOINT = process.env.RAPT_PROFILE_ENDPOINT ?? '/api/Profile
 const RAPT_HYDR_ENDPOINT = process.env.RAPT_HYDR_ENDPOINT ?? '/api/Hydrometers/GetHydrometers';
 const RAPT_TELEMETRY_ENDPOINT = process.env.RAPT_TELEMETRY_ENDPOINT ?? '/api/Hydrometers/GetTelemetry';
 const PORT = Number(process.env.PORT ?? 3000);
+const CACHE_INTERVAL_MS = Number(process.env.RAPT_CACHE_INTERVAL_MS ?? 60 * 60 * 1000);
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*';
 
 if (!OPENAI_API_KEY) {
   console.error('OPENAI_API_KEY is not set. Provide it via environment variable or proxy/.env file.');
   process.exit(1);
 }
+
+let telemetryCache = null;
+let telemetryCacheTimestamp = 0;
+let telemetryCachePromise = null;
 
 const server = http.createServer(async (req, res) => {
   setCorsHeaders(res);
@@ -48,7 +53,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (url.pathname === '/api/rapt/telemetry' && req.method === 'GET') {
-    await handleRaptTelemetryRequest(res);
+    await handleRaptTelemetryRequest(req, res);
     return;
   }
 
@@ -58,6 +63,14 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Proxy listening on http://localhost:${PORT}`);
+  ensureTelemetryCache(true).catch(err => {
+    console.error('Initial telemetry preload failed:', err.message || err);
+  });
+  setInterval(() => {
+    ensureTelemetryCache(true).catch(err => {
+      console.error('Scheduled telemetry refresh failed:', err.message || err);
+    });
+  }, CACHE_INTERVAL_MS);
 });
 
 function setCorsHeaders(res) {
@@ -166,114 +179,16 @@ async function handleRaptProfilesRequest(res) {
   }
 }
 
-async function handleRaptTelemetryRequest(res) {
+async function handleRaptTelemetryRequest(req, res) {
   if (!RAPT_USERNAME || !RAPT_API_KEY) {
     respondJson(res, 500, { error: 'RAPT credentials not configured.' });
     return;
   }
   try {
-    const token = await requestRaptToken();
-    if (!token?.access_token) {
-      respondJson(res, 502, { error: 'Token response invalid.' });
-      return;
-    }
-
-    const base = RAPT_API_BASE.replace(/\/$/, '');
-    const hydromRes = await fetch(`${base}${RAPT_HYDR_ENDPOINT}`, {
-      headers: {
-        'Authorization': `Bearer ${token.access_token}`,
-        'Accept': 'application/json',
-      },
-    });
-    const hydromData = await hydromRes.json().catch(() => []);
-    if (!hydromRes.ok) {
-      respondJson(res, hydromRes.status, hydromData);
-      return;
-    }
-
-    const hydrometers = Array.isArray(hydromData) ? hydromData : [];
-    const nowIso = new Date().toISOString();
-    const rows = [];
-    let firstProfileName = null;
-
-    for (const hydrometer of hydrometers) {
-      const hydrometerId =
-        hydrometer?.hydrometerId ||
-        hydrometer?.HydrometerId ||
-        hydrometer?.id ||
-        hydrometer?.Id;
-      const startDate =
-        hydrometer?.activeProfileSession?.startDate ||
-        hydrometer?.activeProfileSession?.StartDate;
-      const profileName = hydrometer?.activeProfileSession?.name || null;
-      if (!hydrometerId) {
-        rows.push({
-          hydrometerId: '(unbekannt)',
-          error: 'Hydrometer ohne gültige ID im Response.',
-        });
-        continue;
-      }
-
-      if (!startDate) {
-        rows.push({
-          hydrometerId,
-          error: 'Kein Startdatum in activeProfileSession gefunden.',
-        });
-        continue;
-      }
-      if (!firstProfileName && profileName) {
-        firstProfileName = profileName;
-      }
-
-      const telemetryUrl = new URL(`${base}${RAPT_TELEMETRY_ENDPOINT}`);
-      telemetryUrl.searchParams.set('hydrometerId', hydrometerId);
-      telemetryUrl.searchParams.set('startDate', startDate);
-      telemetryUrl.searchParams.set('endDate', nowIso);
-
-      const teleRes = await fetch(telemetryUrl, {
-        headers: {
-          'Authorization': `Bearer ${token.access_token}`,
-          'Accept': 'application/json',
-        },
-      });
-      const teleData = await teleRes.json().catch(() => []);
-      if (!teleRes.ok) {
-        rows.push({
-          hydrometerId,
-          error: teleData,
-        });
-        continue;
-      }
-
-      const entries = Array.isArray(teleData) ? teleData : [teleData];
-      for (const entry of entries) {
-        rows.push({
-          hydrometerId,
-          startDate: entry?.startDate || entry?.StartDate || startDate || null,
-          temperature: entry?.temperature ?? entry?.Temperature ?? null,
-          gravity: entry?.gravity ?? entry?.Gravity ?? null,
-          gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
-          battery: entry?.battery ?? entry?.Battery ?? null,
-          macAddress: entry?.macAddress || entry?.MacAddress || null,
-          profileName,
-        });
-      }
-    }
-
-    rows.sort((a, b) => {
-      const da = new Date(a.startDate || 0).getTime();
-      const db = new Date(b.startDate || 0).getTime();
-      return da - db;
-    });
-
-    const firstStart = rows[0]?.startDate || null;
-    respondJson(res, 200, {
-      rows,
-      generatedAt: nowIso,
-      startDate: firstStart,
-      endDate: nowIso,
-      profileName: firstProfileName,
-    });
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const forceReload = ['1', 'true'].includes((url.searchParams.get('reload') || '').toLowerCase());
+    const data = await ensureTelemetryCache(forceReload);
+    respondJson(res, 200, data);
   } catch (error) {
     console.error('RAPT telemetry error:', error);
     const status = error.statusCode ?? 500;
@@ -322,6 +237,140 @@ function readBody(req) {
 function respondJson(res, statusCode, payload) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(payload));
+}
+
+async function ensureTelemetryCache(force = false) {
+  const cacheAge = Date.now() - telemetryCacheTimestamp;
+  if (force || !telemetryCache) {
+    if (!telemetryCachePromise) {
+      telemetryCachePromise = refreshTelemetryCache().finally(() => {
+        telemetryCachePromise = null;
+      });
+    }
+    return telemetryCachePromise;
+  }
+  if (cacheAge > CACHE_INTERVAL_MS) {
+    refreshTelemetryCache().catch(err => {
+      console.error('Background telemetry refresh failed:', err.message || err);
+    });
+  }
+  return telemetryCache;
+}
+
+async function refreshTelemetryCache() {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    throw new Error('RAPT credentials not configured.');
+  }
+
+  const token = await requestRaptToken();
+  if (!token?.access_token) {
+    const err = new Error('Token response invalid.');
+    err.statusCode = 502;
+    throw err;
+  }
+
+  const base = RAPT_API_BASE.replace(/\/$/, '');
+  const hydromRes = await fetch(`${base}${RAPT_HYDR_ENDPOINT}`, {
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+  const hydromData = await hydromRes.json().catch(() => []);
+  if (!hydromRes.ok) {
+    const err = new Error('Hydrometer response invalid.');
+    err.statusCode = hydromRes.status;
+    err.details = hydromData;
+    throw err;
+  }
+
+  const hydrometers = Array.isArray(hydromData) ? hydromData : [];
+  const nowIso = new Date().toISOString();
+  const rows = [];
+  let firstProfileName = null;
+
+  for (const hydrometer of hydrometers) {
+    const hydrometerId =
+      hydrometer?.hydrometerId ||
+      hydrometer?.HydrometerId ||
+      hydrometer?.id ||
+      hydrometer?.Id;
+    const startDate =
+      hydrometer?.activeProfileSession?.startDate ||
+      hydrometer?.activeProfileSession?.StartDate;
+    const profileName = hydrometer?.activeProfileSession?.name || null;
+
+    if (!hydrometerId) {
+      rows.push({
+        hydrometerId: '(unbekannt)',
+        error: 'Hydrometer ohne gültige ID im Response.',
+      });
+      continue;
+    }
+
+    if (!startDate) {
+      rows.push({
+        hydrometerId,
+        error: 'Kein Startdatum in activeProfileSession gefunden.',
+      });
+      continue;
+    }
+
+    if (!firstProfileName && profileName) {
+      firstProfileName = profileName;
+    }
+
+    const telemetryUrl = new URL(`${base}${RAPT_TELEMETRY_ENDPOINT}`);
+    telemetryUrl.searchParams.set('hydrometerId', hydrometerId);
+    telemetryUrl.searchParams.set('startDate', startDate);
+    telemetryUrl.searchParams.set('endDate', nowIso);
+
+    const teleRes = await fetch(telemetryUrl, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const teleData = await teleRes.json().catch(() => []);
+    if (!teleRes.ok) {
+      rows.push({
+        hydrometerId,
+        error: teleData,
+      });
+      continue;
+    }
+
+    const entries = Array.isArray(teleData) ? teleData : [teleData];
+    for (const entry of entries) {
+      rows.push({
+        hydrometerId,
+        startDate: entry?.startDate || entry?.StartDate || startDate || null,
+        temperature: entry?.temperature ?? entry?.Temperature ?? null,
+        gravity: entry?.gravity ?? entry?.Gravity ?? null,
+        gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
+        battery: entry?.battery ?? entry?.Battery ?? null,
+        macAddress: entry?.macAddress || entry?.MacAddress || null,
+        profileName,
+      });
+    }
+  }
+
+  rows.sort((a, b) => {
+    const da = new Date(a.startDate || 0).getTime();
+    const db = new Date(b.startDate || 0).getTime();
+    return da - db;
+  });
+
+  const firstStart = rows[0]?.startDate || null;
+  telemetryCache = {
+    rows,
+    generatedAt: nowIso,
+    startDate: firstStart,
+    endDate: nowIso,
+    profileName: firstProfileName,
+  };
+  telemetryCacheTimestamp = Date.now();
+  return telemetryCache;
 }
 
 function loadEnvFile(filePath) {

@@ -18,8 +18,9 @@
     .rapt-range {margin-bottom:16px;font-size:14px;color:#cbd5f5;}
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
+    .btn.icon {padding:0;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:18px;}
     .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
-    .chart-card h3 {margin:0 0 8px;font-size:18px;font-weight:600;}
+    .chart-card h3 {margin:0 0 8px;font-size:28px;font-weight:700;}
     .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
     .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
     .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
@@ -55,6 +56,7 @@
         </div>
         <div class="rapt-actions">
           <button class="btn primary" id="btn-telemetry">Telemetry laden</button>
+          <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
           <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
         </div>
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
@@ -117,6 +119,7 @@
     Chart.register(dayMarkerPlugin);
 
     const telemetryBtn=document.getElementById('btn-telemetry');
+    const reloadBtn=document.getElementById('btn-reload');
     const telemetryStatus=document.getElementById('telemetry-status');
     const telemetryRange=document.getElementById('telemetry-range');
     const downloadBtn=document.getElementById('btn-download');
@@ -127,7 +130,8 @@
     let telemetryChart=null;
     let latestTelemetry=[];
 
-    telemetryBtn.addEventListener('click',loadTelemetry);
+    telemetryBtn.addEventListener('click',()=>loadTelemetry(false));
+    reloadBtn.addEventListener('click',()=>loadTelemetry(true));
     downloadBtn.addEventListener('click',downloadCsv);
     downloadBtn.disabled=true;
     updateProfileHeading();
@@ -135,11 +139,13 @@
 
     loadTelemetry();
 
-    async function loadTelemetry(){
-      telemetryStatus.textContent='⏳ Telemetrie wird geladen ...';
+    async function loadTelemetry(force=false){
+      telemetryStatus.textContent=force?'♻️ Aktualisiere Daten ...':'⏳ Telemetrie wird geladen ...';
       telemetryRange.textContent='Zeitraum wird geladen ...';
+      setLoadingState(true);
       try{
-        const response=await fetch('/api/rapt/telemetry');
+        const endpoint=force?'/api/rapt/telemetry?reload=1':'/api/rapt/telemetry';
+        const response=await fetch(endpoint);
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
@@ -147,6 +153,7 @@
           updateRangeInfo();
           updateProfileHeading();
           updateSummary([]);
+          setLoadingState(false);
           return;
         }
         const allRows=Array.isArray(data.rows)?data.rows:[];
@@ -177,12 +184,14 @@
         updateProfileHeading(resolvedProfileName);
         renderChart(rows);
         updateSummary(rows);
+        setLoadingState(false);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
         renderChart([]);
         updateRangeInfo();
         updateProfileHeading();
         updateSummary([]);
+        setLoadingState(false);
       }
     }
 
@@ -343,6 +352,12 @@
       link.download=`rapt-telemetrie-${new Date().toISOString().slice(0,19)}.csv`;
       link.click();
       setTimeout(()=>URL.revokeObjectURL(url),2000);
+    }
+
+    function setLoadingState(isLoading){
+      if(telemetryBtn) telemetryBtn.disabled=isLoading;
+      if(reloadBtn) reloadBtn.disabled=isLoading;
+      if(downloadBtn) downloadBtn.disabled=isLoading || !latestTelemetry.length;
     }
 
     function escapeCsv(value){
