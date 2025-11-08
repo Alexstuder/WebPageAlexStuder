@@ -300,6 +300,7 @@
           responsive:true,
           maintainAspectRatio:false,
           interaction:{mode:'index',intersect:false},
+          layout:{padding:{top:28}},
           plugins:{
             legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
             tooltip:{
@@ -344,7 +345,7 @@
               title:{display:true,text:'Alkohol %',color:'#facc15'}
             },
             x:{
-              ticks:{color:'#cbd5f5',callback:(val)=>labelDayTick(val),autoSkip:true,maxRotation:0},
+              ticks:{color:'#cbd5f5',callback:(val,idx)=>labelDayTick(labels[idx]),autoSkip:true,maxRotation:0},
               grid:{color:'rgba(148,163,184,0.08)'}
             }
           }
