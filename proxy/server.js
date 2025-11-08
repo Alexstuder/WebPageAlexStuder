@@ -194,6 +194,7 @@ async function handleRaptTelemetryRequest(res) {
     const hydrometers = Array.isArray(hydromData) ? hydromData : [];
     const nowIso = new Date().toISOString();
     const rows = [];
+    let firstProfileName = null;
 
     for (const hydrometer of hydrometers) {
       const hydrometerId =
@@ -204,6 +205,7 @@ async function handleRaptTelemetryRequest(res) {
       const startDate =
         hydrometer?.activeProfileSession?.startDate ||
         hydrometer?.activeProfileSession?.StartDate;
+      const profileName = hydrometer?.activeProfileSession?.name || null;
       if (!hydrometerId) {
         rows.push({
           hydrometerId: '(unbekannt)',
@@ -218,6 +220,9 @@ async function handleRaptTelemetryRequest(res) {
           error: 'Kein Startdatum in activeProfileSession gefunden.',
         });
         continue;
+      }
+      if (!firstProfileName && profileName) {
+        firstProfileName = profileName;
       }
 
       const telemetryUrl = new URL(`${base}${RAPT_TELEMETRY_ENDPOINT}`);
@@ -250,6 +255,7 @@ async function handleRaptTelemetryRequest(res) {
           gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
           battery: entry?.battery ?? entry?.Battery ?? null,
           macAddress: entry?.macAddress || entry?.MacAddress || null,
+          profileName,
         });
       }
     }
@@ -266,6 +272,7 @@ async function handleRaptTelemetryRequest(res) {
       generatedAt: nowIso,
       startDate: firstStart,
       endDate: nowIso,
+      profileName: firstProfileName,
     });
   } catch (error) {
     console.error('RAPT telemetry error:', error);

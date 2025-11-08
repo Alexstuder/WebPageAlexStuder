@@ -23,6 +23,16 @@
     .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
     .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
     .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
+    .telemetry-summary {display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;}
+    .summary-tile {flex:1;min-width:200px;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:6px;}
+    .summary-label {font-size:15px;color:#cbd5f5;text-transform:uppercase;letter-spacing:0.08em;}
+    .summary-value {font-size:clamp(36px,6vw,64px);font-weight:700;line-height:1;color:#f8fafc;}
+    .summary-unit {font-size:16px;color:rgba(241,245,249,0.7);}
+    .summary-tile.blue {border-color:rgba(59,130,246,0.4);}
+    .summary-tile.red {border-color:rgba(239,68,68,0.4);}
+    @media (max-width:640px){
+      .summary-value {font-size:42px;}
+    }
   </style>
 </head>
 <body data-page="rapt">
@@ -50,10 +60,21 @@
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
         <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
         <div class="chart-card">
-          <h3>Gesammelte Telemetrie</h3>
-          <p>Zwei Linien (Temperatur & Gravity) teilen sich ein Diagramm, behalten aber eigene Skalen.</p>
+          <h3 id="profile-title">Gesammelte Telemetrie</h3>
           <div class="chart-frame">
             <canvas id="telemetry-chart"></canvas>
+          </div>
+          <div class="telemetry-summary">
+            <div class="summary-tile blue">
+              <span class="summary-label">Temperatur</span>
+              <span class="summary-value" id="summary-temp">–</span>
+              <span class="summary-unit">°C</span>
+            </div>
+            <div class="summary-tile red">
+              <span class="summary-label">Gravity</span>
+              <span class="summary-value" id="summary-gravity">–</span>
+              <span class="summary-unit">SG</span>
+            </div>
           </div>
         </div>
       </div>
@@ -100,12 +121,17 @@
     const telemetryRange=document.getElementById('telemetry-range');
     const downloadBtn=document.getElementById('btn-download');
     const chartCanvas=document.getElementById('telemetry-chart');
+    const profileTitle=document.getElementById('profile-title');
+    const summaryTemp=document.getElementById('summary-temp');
+    const summaryGravity=document.getElementById('summary-gravity');
     let telemetryChart=null;
     let latestTelemetry=[];
 
     telemetryBtn.addEventListener('click',loadTelemetry);
     downloadBtn.addEventListener('click',downloadCsv);
     downloadBtn.disabled=true;
+    updateProfileHeading();
+    updateSummary([]);
 
     loadTelemetry();
 
@@ -119,6 +145,8 @@
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
           renderChart([]);
           updateRangeInfo();
+          updateProfileHeading();
+          updateSummary([]);
           return;
         }
         const allRows=Array.isArray(data.rows)?data.rows:[];
@@ -133,6 +161,8 @@
             : 'Keine Telemetriedaten vorhanden.';
           renderChart([]);
           updateRangeInfo();
+          updateProfileHeading();
+          updateSummary([]);
           return;
         }
         let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
@@ -143,11 +173,16 @@
         const start=data.startDate || rows[0]?.startDate || '';
         const end=data.endDate || data.generatedAt || rows[rows.length-1]?.startDate || '';
         updateRangeInfo(start,end);
+        const resolvedProfileName=data.profileName || rows.find(r=>r?.profileName)?.profileName || null;
+        updateProfileHeading(resolvedProfileName);
         renderChart(rows);
+        updateSummary(rows);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
         renderChart([]);
         updateRangeInfo();
+        updateProfileHeading();
+        updateSummary([]);
       }
     }
 
@@ -166,7 +201,8 @@
           tension:0.25,
           spanGaps:true,
           borderWidth:1,
-          pointRadius:2,
+          pointRadius:0,
+          pointHitRadius:8,
           pointHoverRadius:4
         },
         {
@@ -179,7 +215,8 @@
           tension:0.25,
           spanGaps:true,
           borderWidth:1,
-          pointRadius:2,
+          pointRadius:0,
+          pointHitRadius:8,
           pointHoverRadius:4
         }
       ];
@@ -242,6 +279,37 @@
       const num=Number(value);
       if(!Number.isFinite(num)) return null;
       return num/1000;
+    }
+
+    function updateSummary(rows){
+      const latest=Array.isArray(rows) && rows.length?rows[rows.length-1]:null;
+      if(summaryTemp){
+        summaryTemp.textContent=formatTempDisplay(latest?.temperature);
+      }
+      if(summaryGravity){
+        const gravityValue=latest?normalizeGravity(latest?.gravity):null;
+        summaryGravity.textContent=formatGravityDisplay(gravityValue);
+      }
+    }
+
+    function formatTempDisplay(value){
+      if(value===undefined || value===null) return '–';
+      const num=Number(value);
+      if(!Number.isFinite(num)) return '–';
+      return num.toLocaleString('de-CH',{minimumFractionDigits:1,maximumFractionDigits:1});
+    }
+
+    function formatGravityDisplay(value){
+      if(value===undefined || value===null) return '–';
+      const num=Number(value);
+      if(!Number.isFinite(num)) return '–';
+      return num.toFixed(3);
+    }
+
+    function updateProfileHeading(name){
+      if(profileTitle){
+        profileTitle.textContent=name || 'Gesammelte Telemetrie';
+      }
     }
 
     function updateRangeInfo(start,end){
