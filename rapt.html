@@ -224,9 +224,18 @@
       const gravityMax=gravityValues.length?Math.max(...gravityValues):1.05;
       const gravityMin=1.0;
       initialGravityValue=gravityValues.length?gravityValues[0]:null;
-      const abvSeries=rows.map(r=>{
+      const abvSeries=[];
+      let lastAbv=0;
+      rows.forEach(r=>{
         const g=normalizeGravity(r?.gravity);
-        return computeAbv(initialGravityValue,g);
+        let currentAbv=computeAbv(initialGravityValue,g);
+        if(!Number.isFinite(currentAbv)){
+          currentAbv=null;
+        } else {
+          currentAbv=Math.max(lastAbv,currentAbv);
+          lastAbv=currentAbv;
+        }
+        abvSeries.push(currentAbv);
       });
       const validAbv=abvSeries.filter(v=>Number.isFinite(v));
       const abvMax=validAbv.length?Math.max(...validAbv):0;
