@@ -16,11 +16,11 @@
     .rapt-status {margin-bottom:12px;color:#fbbf24;}
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
-    .chart-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;}
     .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
     .chart-card h3 {margin:0 0 8px;font-size:18px;font-weight:600;}
     .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
-    .chart-canvas {width:100%;height:360px;}
+    .chart-frame {height:clamp(320px,45vh,520px);}
+    canvas {width:100%;height:100%;}
   </style>
 </head>
 <body data-page="rapt">
@@ -46,21 +46,11 @@
           <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
         </div>
         <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
-        <div class="chart-grid">
-          <div class="chart-card">
-            <h3>Temperatur</h3>
-            <p>Alle Temperaturwerte in °C als eigenständiger Verlauf.</p>
-            <canvas id="chart-temperature" class="chart-canvas"></canvas>
-          </div>
-          <div class="chart-card">
-            <h3>Gravity</h3>
-            <p>Refraktometerwerte ohne andere Metriken vermischt.</p>
-            <canvas id="chart-gravity" class="chart-canvas"></canvas>
-          </div>
-          <div class="chart-card">
-            <h3>Gravity Velocity</h3>
-            <p>Bewertet den zeitlichen Verlauf der Gravity-Änderung.</p>
-            <canvas id="chart-velocity" class="chart-canvas"></canvas>
+        <div class="chart-card">
+          <h3>Gesammelte Telemetrie</h3>
+          <p>Zwei Linien (Temperatur & Gravity) teilen sich ein Diagramm, behalten aber eigene Skalen.</p>
+          <div class="chart-frame">
+            <canvas id="telemetry-chart"></canvas>
           </div>
         </div>
       </div>
@@ -76,34 +66,8 @@
     const telemetryBtn=document.getElementById('btn-telemetry');
     const telemetryStatus=document.getElementById('telemetry-status');
     const downloadBtn=document.getElementById('btn-download');
-    const chartDefinitions={
-      temperature:{
-        canvas:document.getElementById('chart-temperature'),
-        field:'temperature',
-        label:'Temperatur (°C)',
-        borderColor:'#fbbf24',
-        backgroundColor:'rgba(251,191,36,0.15)',
-        y:{title:'°C',suggestedMin:0,suggestedMax:30}
-      },
-      gravity:{
-        canvas:document.getElementById('chart-gravity'),
-        field:'gravity',
-        label:'Gravity',
-        borderColor:'#22d3ee',
-        backgroundColor:'rgba(34,211,238,0.1)',
-        y:{title:'Gravity',suggestedMin:0.99,suggestedMax:1.1}
-      },
-      velocity:{
-        canvas:document.getElementById('chart-velocity'),
-        field:'gravityVelocity',
-        label:'Gravity Velocity',
-        borderColor:'#f472b6',
-        backgroundColor:'rgba(244,114,182,0.1)',
-        borderDash:[5,5],
-        y:{title:'Δ Gravity',suggestedMin:-0.02,suggestedMax:0.02}
-      }
-    };
-    const charts={};
+    const chartCanvas=document.getElementById('telemetry-chart');
+    let telemetryChart=null;
     let latestTelemetry=[];
 
     telemetryBtn.addEventListener('click',loadTelemetry);
@@ -119,83 +83,95 @@
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           telemetryStatus.textContent=`❗ HTTP ${response.status}`;
-          renderCharts([]);
+          renderChart([]);
           return;
         }
         const rows=Array.isArray(data.rows)?data.rows:[];
         if(!rows.length){
           telemetryStatus.textContent='Keine Telemetriedaten vorhanden.';
-          renderCharts([]);
+          renderChart([]);
           return;
         }
         telemetryStatus.textContent=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
-        renderCharts(rows);
+        renderChart(rows);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
-        renderCharts([]);
+        renderChart([]);
       }
     }
 
-    function renderCharts(rows){
+    function renderChart(rows){
       latestTelemetry=rows;
       downloadBtn.disabled=!rows.length;
       const labels=rows.map(r=>r.createdOn || '');
+      const datasets=[
+        {
+          label:'Temperatur (°C)',
+          data:rows.map(r=>r?.temperature ?? null),
+          borderColor:'#fbbf24',
+          backgroundColor:'rgba(251,191,36,0.08)',
+          yAxisID:'yTemp',
+          fill:false,
+          tension:0.25,
+          spanGaps:true
+        },
+        {
+          label:'Gravity',
+          data:rows.map(r=>normalizeGravity(r?.gravity)),
+          borderColor:'#22d3ee',
+          backgroundColor:'rgba(34,211,238,0.05)',
+          yAxisID:'yGravity',
+          fill:false,
+          tension:0.25,
+          spanGaps:true
+        }
+      ];
 
-      Object.entries(chartDefinitions).forEach(([key,definition])=>{
-        const datasetValues=rows.map(r=>{
-          const value=r?.[definition.field];
-          return value===undefined?null:value;
-        });
-
-        const config={
-          type:'line',
-          data:{
-            labels,
-            datasets:[
-              {
-                label:definition.label,
-                data:datasetValues,
-                borderColor:definition.borderColor,
-                backgroundColor:definition.backgroundColor,
-                borderDash:definition.borderDash || [],
-                fill:true,
-                spanGaps:true,
-                tension:0.25
-              }
-            ]
+      const config={
+        type:'line',
+        data:{labels,datasets},
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          interaction:{mode:'index',intersect:false},
+          plugins:{
+            legend:{position:'bottom',labels:{color:'#f1f5f9'}},
+            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
           },
-          options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            interaction:{mode:'index',intersect:false},
-            plugins:{
-              legend:{display:false},
-              tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}}
+          scales:{
+            yTemp:{
+              type:'linear',
+              position:'left',
+              suggestedMin:0,
+              suggestedMax:30,
+              grid:{color:'rgba(251,191,36,0.12)'},
+              ticks:{color:'#fbbf24'},
+              title:{display:true,text:'°C',color:'#fbbf24'}
             },
-            scales:{
-              y:{
-                title:{display:true,text:definition.y.title,color:'#f1f5f9'},
-                ticks:{color:'#f1f5f9'},
-                grid:{color:'rgba(148,163,184,0.12)'},
-                suggestedMin:definition.y.suggestedMin,
-                suggestedMax:definition.y.suggestedMax
-              },
-              x:{
-                ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
-                grid:{color:'rgba(148,163,184,0.06)'}
-              }
+            yGravity:{
+              type:'linear',
+              position:'right',
+              min:1.0,
+              max:1.2,
+              grid:{drawOnChartArea:false},
+              ticks:{color:'#22d3ee'},
+              title:{display:true,text:'Gravity',color:'#22d3ee'}
+            },
+            x:{
+              ticks:{color:'#cbd5f5',callback:(value,index)=>formatTimestamp(labels[index]||'')},
+              grid:{color:'rgba(148,163,184,0.08)'}
             }
           }
-        };
-
-        if(charts[key]){
-          charts[key].data=config.data;
-          charts[key].options=config.options;
-          charts[key].update();
-        }else if(definition.canvas){
-          charts[key]=new Chart(definition.canvas.getContext('2d'),config);
         }
-      });
+      };
+
+      if(telemetryChart){
+        telemetryChart.data=config.data;
+        telemetryChart.options=config.options;
+        telemetryChart.update();
+      }else if(chartCanvas){
+        telemetryChart=new Chart(chartCanvas.getContext('2d'),config);
+      }
     }
 
     function formatTimestamp(label){
@@ -203,12 +179,19 @@
       return label.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,16);
     }
 
+    function normalizeGravity(value){
+      if(value===undefined || value===null) return null;
+      const num=Number(value);
+      if(!Number.isFinite(num)) return null;
+      return num/1000;
+    }
+
     function downloadCsv(){
       if(!latestTelemetry.length) return;
       const columns=['createdOn','temperature','gravity','gravityVelocity'];
       const header=columns.join(';');
       const lines=latestTelemetry.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
-      const csv=[header,...lines].join('\\n');
+      const csv=[header,...lines].join('\\r\\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const url=URL.createObjectURL(blob);
       const link=document.createElement('a');
