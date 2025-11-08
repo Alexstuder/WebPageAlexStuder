@@ -9,22 +9,28 @@
     html,body {min-height:100%;overflow:auto;}
     body {background:#020617;color:#f1f5f9;}
     .rapt-stack {display:flex;flex-direction:column;gap:20px;}
-    .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
+    .page-panel{position:relative;background:rgba(3,6,16,0.92);padding:56px 64px 72px;border-radius:56px;box-shadow:0 40px 110px rgba(0,0,0,0.6);}
+    .page-panel>.panel-label{display:none;}
+    .rapt-panel {position:relative;width:calc(100% - 96px);margin:48px auto 0 auto;background: rgba(4,6,15,0.94);padding: 48px;border-radius: 40px;box-shadow: inset 0 0 0 1px rgba(59,130,246,0.12);}
+    .panel-label{display:none;}
     .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;}
     .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;}
-    .rapt-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
-    .rapt-links {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
     .rapt-status {margin-bottom:8px;color:#fbbf24;}
     .rapt-range {margin-bottom:16px;font-size:14px;color:#cbd5f5;}
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
     .btn.icon {padding:0;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-    .chart-card {background:#0b1120;padding:18px;border-radius:20px;border:1px solid rgba(148,163,184,0.2);}
+    .chart-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:6px 0 0;}
+    .chart-actions__info{font-size:12px;color:#94a3b8;}
+    .chart-actions__label{font-size:14px;color:#cbd5f5;}
+    .links-footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:22px;}
+    .chart-card {position:relative;background:#0b1120;padding:24px;border-radius:24px;border:1px solid rgba(59,130,246,0.25);width:calc(100% - 54px);margin:24px auto 0 auto;}
+    .chart-card .panel-label{top:16px;left:24px;}
     .chart-card h3 {margin:0 0 8px;font-size:28px;font-weight:700;}
     .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
     .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
     .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
-    .telemetry-summary {display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;}
+    .telemetry-summary {display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;margin-bottom:26px;}
     .summary-tile {flex:1;min-width:200px;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:6px;}
     .summary-label {font-size:15px;color:#cbd5f5;text-transform:uppercase;letter-spacing:0.08em;}
     .summary-value {font-size:clamp(36px,6vw,64px);font-weight:700;line-height:1;color:#f8fafc;}
@@ -38,39 +44,45 @@
 </head>
 <body data-page="rapt">
   <main class="gpt-shell">
-    <header class="gpt-head">
-      <h1 id="page-title">Gesammelte Telemetrie</h1>
-    </header>
-
     <section class="gpt-preview rapt-stack">
-      <div class="rapt-panel">
-        <div class="rapt-links">
-          <a class="btn ghost" href="rapt-token.html">Bearer-Details</a>
-          <a class="btn ghost" href="rapt-table.html">Tabellenansicht</a>
-        </div>
-        <div class="rapt-actions">
-          <button class="btn primary" id="btn-telemetry">Telemetry laden</button>
-          <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
-          <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
-        </div>
-        <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
-        <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
-        <div class="chart-card">
-          <h3 id="profile-title"></h3>
+      <div class="page-panel">
+        <div class="panel-label">Page Header</div>
+        <header class="gpt-head panel-head">
+          <div class="gpt-badge gpt-badge--brew">Currently Brewing</div>
+          <h1 id="page-title">Gesammelte Telemetrie</h1>
+        </header>
+        <div class="rapt-panel">
+          <div class="panel-label">Outer Panel</div>
+          <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
+          <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
+          <div class="chart-card">
+            <div class="panel-label">Inner Panel</div>
+            <h3 id="profile-title"></h3>
+            <div class="telemetry-summary">
+              <div class="summary-tile blue">
+                <span class="summary-label">Temperatur</span>
+                <span class="summary-value" id="summary-temp">–</span>
+                <span class="summary-unit">°C</span>
+              </div>
+              <div class="summary-tile red">
+                <span class="summary-label">Gravity</span>
+                <span class="summary-value" id="summary-gravity">–</span>
+                <span class="summary-unit">SG</span>
+              </div>
+            </div>
           <div class="chart-frame">
             <canvas id="telemetry-chart"></canvas>
           </div>
-          <div class="telemetry-summary">
-            <div class="summary-tile blue">
-              <span class="summary-label">Temperatur</span>
-              <span class="summary-value" id="summary-temp">–</span>
-              <span class="summary-unit">°C</span>
-            </div>
-            <div class="summary-tile red">
-              <span class="summary-label">Gravity</span>
-              <span class="summary-value" id="summary-gravity">–</span>
-              <span class="summary-unit">SG</span>
-            </div>
+          <div class="chart-actions">
+            <span class="chart-actions__info" id="reload-info">Lädt...</span>
+            <span class="chart-actions__label">Reload</span>
+            <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
+          </div>
+          </div>
+          <div class="links-footer">
+            <a class="btn ghost" href="rapt-token.html">Bearer-Details</a>
+            <a class="btn ghost" href="rapt-table.html">Tabellenansicht</a>
+            <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
           </div>
         </div>
       </div>
@@ -112,7 +124,6 @@
     };
     Chart.register(dayMarkerPlugin);
 
-    const telemetryBtn=document.getElementById('btn-telemetry');
     const reloadBtn=document.getElementById('btn-reload');
     const telemetryStatus=document.getElementById('telemetry-status');
     const telemetryRange=document.getElementById('telemetry-range');
@@ -125,7 +136,6 @@
     let telemetryChart=null;
     let latestTelemetry=[];
 
-    telemetryBtn.addEventListener('click',()=>loadTelemetry(false));
     reloadBtn.addEventListener('click',()=>loadTelemetry(true));
     downloadBtn.addEventListener('click',downloadCsv);
     downloadBtn.disabled=true;
@@ -165,6 +175,10 @@
           updateRangeInfo();
           updateProfileHeading();
           updateSummary([]);
+          updateReloadInfo(data.generatedAt || null,false);
+          setLoadingState(false);
+          return;
+        }
           return;
         }
         let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
@@ -179,6 +193,7 @@
         updateProfileHeading(resolvedProfileName);
         renderChart(rows);
         updateSummary(rows);
+        updateReloadInfo(end || data.generatedAt || null,true);
         setLoadingState(false);
       }catch(error){
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
@@ -186,6 +201,7 @@
         updateRangeInfo();
         updateProfileHeading();
         updateSummary([]);
+        updateReloadInfo(null,false);
         setLoadingState(false);
       }
     }
@@ -358,9 +374,23 @@
     }
 
     function setLoadingState(isLoading){
-      if(telemetryBtn) telemetryBtn.disabled=isLoading;
       if(reloadBtn) reloadBtn.disabled=isLoading;
       if(downloadBtn) downloadBtn.disabled=isLoading || !latestTelemetry.length;
+    }
+
+    function updateReloadInfo(timestamp,isFresh){
+      const info=document.getElementById('reload-info');
+      if(!info){
+        return;
+      }
+      if(!timestamp){
+        info.textContent=isFresh?'Gerade aktualisiert':'Keine Daten';
+        return;
+      }
+      const date=new Date(timestamp);
+      info.textContent=isFresh
+        ? `Stand ${date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'})}`
+        : `Letzter Stand ${date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'})}`;
     }
 
     function escapeCsv(value){
