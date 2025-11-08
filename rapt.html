@@ -293,7 +293,16 @@
           interaction:{mode:'index',intersect:false},
           plugins:{
             legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
-            tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`}},
+            tooltip:{
+              callbacks:{
+                title:items=>{
+                  const idx=items[0]?.dataIndex ?? 0;
+                  const label=labels[idx] || '';
+                  return formatFullTimestamp(label);
+                },
+                label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`
+              }
+            },
             dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8}
           },
           scales:{
@@ -326,7 +335,7 @@
               title:{display:true,text:'Alkohol %',color:'#facc15'}
             },
             x:{
-              ticks:{color:'#cbd5f5',callback:(value,index)=>formatDayLabel(labels[index]||''),autoSkip:true,maxRotation:0},
+              ticks:{color:'#cbd5f5',callback:value=>formatDayLabel(value),autoSkip:true,maxRotation:0},
               grid:{color:'rgba(148,163,184,0.08)'}
             }
           }
@@ -347,6 +356,13 @@
       const date=new Date(label);
       if(Number.isNaN(date.getTime())) return label;
       return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+    }
+
+    function formatFullTimestamp(label){
+      if(!label) return '';
+      const date=new Date(label);
+      if(Number.isNaN(date.getTime())) return label;
+      return date.toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     }
 
     function normalizeGravity(value){
