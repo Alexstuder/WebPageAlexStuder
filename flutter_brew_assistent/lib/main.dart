@@ -443,7 +443,12 @@ class FineTuningProfile {
   double hopPalate = 0.0;
   double hopFinish = 0.0;
 
+  final Map<String, double> _baseline = {};
+
   void applyPreset(Map<String, double> preset) {
+    _baseline
+      ..clear()
+      ..addAll(preset);
     hopIntensity = preset['hopIntensity'] ?? hopIntensity;
     hopHerbal = preset['hopHerbal'] ?? hopHerbal;
     hopFloral = preset['hopFloral'] ?? hopFloral;
@@ -462,6 +467,12 @@ class FineTuningProfile {
     fresh = preset['fresh'] ?? fresh;
     dry = preset['dry'] ?? dry;
     lasting = preset['lasting'] ?? lasting;
+  }
+
+  double diff(String key, double current) {
+    final base = _baseline[key];
+    if (base == null) return 0.0;
+    return current - base;
   }
 }
 
@@ -668,6 +679,47 @@ const Map<String, Map<String, double>> _beerPresets = {
   },
 };
 
+class _SliderExtrema {
+  _SliderExtrema(this.minValue, this.minBeer, this.maxValue, this.maxBeer);
+
+  final double minValue;
+  final String minBeer;
+  final double maxValue;
+  final String maxBeer;
+
+  int get minPercent => (minValue * 100).round();
+  int get maxPercent => (maxValue * 100).round();
+}
+
+final Map<String, _SliderExtrema> _sliderExtrema = (() {
+  final Map<String, _SliderExtrema> result = {};
+  final keys = _beerPresets.values
+      .expand((preset) => preset.keys)
+      .toSet()
+      .toList();
+  for (final key in keys) {
+    double? minVal;
+    String minBeer = '';
+    double? maxVal;
+    String maxBeer = '';
+    _beerPresets.forEach((beer, preset) {
+      final value = preset[key];
+      if (value == null) return;
+      if (minVal == null || value < minVal!) {
+        minVal = value;
+        minBeer = beer;
+      }
+      if (maxVal == null || value > maxVal!) {
+        maxVal = value;
+        maxBeer = beer;
+      }
+    });
+    if (minVal != null && maxVal != null) {
+      result[key] = _SliderExtrema(minVal!, minBeer, maxVal!, maxBeer);
+    }
+  }
+  return result;
+})();
 class _BeerGroup extends StatelessWidget {
   const _BeerGroup({
     required this.title,
@@ -824,11 +876,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopIntensity,
+                      baselineKey: 'hopIntensity',
                     ),
                     _FineSlider(
                       value: profile.hopIntensity,
                       onChanged: (v) =>
                           setState(() => profile.hopIntensity = v),
+                      baselineKey: 'hopIntensity',
                     ),
                     const SizedBox(height: 12),
                     _SliderBlock(
@@ -836,11 +890,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopHerbal,
+                      baselineKey: 'hopHerbal',
                     ),
                     _FineSlider(
                       value: profile.hopHerbal,
                       onChanged: (v) =>
                           setState(() => profile.hopHerbal = v),
+                      baselineKey: 'hopHerbal',
                     ),
                     const SizedBox(height: 12),
                     _SliderBlock(
@@ -848,11 +904,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopFloral,
+                      baselineKey: 'hopFloral',
                     ),
                     _FineSlider(
                       value: profile.hopFloral,
                       onChanged: (v) =>
                           setState(() => profile.hopFloral = v),
+                      baselineKey: 'hopFloral',
                     ),
                     const SizedBox(height: 12),
                     _SliderBlock(
@@ -860,11 +918,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopFruity,
+                      baselineKey: 'hopFruity',
                     ),
                     _FineSlider(
                       value: profile.hopFruity,
                       onChanged: (v) =>
                           setState(() => profile.hopFruity = v),
+                      baselineKey: 'hopFruity',
                     ),
                   ],
                 ),
@@ -883,11 +943,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopNose,
+                      baselineKey: 'hopNose',
                     ),
                     _FineSlider(
                       value: profile.hopNose,
                       onChanged: (v) =>
                           setState(() => profile.hopNose = v),
+                      baselineKey: 'hopNose',
                     ),
                     const SizedBox(height: 12),
                     _SliderBlock(
@@ -895,11 +957,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopPalate,
+                      baselineKey: 'hopPalate',
                     ),
                     _FineSlider(
                       value: profile.hopPalate,
                       onChanged: (v) =>
                           setState(() => profile.hopPalate = v),
+                      baselineKey: 'hopPalate',
                     ),
                     const SizedBox(height: 12),
                     _SliderBlock(
@@ -907,11 +971,13 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                       minLabel: 'wenig',
                       maxLabel: 'stark',
                       value: profile.hopFinish,
+                      baselineKey: 'hopFinish',
                     ),
                     _FineSlider(
                       value: profile.hopFinish,
                       onChanged: (v) =>
                           setState(() => profile.hopFinish = v),
+                      baselineKey: 'hopFinish',
                     ),
                   ],
                 ),
@@ -988,10 +1054,12 @@ class _FineTuningPageState extends State<FineTuningPage> {
               minLabel: 'Wasser',
               maxLabel: 'Motorenöl',
               value: profile.mouthfeel,
+              baselineKey: 'mouthfeel',
             ),
             _FineSlider(
               value: profile.mouthfeel,
               onChanged: (v) => setState(() => profile.mouthfeel = v),
+              baselineKey: 'mouthfeel',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -999,10 +1067,12 @@ class _FineTuningPageState extends State<FineTuningPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: profile.antrunkMalt,
+              baselineKey: 'antrunkMalt',
             ),
             _FineSlider(
               value: profile.antrunkMalt,
               onChanged: (v) => setState(() => profile.antrunkMalt = v),
+              baselineKey: 'antrunkMalt',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1010,10 +1080,12 @@ class _FineTuningPageState extends State<FineTuningPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: profile.antrunkRoast,
+              baselineKey: 'antrunkRoast',
             ),
             _FineSlider(
               value: profile.antrunkRoast,
               onChanged: (v) => setState(() => profile.antrunkRoast = v),
+              baselineKey: 'antrunkRoast',
             ),
             const Spacer(),
             Align(
@@ -1081,10 +1153,12 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.smooth,
+              baselineKey: 'smooth',
             ),
             _FineSlider(
               value: widget.profile.smooth,
               onChanged: (v) => setState(() => widget.profile.smooth = v),
+              baselineKey: 'smooth',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1092,10 +1166,12 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.fullBody,
+              baselineKey: 'fullBody',
             ),
             _FineSlider(
               value: widget.profile.fullBody,
               onChanged: (v) => setState(() => widget.profile.fullBody = v),
+              baselineKey: 'fullBody',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1103,10 +1179,12 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.mainMalt,
+              baselineKey: 'mainMalt',
             ),
             _FineSlider(
               value: widget.profile.mainMalt,
               onChanged: (v) => setState(() => widget.profile.mainMalt = v),
+              baselineKey: 'mainMalt',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1114,10 +1192,12 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.mainRoast,
+              baselineKey: 'mainRoast',
             ),
             _FineSlider(
               value: widget.profile.mainRoast,
               onChanged: (v) => setState(() => widget.profile.mainRoast = v),
+              baselineKey: 'mainRoast',
             ),
             const Spacer(),
             Align(
@@ -1186,10 +1266,12 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.fade,
+              baselineKey: 'fade',
             ),
             _FineSlider(
               value: widget.profile.fade,
               onChanged: (v) => setState(() => widget.profile.fade = v),
+              baselineKey: 'fade',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1197,10 +1279,12 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.fresh,
+              baselineKey: 'fresh',
             ),
             _FineSlider(
               value: widget.profile.fresh,
               onChanged: (v) => setState(() => widget.profile.fresh = v),
+              baselineKey: 'fresh',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1208,10 +1292,12 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.dry,
+              baselineKey: 'dry',
             ),
             _FineSlider(
               value: widget.profile.dry,
               onChanged: (v) => setState(() => widget.profile.dry = v),
+              baselineKey: 'dry',
             ),
             const SizedBox(height: 12),
             _SliderBlock(
@@ -1219,10 +1305,12 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
               minLabel: 'leicht',
               maxLabel: 'kräftig',
               value: widget.profile.lasting,
+              baselineKey: 'lasting',
             ),
             _FineSlider(
               value: widget.profile.lasting,
               onChanged: (v) => setState(() => widget.profile.lasting = v),
+              baselineKey: 'lasting',
             ),
             const Spacer(),
             Align(
@@ -1308,32 +1396,50 @@ class RecipeSummaryPage extends StatelessWidget {
   List<Widget> _buildSummarySections() {
     final sections = [
       _SummarySection('Hopfen', [
-        _SummaryEntry('Aromaintensität', profile.hopIntensity),
-        _SummaryEntry('Kräuterig', profile.hopHerbal),
-        _SummaryEntry('Blumig', profile.hopFloral),
-        _SummaryEntry('Fruchtig', profile.hopFruity),
+        _SummaryEntry('Aromaintensität', profile.hopIntensity,
+            baselineKey: 'hopIntensity'),
+        _SummaryEntry('Kräuterig', profile.hopHerbal,
+            baselineKey: 'hopHerbal'),
+        _SummaryEntry('Blumig', profile.hopFloral,
+            baselineKey: 'hopFloral'),
+        _SummaryEntry('Fruchtig', profile.hopFruity,
+            baselineKey: 'hopFruity'),
       ]),
       _SummarySection('Verteilung', [
-        _SummaryEntry('Nase', profile.hopNose),
-        _SummaryEntry('Gaumen', profile.hopPalate),
-        _SummaryEntry('Abgang', profile.hopFinish),
+        _SummaryEntry('Nase', profile.hopNose,
+            baselineKey: 'hopNose'),
+        _SummaryEntry('Gaumen', profile.hopPalate,
+            baselineKey: 'hopPalate'),
+        _SummaryEntry('Abgang', profile.hopFinish,
+            baselineKey: 'hopFinish'),
       ]),
       _SummarySection('Antrunk', [
-        _SummaryEntry('Mundgefühl', profile.mouthfeel),
-        _SummaryEntry('Malzaroma', profile.antrunkMalt),
-        _SummaryEntry('Röstmalzaroma', profile.antrunkRoast),
+        _SummaryEntry('Mundgefühl', profile.mouthfeel,
+            baselineKey: 'mouthfeel'),
+        _SummaryEntry('Malzaroma', profile.antrunkMalt,
+            baselineKey: 'antrunkMalt'),
+        _SummaryEntry('Röstmalzaroma', profile.antrunkRoast,
+            baselineKey: 'antrunkRoast'),
       ], dividerBefore: true),
       _SummarySection('Haupttrunk', [
-        _SummaryEntry('süffig', profile.smooth),
-        _SummaryEntry('vollmundig', profile.fullBody),
-        _SummaryEntry('Malzaroma', profile.mainMalt),
-        _SummaryEntry('Röstaroma', profile.mainRoast),
+        _SummaryEntry('süffig', profile.smooth,
+            baselineKey: 'smooth'),
+        _SummaryEntry('vollmundig', profile.fullBody,
+            baselineKey: 'fullBody'),
+        _SummaryEntry('Malzaroma', profile.mainMalt,
+            baselineKey: 'mainMalt'),
+        _SummaryEntry('Röstaroma', profile.mainRoast,
+            baselineKey: 'mainRoast'),
       ]),
       _SummarySection('Nachtrunk', [
-        _SummaryEntry('abklingen', profile.fade),
-        _SummaryEntry('erfrischend', profile.fresh),
-        _SummaryEntry('trocken', profile.dry),
-        _SummaryEntry('langanhaltend', profile.lasting),
+        _SummaryEntry('abklingen', profile.fade,
+            baselineKey: 'fade'),
+        _SummaryEntry('erfrischend', profile.fresh,
+            baselineKey: 'fresh'),
+        _SummaryEntry('trocken', profile.dry,
+            baselineKey: 'dry'),
+        _SummaryEntry('langanhaltend', profile.lasting,
+            baselineKey: 'lasting'),
       ]),
     ];
 
@@ -1362,17 +1468,26 @@ class RecipeSummaryPage extends StatelessWidget {
               const SizedBox(height: 6),
               ...section.entries.map(
                 (entry) => Padding(
-                  padding: const EdgeInsets.only(left: 20, top: 2, bottom: 2),
+                  padding: const EdgeInsets.only(left: 20, top: 4, bottom: 4),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        entry.label,
-                        style: const TextStyle(fontSize: 14),
+                      Expanded(
+                        child: Text(
+                          entry.label,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
                       Text(
                         '${(entry.value * 100).round()}%',
                         style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(width: 20),
+                      Text(
+                        _formatDiff(entry),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   ),
@@ -1385,10 +1500,18 @@ class RecipeSummaryPage extends StatelessWidget {
     }
     return widgets;
   }
+
+  String _formatDiff(_SummaryEntry entry) {
+    final delta = profile.diff(entry.baselineKey, entry.value);
+    if (delta.abs() < 0.005) return '0%';
+    final sign = delta > 0 ? '+' : '-';
+    return '$sign${(delta.abs() * 100).round()}%';
+  }
 }
 
 class _SummarySection {
-  const _SummarySection(this.title, this.entries, {this.dividerBefore = false});
+  const _SummarySection(this.title, this.entries,
+      {this.dividerBefore = false});
 
   final String title;
   final List<_SummaryEntry> entries;
@@ -1396,10 +1519,11 @@ class _SummarySection {
 }
 
 class _SummaryEntry {
-  const _SummaryEntry(this.label, this.value);
+  const _SummaryEntry(this.label, this.value, {required this.baselineKey});
 
   final String label;
   final double value;
+  final String baselineKey;
 }
 class _SliderBlock extends StatelessWidget {
   const _SliderBlock({
@@ -1407,12 +1531,14 @@ class _SliderBlock extends StatelessWidget {
     required this.minLabel,
     required this.maxLabel,
     required this.value,
+    required this.baselineKey,
   });
 
   final String label;
   final String minLabel;
   final String maxLabel;
   final double value;
+  final String baselineKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1465,10 +1591,15 @@ class _IndentedBlock extends StatelessWidget {
 }
 
 class _FineSlider extends StatelessWidget {
-  const _FineSlider({required this.value, required this.onChanged});
+  const _FineSlider({
+    required this.value,
+    required this.onChanged,
+    required this.baselineKey,
+  });
 
   final double value;
   final ValueChanged<double> onChanged;
+  final String baselineKey;
 
   @override
   Widget build(BuildContext context) {
@@ -1476,19 +1607,122 @@ class _FineSlider extends StatelessWidget {
       trackHeight: 4,
       thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
     );
+
     return Padding(
       padding: const EdgeInsets.only(top: 4, right: 24),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: SliderTheme(
-          data: theme,
-          child: Slider(
-            value: value,
-            min: 0,
-            max: 1,
-            onChanged: onChanged,
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final points = _markerPoints(baselineKey, width);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              SizedBox(
+                width: width,
+                child: SliderTheme(
+                  data: theme,
+                  child: Slider(
+                    value: value,
+                    min: 0,
+                    max: 1,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+              ...points,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _markerPoints(String key, double width) {
+    final entries = _beerPresets.entries
+        .map((e) => MapEntry(e.key, e.value[key]))
+        .where((e) => e.value != null)
+        .map((e) => MapEntry(e.key, e.value!.clamp(0.0, 1.0)))
+        .toList();
+    if (entries.isEmpty) return [];
+
+    entries.sort((a, b) => a.value.compareTo(b.value));
+    final candidates = <MapEntry<String, double>>[];
+    candidates.add(entries.first);
+    if (entries.length > 2) {
+      final midIndex = entries.length ~/ 2;
+      candidates.add(entries[midIndex]);
+    }
+    candidates.add(entries.last);
+
+    final List<Widget> markers = [];
+    for (var i = 0; i < candidates.length; i++) {
+      final entry = candidates[i];
+      final left = (entry.value * width).clamp(0.0, width - 12.0);
+      final placeAbove = i.isEven;
+      final double top = placeAbove ? -24.0 - i * 4.0 : 18.0 + i * 4.0;
+      markers.add(_Marker(left: left, top: top, label: entry.key));
+    }
+    return markers;
+  }
+}
+
+class _Marker extends StatelessWidget {
+  const _Marker({required this.left, required this.top, required this.label});
+
+  final double left;
+  final double top;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: left,
+      top: top,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: top < 0
+            ? [
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 70),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.white54),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.white54,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ]
+            : [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.white54,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 70),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(fontSize: 10, color: Colors.white54),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
       ),
     );
   }
