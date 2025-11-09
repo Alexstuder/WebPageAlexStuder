@@ -117,6 +117,7 @@
         ctx.strokeStyle='rgba(255,255,255,0.2)';
         ctx.lineWidth=1;
         const bottom=chart.chartArea.bottom;
+        const textMarkers=[];
         labels.forEach((label,idx)=>{
           const day=new Date(label).toDateString();
           if(!day || day===lastDay) return;
@@ -127,6 +128,26 @@
           ctx.moveTo(x,chart.chartArea.top);
           ctx.lineTo(x,bottom);
           ctx.stroke();
+          const text=formatDayShort(label);
+          if(text){
+            textMarkers.push({x,text});
+          }
+        });
+        const minSpacing=28;
+        for(let i=1;i<textMarkers.length;i++){
+          const prev=textMarkers[i-1];
+          const current=textMarkers[i];
+          if(Math.abs(current.x-prev.x)<minSpacing){
+            prev.bumped=true;
+          }
+        }
+        ctx.fillStyle='#cbd5f5';
+        ctx.font='10px "Inter", system-ui, sans-serif';
+        ctx.textAlign='center';
+        ctx.textBaseline='top';
+        textMarkers.forEach(marker=>{
+          const y=marker.bumped?bottom+18:bottom+4;
+          ctx.fillText(marker.text,marker.x,y);
         });
         ctx.restore();
       }
@@ -331,7 +352,7 @@
             yAbv:{
               type:'linear',
               position:'right',
-              offset:true,
+              offset:false,
               min:0,
               max:Math.max(5,Math.ceil(abvMax+0.5)),
               grid:{drawOnChartArea:false},
