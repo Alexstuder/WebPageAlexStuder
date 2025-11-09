@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AiBrewGenius · RAPT Bearer</title>
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="../../../css/styles.css?v=4" />
   <style>
     html,body {min-height:100%;overflow:auto;}
     body {background:#020617;color:#f1f5f9;}
@@ -33,7 +33,7 @@
         <div class="rapt-actions">
           <button class="btn primary" id="btn-token">Token aktualisieren</button>
           <a class="btn ghost" href="https://api.rapt.io/index.html" target="_blank" rel="noopener">RAPT OpenAPI</a>
-          <a class="btn" href="rapt.html">Zurück zum Dashboard</a>
+          <a class="btn" href="../">Zurück zum Dashboard</a>
         </div>
         <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
         <div id="token-data" class="rapt-result">-</div>
@@ -41,11 +41,11 @@
     </section>
 
     <footer class="gpt-foot">
-      <a class="btn" href="index.html">Zur Startseite</a>
+      <a class="btn" href="../../../index.html">Zur Startseite</a>
     </footer>
   </main>
 
-  <script src="js/api-base.js"></script>
+  <script src="../../../js/api-base.js"></script>
   <script>
     const tokenBtn=document.getElementById('btn-token');
     const tokenStatus=document.getElementById('token-status');

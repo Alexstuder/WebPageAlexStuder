@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AiBrewGenius · RAPT Tabelle</title>
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="../../../css/styles.css?v=4" />
   <style>
     body {background:#020617;color:#f1f5f9;}
     .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
@@ -36,7 +36,7 @@
         <div class="table-actions">
           <button class="btn primary" id="btn-table-reload">Telemetry laden</button>
           <button class="btn ghost" id="btn-table-download" disabled>CSV herunterladen</button>
-          <a class="btn" href="rapt.html">Zurück zum Dashboard</a>
+          <a class="btn" href="../">Zurück zum Dashboard</a>
         </div>
         <div class="rapt-status" id="table-status">Noch nicht geladen.</div>
         <div class="table-wrapper">
@@ -58,11 +58,11 @@
     </section>
 
     <footer class="gpt-foot">
-      <a class="btn" href="index.html">Zur Startseite</a>
+      <a class="btn" href="../../../index.html">Zur Startseite</a>
     </footer>
   </main>
 
-  <script src="js/api-base.js"></script>
+  <script src="../../../js/api-base.js"></script>
   <script>
     const reloadBtn=document.getElementById('btn-table-reload');
     const downloadBtn=document.getElementById('btn-table-download');
