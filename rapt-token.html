@@ -45,6 +45,7 @@
     </footer>
   </main>
 
+  <script src="js/api-base.js"></script>
   <script>
     const tokenBtn=document.getElementById('btn-token');
     const tokenStatus=document.getElementById('token-status');
@@ -57,7 +58,7 @@
       tokenStatus.textContent='⏳ Token wird abgerufen ...';
       tokenData.textContent='';
       try{
-        const response=await fetch('/api/rapt/token',{method:'POST'});
+        const response=await fetch(getApiUrl('/api/rapt/token'),{method:'POST'});
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           tokenStatus.textContent=`❗ HTTP ${response.status}`;

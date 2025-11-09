@@ -37,6 +37,20 @@ Kurzanleitung (Landing Page):
    ```
 5. Für Produktions-Deploy den Proxy auf dem Server laufen lassen und `PROXY_URL` auf die öffentliche AiBrewGenius-Proxy-URL setzen. Wenn du den Web-Build manuell erstellst, nutze `flutter build web --wasm --base-href /brew_app/`, damit alle Assets unter dem Unterpfad gefunden werden.
 
+### RAPT Seiten lokal testen
+
+1. Proxy vorbereiten und starten:
+   ```bash
+   npm run proxy:dev
+   ```
+   Der Root-Befehl startet intern `scripts/dev-proxy.sh`, installiert fehlende Dependencies automatisch und fährt anschließend den Server hoch (Standard: `http://localhost:3000`, Endpunkte `/api/rapt/*`). Alternativ: `npm run proxy:watch`, um direkt `nodemon` im `proxy`-Ordner zu nutzen, falls alles bereits installiert ist.
+2. Öffne `rapt.html`, `rapt-table.html` oder `rapt-token.html` wie gewohnt (Dateipfad oder beliebiger lokaler Webserver). Die Seiten erkennen automatisch, dass sie lokal laufen, und rufen die API über `http://localhost:3000` auf. Dadurch verschwindet das 404 aus rein statischen Servern wie `python -m http.server`.
+3. Falls du einen anderen Proxy-Port oder eine externe URL nutzen willst, setze einmalig im Browser die Basis per Konsole:
+   ```js
+   localStorage.setItem('API_BASE_URL', 'http://dein-host:4000');
+   ```
+   oder hänge während der Sitzung `window.API_BASE_URL='https://example.com';` vor den Seitenaufruf. Entferne den Eintrag mit `localStorage.removeItem('API_BASE_URL')`, um wieder die automatische Erkennung zu verwenden.
+
 ## Deployment via GitHub Actions
 
 - Secrets benötigt:

@@ -1,0 +1,8 @@
+{
+  "name": "webpage-alex-studer",
+  "private": true,
+  "scripts": {
+    "proxy:dev": "./scripts/dev-proxy.sh",
+    "proxy:watch": "npm --prefix proxy run dev"
+  }
+}

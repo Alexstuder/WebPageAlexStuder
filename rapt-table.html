@@ -62,6 +62,7 @@
     </footer>
   </main>
 
+  <script src="js/api-base.js"></script>
   <script>
     const reloadBtn=document.getElementById('btn-table-reload');
     const downloadBtn=document.getElementById('btn-table-download');
@@ -81,7 +82,7 @@
     async function loadTelemetry(){
       tableStatus.textContent='⏳ Telemetrie wird geladen ...';
       try{
-        const response=await fetch('/api/rapt/telemetry');
+        const response=await fetch(getApiUrl('/api/rapt/telemetry'));
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           tableStatus.textContent=`❗ HTTP ${response.status}`;

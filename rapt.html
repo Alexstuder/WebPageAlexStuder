@@ -103,6 +103,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/api-base.js"></script>
   <script>
     Chart.register({
       id:'dayMarkers',
@@ -160,7 +161,7 @@
       telemetryRange.textContent='Zeitraum wird geladen ...';
       setLoadingState(true);
       try{
-        const endpoint=force?'/api/rapt/telemetry?reload=1':'/api/rapt/telemetry';
+        const endpoint=force?getApiUrl('/api/rapt/telemetry?reload=1'):getApiUrl('/api/rapt/telemetry');
         const response=await fetch(endpoint);
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
