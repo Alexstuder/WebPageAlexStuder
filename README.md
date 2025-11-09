@@ -59,7 +59,7 @@ Kurzanleitung (Landing Page):
    ```bash
    npm run proxy:dev
    ```
-   Der Root-Befehl startet intern `scripts/dev-proxy.sh`, installiert fehlende Dependencies automatisch und fährt anschließend den Server hoch (Standard: `http://localhost:3000`, Endpunkte `/api/rapt/*`). Alternativ: `npm run proxy:watch`, um direkt `nodemon` im `proxy`-Ordner zu nutzen, falls alles bereits installiert ist.
+   Der Root-Befehl startet intern `scripts/dev-proxy.sh`, installiert fehlende Dependencies automatisch, fährt den Proxy hoch (Standard: `http://localhost:3000`, Endpunkte `/api/rapt/*`) **und** startet parallel `flutter run -d chrome`. Ein `Ctrl+C` beendet beide Prozesse. Alternativ: `npm run proxy:watch`, um ausschließlich den Proxy (mit nodemon) zu starten.
 2. Öffne `WegPages/rapt/`, `WegPages/rapt/table/` oder `WegPages/rapt/token/` (Dateipfad oder beliebiger lokaler Webserver). Die Seiten erkennen automatisch, dass sie lokal laufen, und rufen die API über `http://localhost:3000` auf. Dadurch verschwindet das 404 aus rein statischen Servern wie `python -m http.server`.
 3. Falls du einen anderen Proxy-Port oder eine externe URL nutzen willst, setze einmalig im Browser die Basis per Konsole:
    ```js
