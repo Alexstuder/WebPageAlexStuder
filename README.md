@@ -6,10 +6,8 @@ Projektstruktur (empfohlen)
 │  └─ styles.css
 ├─ js/
 │  └─ app.js
-├─ WegPages/
+├─ WebPages/
 │  ├─ bier/
-│  │  └─ index.html
-│  ├─ brew_app/
 │  │  └─ index.html
 │  ├─ quiz/
 │  │  └─ index.html
@@ -60,7 +58,7 @@ Kurzanleitung (Landing Page):
    npm run proxy:dev
    ```
    Der Root-Befehl startet intern `scripts/dev-proxy.sh`, installiert fehlende Dependencies automatisch, fährt den Proxy hoch (Standard: `http://localhost:3000`, Endpunkte `/api/rapt/*`) **und** startet parallel `flutter run -d chrome`. Ein `Ctrl+C` beendet beide Prozesse. Alternativ: `npm run proxy:watch`, um ausschließlich den Proxy (mit nodemon) zu starten.
-2. Öffne `WegPages/rapt/`, `WegPages/rapt/table/` oder `WegPages/rapt/token/` (Dateipfad oder beliebiger lokaler Webserver). Die Seiten erkennen automatisch, dass sie lokal laufen, und rufen die API über `http://localhost:3000` auf. Dadurch verschwindet das 404 aus rein statischen Servern wie `python -m http.server`.
+2. Öffne `WebPages/rapt/`, `WebPages/rapt/table/` oder `WebPages/rapt/token/` (Dateipfad oder beliebiger lokaler Webserver). Die Seiten erkennen automatisch, dass sie lokal laufen, und rufen die API über `http://localhost:3000` auf. Dadurch verschwindet das 404 aus rein statischen Servern wie `python -m http.server`.
 3. Falls du einen anderen Proxy-Port oder eine externe URL nutzen willst, setze einmalig im Browser die Basis per Konsole:
    ```js
    localStorage.setItem('API_BASE_URL', 'http://dein-host:4000');
@@ -75,8 +73,8 @@ Kurzanleitung (Landing Page):
   - `OPENAI_API_KEY` (wird in `proxy/.env` geschrieben)
   - `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
   - `RAPT_API_KEY` & `RAPT_USERNAME` (für den RAPT Explorer; nur serverseitig genutzt)
-- Öffentliche AiBrewGenius-Web-App: `https://alexstuder.run.place/brew_app/`
-- RAPT API Explorer lokal via `WegPages/rapt/` oder live über deine Domain.
+- Öffentliche AiBrewGenius-Web-App: `https://alexstuder.run.place/brew_app/` (Startseite und Karussell führen direkt dorthin.)
+- RAPT API Explorer lokal via `WebPages/rapt/` oder live über deine Domain.
   - Enthält einen integrierten Token-Generator (`https://id.rapt.io/connect/token`), der deinen Benutzer/API-Key nutzt und den erhaltenen JWT automatisch als Bearer-Token einträgt.
   - Ruft automatisch `GetProfiles`, `GetHydrometers`, `GetTelemetry` ab und zeigt Token + Messwerte tabellarisch an.
 - Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).

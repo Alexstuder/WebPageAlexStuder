@@ -175,7 +175,7 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'welcome',
+              'Wähle die Basis deines neuen Bieres',
               style: TextStyle(fontSize: 26, letterSpacing: 1.2),
             ),
             const SizedBox(height: 24),
