@@ -9,6 +9,8 @@ Projektstruktur (empfohlen)
 ├─ WegPages/
 │  ├─ bier/
 │  │  └─ index.html
+│  ├─ brew_app/
+│  │  └─ index.html
 │  ├─ quiz/
 │  │  └─ index.html
 │  ├─ rapt/

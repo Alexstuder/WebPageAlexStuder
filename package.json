@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "proxy:dev": "./scripts/dev-proxy.sh",
-    "proxy:watch": "npm --prefix proxy run dev"
+    "proxy:watch": "npm --prefix proxy run dev",
+    "flutter:web": "cd flutter_brew_assistent && flutter run -d chrome",
+    "flutter:build": "cd flutter_brew_assistent && flutter build web --wasm --base-href /brew_app/"
   }
 }
