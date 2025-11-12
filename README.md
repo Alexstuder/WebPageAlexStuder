@@ -44,6 +44,7 @@ Kurzanleitung (Landing Page):
    ```
 3. Flutter-Web-App konfigurieren:
 - In `flutter_brew_assistent/.env` die Proxy-URL setzen, z.B. `PROXY_URL=http://localhost:3000/api/brew`.
+- Für Supabase die Werte `SUPABASE_URL` (lokaler/öffentlicher Host, z.B. `http://localhost:54321`) und `SUPABASE_ANON_KEY` hinterlegen.
 4. Flutter lokal starten:
    ```bash
    cd flutter_brew_assistent
@@ -64,6 +65,37 @@ Kurzanleitung (Landing Page):
    localStorage.setItem('API_BASE_URL', 'http://dein-host:4000');
    ```
    oder hänge während der Sitzung `window.API_BASE_URL='https://example.com';` vor den Seitenaufruf. Entferne den Eintrag mit `localStorage.removeItem('API_BASE_URL')`, um wieder die automatische Erkennung zu verwenden.
+
+## Supabase (Self-hosted) Setup
+
+1. **Supabase lokal starten**  
+   - Repo klonen: `git clone https://github.com/supabase/supabase`.
+   - `.env` kopieren (`cp .env.example .env`) und die gewünschten Ports belassen oder anpassen.  
+   - `supabase start` (Docker & docker-compose erforderlich). Danach erreichst du die lokale Instanz über `http://localhost:54321`.
+2. **API Keys auslesen**  
+   - Nach dem Start findest du im `.env` bzw. im Log den `anon` Schlüssel. Trage URL + Key in `flutter_brew_assistent/.env` ein (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+3. **Tabelle für User-Profil anlegen**  
+   ```sql
+   create table public.user_profiles (
+     id text primary key,
+     name text,
+     avatar_url text,
+     kettle_brand text,
+     kettle_type text,
+     default_batch_liters float8,
+     fermenter_brand text,
+     fermenter_type text,
+     controller text,
+     controller_user text,
+     controller_api_key text,
+     yeast_entries jsonb default '[]'::jsonb
+   );
+   ```
+   Optional: Row-Level-Security aktivieren (`alter table user_profiles enable row level security;`) und eine Policy hinzufügen, falls du später Auth nutzt. Für den einfachen Selbsthost-Usecase ohne Auth kannst du RLS deaktiviert lassen.
+4. **Service deployment**  
+   - Docker-Compose Setup dauerhaft laufen lassen (`supabase start -x` für Hintergrund).  
+   - Von außen erreichbar machen (z.B. Reverse Proxy) oder Port-Forwarding konfigurieren.  
+   - Die Flutter-App verbindet sich direkt per Supabase-URL + `anon` Key.
 
 ## Deployment via GitHub Actions
 

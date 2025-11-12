@@ -4,3 +4,6 @@
 
 # Dependencies
 node_modules/
+
+# Supabase local stack (Docker configs, volumes)
+supabase/

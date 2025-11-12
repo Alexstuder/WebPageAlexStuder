@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'services/openai_service.dart';
+import 'services/user_profile_service.dart';
+import 'models/user_profile.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+  if (supabaseUrl == null || supabaseAnonKey == null) {
+    throw Exception('Supabase config missing. Check .env');
+  }
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   runApp(const BrewMateApp());
 }
 
@@ -35,6 +44,7 @@ class BrewMateApp extends StatelessWidget {
       initialRoute: BrewEntryPage.routeName,
       routes: {
         BrewEntryPage.routeName: (_) => const BrewEntryPage(),
+        UserProfilePage.routeName: (_) => const UserProfilePage(),
         DiscoveryWelcomePage.routeName: (_) => const DiscoveryWelcomePage(),
         RecipePromptPage.routeName: (_) => const RecipePromptPage(),
       },
@@ -49,6 +59,15 @@ class BrewEntryPage extends StatelessWidget {
 
   void _openRoute(BuildContext context, String route) {
     Navigator.of(context).pushNamed(route);
+  }
+
+  Future<void> _openStudio(BuildContext context) async {
+    final uri = Uri.parse('http://127.0.0.1:54323/');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Konnte Studio nicht öffnen.')),
+      );
+    }
   }
 
   @override
@@ -70,6 +89,17 @@ class BrewEntryPage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  _EntryButton(
+                    label: 'Users profil',
+                    onPressed: () =>
+                        _openRoute(context, UserProfilePage.routeName),
+                  ),
+                  const SizedBox(height: 18),
+                  _EntryButton(
+                    label: 'Studio',
+                    onPressed: () => _openStudio(context),
+                  ),
+                  const SizedBox(height: 18),
                   _EntryButton(
                     label: 'Start, entdecken wir ein neues Bier',
                     onPressed: () => _openRoute(
@@ -175,6 +205,8 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const _UserNameBanner(),
+            const SizedBox(height: 20),
             const Text(
               'Wähle die Basis deines neuen Bieres',
               style: TextStyle(fontSize: 26, letterSpacing: 1.2),
@@ -198,6 +230,569 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class UserProfilePage extends StatefulWidget {
+  const UserProfilePage({super.key});
+
+  static const String routeName = '/user-profile';
+
+  @override
+  State<UserProfilePage> createState() => _UserProfilePageState();
+}
+
+class _UserProfilePageState extends State<UserProfilePage> {
+  final TextEditingController _userNameCtrl = TextEditingController();
+  final TextEditingController _avatarUrlCtrl = TextEditingController();
+  final TextEditingController _kettleBrandCtrl = TextEditingController();
+  final TextEditingController _kettleTypeCtrl = TextEditingController();
+  final TextEditingController _defaultBatchCtrl = TextEditingController();
+  final TextEditingController _fermenterBrandCtrl = TextEditingController();
+  final TextEditingController _fermenterTypeCtrl = TextEditingController();
+  final TextEditingController _raptUserCtrl = TextEditingController();
+  final TextEditingController _raptApiKeyCtrl = TextEditingController();
+  final List<_YeastEntry> _yeastEntries = [_YeastEntry()];
+  final UserProfileService _profileService = UserProfileService();
+
+  static const List<String> _controllerOptions = [
+    'Kein Controller',
+    'R.A.P.T Temperature Controller',
+    'Inkbird ITC-308',
+  ];
+
+  late String _selectedController;
+  bool _isSaving = false;
+  bool _isLoadingProfile = true;
+  String? _loadError;
+  static const String _profileId = UserProfileService.defaultProfileId;
+
+  bool get _isRaptSelected =>
+      _selectedController == 'R.A.P.T Temperature Controller';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedController = _controllerOptions.first;
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _userNameCtrl.dispose();
+    _avatarUrlCtrl.dispose();
+    _kettleBrandCtrl.dispose();
+    _kettleTypeCtrl.dispose();
+    _defaultBatchCtrl.dispose();
+    _fermenterBrandCtrl.dispose();
+    _fermenterTypeCtrl.dispose();
+    _raptUserCtrl.dispose();
+    _raptApiKeyCtrl.dispose();
+    for (final entry in _yeastEntries) {
+      entry.dispose();
+    }
+    super.dispose();
+  }
+
+  void _handleYeastEntryChanged(int index) {
+    final isLast = index == _yeastEntries.length - 1;
+    if (!isLast) return;
+    final entry = _yeastEntries[index];
+    final hasBrand = entry.brandCtrl.text.trim().isNotEmpty;
+    final hasType = entry.typeCtrl.text.trim().isNotEmpty;
+    if (hasBrand && hasType) {
+      setState(() => _yeastEntries.add(_YeastEntry()));
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await _profileService.fetchProfile(_profileId);
+      if (profile != null) {
+        _userNameCtrl.text = profile.name;
+        _avatarUrlCtrl.text = profile.avatarUrl;
+        _kettleBrandCtrl.text = profile.kettleBrand;
+        _kettleTypeCtrl.text = profile.kettleType;
+        _defaultBatchCtrl.text =
+            profile.defaultBatchLiters?.toString() ?? '';
+        _fermenterBrandCtrl.text = profile.fermenterBrand;
+        _fermenterTypeCtrl.text = profile.fermenterType;
+        _selectedController = _controllerOptions.contains(profile.controller)
+            ? profile.controller
+            : _controllerOptions.first;
+        if (_isRaptSelected) {
+          _raptUserCtrl.text = profile.controllerUser ?? '';
+          _raptApiKeyCtrl.text = profile.controllerApiKey ?? '';
+        } else {
+          _raptUserCtrl.clear();
+          _raptApiKeyCtrl.clear();
+        }
+        _replaceYeastEntries(profile.yeastEntries);
+      }
+      setState(() {
+        _isLoadingProfile = false;
+        _loadError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingProfile = false;
+        _loadError = e.toString();
+      });
+    }
+  }
+
+  void _replaceYeastEntries(List<YeastEntryModel> entries) {
+    for (final entry in _yeastEntries) {
+      entry.dispose();
+    }
+    _yeastEntries
+      ..clear()
+      ..addAll(
+        entries.isNotEmpty
+            ? entries
+                .map((model) =>
+                    _YeastEntry(brand: model.brand, type: model.type))
+                .toList()
+            : [_YeastEntry()],
+      );
+  }
+
+  Future<void> _saveProfile() async {
+    FocusScope.of(context).unfocus();
+    final double? defaultBatch =
+        double.tryParse(_defaultBatchCtrl.text.replaceAll(',', '.'));
+
+    final yeastEntries = _yeastEntries
+        .map((entry) => YeastEntryModel(
+              brand: entry.brandCtrl.text.trim(),
+              type: entry.typeCtrl.text.trim(),
+            ))
+        .where((entry) => entry.brand.isNotEmpty && entry.type.isNotEmpty)
+        .toList();
+
+    final profile = UserProfile(
+      id: _profileId,
+      name: _userNameCtrl.text.trim(),
+      avatarUrl: _avatarUrlCtrl.text.trim(),
+      kettleBrand: _kettleBrandCtrl.text.trim(),
+      kettleType: _kettleTypeCtrl.text.trim(),
+      defaultBatchLiters: defaultBatch,
+      fermenterBrand: _fermenterBrandCtrl.text.trim(),
+      fermenterType: _fermenterTypeCtrl.text.trim(),
+      controller: _selectedController,
+      controllerUser: _isRaptSelected ? _raptUserCtrl.text.trim() : null,
+      controllerApiKey: _isRaptSelected ? _raptApiKeyCtrl.text.trim() : null,
+      yeastEntries: yeastEntries,
+    );
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await _profileService.saveProfile(profile);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil gespeichert')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Users Profil'),
+        centerTitle: true,
+      ),
+      body: _isLoadingProfile
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+        builder: (context, constraints) => Align(
+          alignment: Alignment.topCenter,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_loadError != null) ...[
+                    Card(
+                      color: Colors.red.shade900.withOpacity(0.35),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          'Laden fehlgeschlagen: $_loadError',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildUserSection(),
+                  const SizedBox(height: 20),
+                  _buildKettleSection(),
+                  const SizedBox(height: 20),
+                  _buildFermenterSection(),
+                  const SizedBox(height: 20),
+                  _buildYeastSection(),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _isSaving ? null : _saveProfile,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isSaving)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          const Icon(Icons.save_rounded),
+                        const SizedBox(width: 12),
+                        Text(_isSaving ? 'Speichert …' : 'Profil speichern'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Zurück'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserSection() {
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'User',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 42,
+                  backgroundColor: const Color(0xFF1D4ED8),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 36,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextField(
+                    controller: _userNameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Name',
+                      hintText: 'z. B. Alex Studer',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _avatarUrlCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Avatar URL',
+                hintText: 'https://…/avatar.png',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKettleSection() {
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Braukessel',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _kettleBrandCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Marke',
+                hintText: 'z. B. Grainfather',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _kettleTypeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Typ',
+                hintText: 'G30, Brewtools B80…',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _defaultBatchCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Default Braumenge (L)',
+                hintText: '20',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFermenterSection() {
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Fermentierer',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _fermenterBrandCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Marke',
+                hintText: 'Ss Brewtech, Speidel…',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _fermenterTypeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Typ',
+                hintText: 'Chronical, Fermentasaurus…',
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _selectedController,
+              decoration: const InputDecoration(
+                labelText: 'Kontroller',
+              ),
+              items: _controllerOptions
+                  .map(
+                    (option) => DropdownMenuItem(
+                      value: option,
+                      child: Text(option),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  _selectedController = value;
+                });
+              },
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _isRaptSelected
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _raptUserCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'User',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _raptApiKeyCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'API Key',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYeastSection() {
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'HefeDatenbank',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(_yeastEntries.length, (index) {
+              final entry = _yeastEntries[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == _yeastEntries.length - 1 ? 0 : 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: entry.brandCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Marken Name',
+                          hintText: 'z. B. Fermentis',
+                        ),
+                        onChanged: (_) => _handleYeastEntryChanged(index),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: entry.typeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Typ',
+                          hintText: 'z. B. SafAle BE-256',
+                        ),
+                        onChanged: (_) => _handleYeastEntryChanged(index),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _YeastEntry {
+  _YeastEntry({String brand = '', String type = ''})
+      : brandCtrl = TextEditingController(text: brand),
+        typeCtrl = TextEditingController(text: type);
+
+  final TextEditingController brandCtrl;
+  final TextEditingController typeCtrl;
+
+  void dispose() {
+    brandCtrl.dispose();
+    typeCtrl.dispose();
+  }
+}
+
+class _UserNameBanner extends StatefulWidget {
+  const _UserNameBanner({super.key});
+
+  @override
+  State<_UserNameBanner> createState() => _UserNameBannerState();
+}
+
+class _UserNameBannerState extends State<_UserNameBanner> {
+  late final Future<UserProfile?> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture =
+        UserProfileService().fetchDefaultProfile();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<UserProfile?>(
+      future: _profileFuture,
+      builder: (context, snapshot) {
+        Widget child;
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          child = const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          );
+        } else if (snapshot.hasError) {
+          child = const Text(
+            'User lädt nicht',
+            style: TextStyle(fontSize: 12, color: Colors.white70),
+          );
+        } else {
+          final name = snapshot.data?.name.trim();
+          child = Text(
+            name?.isNotEmpty == true ? name! : 'User',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        }
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person, size: 18, color: Colors.white70),
+                const SizedBox(width: 8),
+                child,
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -274,6 +869,11 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: _UserNameBanner(),
+                ),
+                const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Image.asset(
@@ -855,6 +1455,8 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const _UserNameBanner(),
+              const SizedBox(height: 20),
               Text(
                 'Erste Anpassungen für ${profile.beerName}',
                 style: const TextStyle(
@@ -1039,6 +1641,11 @@ class _FineTuningPageState extends State<FineTuningPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: _UserNameBanner(),
+            ),
+            const SizedBox(height: 20),
             Text(
               'Lass uns ein neues leckeres und einzigartiges ${profile.beerName} Bier entwerfen',
               style: const TextStyle(
@@ -1140,6 +1747,8 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const _UserNameBanner(),
+            const SizedBox(height: 20),
             Text(
               'Feintuning für ${widget.profile.beerName} · Haupttrunk',
               style: const TextStyle(
@@ -1253,6 +1862,8 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const _UserNameBanner(),
+            const SizedBox(height: 20),
             Text(
               'Feintuning für ${widget.profile.beerName} · Nachtrunk',
               style: const TextStyle(
@@ -1361,6 +1972,8 @@ class RecipeSummaryPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const _UserNameBanner(),
+            const SizedBox(height: 16),
             Expanded(
               child: ListView(
                 children: [
