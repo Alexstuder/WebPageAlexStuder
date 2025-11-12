@@ -25,6 +25,8 @@ jobs:
         run: |
           cat <<'EOF' > flutter_brew_assistent/.env
           PROXY_URL=${{ secrets.PROXY_URL }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           EOF
 
       - name: Install dependencies
