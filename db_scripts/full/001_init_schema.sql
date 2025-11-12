@@ -15,7 +15,8 @@ CREATE TABLE aibrewgenius.user_profiles (
   controller TEXT,
   controller_user TEXT,
   controller_api_key TEXT,
-  yeast_entries JSONB NOT NULL DEFAULT '[]'::jsonb
+  yeast_entries JSONB NOT NULL DEFAULT '[]'::jsonb,
+  malt_depot JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
 GRANT USAGE ON SCHEMA aibrewgenius TO anon;

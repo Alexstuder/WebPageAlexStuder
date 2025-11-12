@@ -19,6 +19,24 @@ class YeastEntryModel {
       );
 }
 
+class MaltDepotEntry {
+  const MaltDepotEntry({required this.name, required this.url});
+
+  final String name;
+  final String url;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'url': url,
+      };
+
+  factory MaltDepotEntry.fromJson(Map<String, dynamic> json) =>
+      MaltDepotEntry(
+        name: (json['name'] as String?) ?? '',
+        url: (json['url'] as String?) ?? '',
+      );
+}
+
 class UserProfile {
   const UserProfile({
     required this.id,
@@ -33,6 +51,7 @@ class UserProfile {
     this.controllerUser,
     this.controllerApiKey,
     required this.yeastEntries,
+    required this.maltDepot,
   });
 
   final String id;
@@ -47,6 +66,7 @@ class UserProfile {
   final String? controllerUser;
   final String? controllerApiKey;
   final List<YeastEntryModel> yeastEntries;
+  final List<MaltDepotEntry> maltDepot;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -61,6 +81,7 @@ class UserProfile {
         'controller_user': controllerUser,
         'controller_api_key': controllerApiKey,
         'yeast_entries': yeastEntries.map((e) => e.toJson()).toList(),
+        'malt_depot': maltDepot.map((e) => e.toJson()).toList(),
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -79,6 +100,10 @@ class UserProfile {
         yeastEntries: (json['yeast_entries'] as List<dynamic>? ?? [])
             .whereType<Map<String, dynamic>>()
             .map(YeastEntryModel.fromJson)
+            .toList(),
+        maltDepot: (json['malt_depot'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>()
+            .map(MaltDepotEntry.fromJson)
             .toList(),
       );
 }

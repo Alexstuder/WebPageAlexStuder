@@ -254,6 +254,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _raptUserCtrl = TextEditingController();
   final TextEditingController _raptApiKeyCtrl = TextEditingController();
   final List<_YeastEntry> _yeastEntries = [_YeastEntry()];
+  final List<_MaltEntry> _maltEntries = [_MaltEntry()];
   final UserProfileService _profileService = UserProfileService();
 
   static const List<String> _controllerOptions = [
@@ -292,6 +293,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
     for (final entry in _yeastEntries) {
       entry.dispose();
     }
+    for (final entry in _maltEntries) {
+      entry.dispose();
+    }
     super.dispose();
   }
 
@@ -303,6 +307,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final hasType = entry.typeCtrl.text.trim().isNotEmpty;
     if (hasBrand && hasType) {
       setState(() => _yeastEntries.add(_YeastEntry()));
+    }
+  }
+
+  void _handleMaltEntryChanged(int index) {
+    final isLast = index == _maltEntries.length - 1;
+    if (!isLast) return;
+    final entry = _maltEntries[index];
+    final hasName = entry.nameCtrl.text.trim().isNotEmpty;
+    final hasUrl = entry.urlCtrl.text.trim().isNotEmpty;
+    if (hasName && hasUrl) {
+      setState(() => _maltEntries.add(_MaltEntry()));
     }
   }
 
@@ -329,6 +344,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           _raptApiKeyCtrl.clear();
         }
         _replaceYeastEntries(profile.yeastEntries);
+        _replaceMaltEntries(profile.maltDepot);
       }
       setState(() {
         _isLoadingProfile = false;
@@ -358,6 +374,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
       );
   }
 
+  void _replaceMaltEntries(List<MaltDepotEntry> entries) {
+    for (final entry in _maltEntries) {
+      entry.dispose();
+    }
+    _maltEntries
+      ..clear()
+      ..addAll(
+        entries.isNotEmpty
+            ? entries
+                .map((model) => _MaltEntry(name: model.name, url: model.url))
+                .toList()
+            : [_MaltEntry()],
+      );
+  }
+
   Future<void> _saveProfile() async {
     FocusScope.of(context).unfocus();
     final double? defaultBatch =
@@ -369,6 +400,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
               type: entry.typeCtrl.text.trim(),
             ))
         .where((entry) => entry.brand.isNotEmpty && entry.type.isNotEmpty)
+        .toList();
+
+    final maltEntries = _maltEntries
+        .map((entry) => MaltDepotEntry(
+              name: entry.nameCtrl.text.trim(),
+              url: entry.urlCtrl.text.trim(),
+            ))
+        .where((entry) => entry.name.isNotEmpty && entry.url.isNotEmpty)
         .toList();
 
     final profile = UserProfile(
@@ -384,6 +423,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       controllerUser: _isRaptSelected ? _raptUserCtrl.text.trim() : null,
       controllerApiKey: _isRaptSelected ? _raptApiKeyCtrl.text.trim() : null,
       yeastEntries: yeastEntries,
+      maltDepot: maltEntries,
     );
 
     setState(() {
@@ -450,6 +490,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   _buildFermenterSection(),
                   const SizedBox(height: 20),
                   _buildYeastSection(),
+                  const SizedBox(height: 20),
+                  _buildMaltSection(),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _isSaving ? null : _saveProfile,
@@ -712,6 +754,58 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ),
     );
   }
+
+  Widget _buildMaltSection() {
+    return Card(
+      color: const Color(0xFF0F172A),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Malzdepot',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(_maltEntries.length, (index) {
+              final entry = _maltEntries[index];
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == _maltEntries.length - 1 ? 0 : 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: entry.nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Name',
+                          hintText: 'z. B. Wiener Malz',
+                        ),
+                        onChanged: (_) => _handleMaltEntryChanged(index),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: entry.urlCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'URL',
+                          hintText: 'https://…',
+                        ),
+                        onChanged: (_) => _handleMaltEntryChanged(index),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _YeastEntry {
@@ -725,6 +819,20 @@ class _YeastEntry {
   void dispose() {
     brandCtrl.dispose();
     typeCtrl.dispose();
+  }
+}
+
+class _MaltEntry {
+  _MaltEntry({String name = '', String url = ''})
+      : nameCtrl = TextEditingController(text: name),
+        urlCtrl = TextEditingController(text: url);
+
+  final TextEditingController nameCtrl;
+  final TextEditingController urlCtrl;
+
+  void dispose() {
+    nameCtrl.dispose();
+    urlCtrl.dispose();
   }
 }
 
