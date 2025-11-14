@@ -14,6 +14,8 @@ import 'services/fermenter_service.dart';
 import 'services/yeast_bank_service.dart';
 import 'services/malt_depot_service.dart';
 import 'services/fermenter_controller_service.dart';
+import 'services/packaging_profile_service.dart';
+import 'services/fining_agents_service.dart';
 import 'models/user_profile.dart';
 import 'models/water_profile.dart';
 import 'models/brew_kettle.dart';
@@ -21,6 +23,8 @@ import 'models/fermenter.dart';
 import 'models/yeast_bank_entry.dart';
 import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
+import 'models/packaging_profile.dart';
+import 'models/fining_agents.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -259,6 +263,7 @@ class UserProfilePage extends StatefulWidget {
 
 class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _userNameCtrl = TextEditingController();
+  final FocusNode _userNameFocusNode = FocusNode();
   final TextEditingController _avatarUrlCtrl = TextEditingController();
   final TextEditingController _kettleBrandCtrl = TextEditingController();
   final TextEditingController _kettleTypeCtrl = TextEditingController();
@@ -304,6 +309,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   double? _waterHardness;
   double? _waterAlkalinity;
   double? _residualAlkalinity;
+  String? _userNameError;
 
   bool get _isRaptSelected =>
       _selectedController == 'R.A.P.T Temperature Controller';
@@ -319,6 +325,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void dispose() {
     _userNameCtrl.dispose();
+    _userNameFocusNode.dispose();
     _avatarUrlCtrl.dispose();
     _kettleBrandCtrl.dispose();
     _kettleTypeCtrl.dispose();
@@ -553,7 +560,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return _waterProfiles.any((profile) => profile.id == id) ? id : null;
   }
 
-  Future<void> _saveProfile() async {
+  Future<bool> _saveProfile({bool showFeedback = true}) async {
     FocusScope.of(context).unfocus();
     final double? defaultBatch =
         double.tryParse(_defaultBatchCtrl.text.replaceAll(',', '.'));
@@ -582,14 +589,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
       _isSaving = true;
     });
 
+    var success = false;
     try {
       await _profileService.saveProfile(profile);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil gespeichert')),
-      );
+      if (!mounted) return success;
+      if (showFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil gespeichert')),
+        );
+      }
+      success = true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return success;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
       );
@@ -600,6 +611,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         });
       }
     }
+    return success;
   }
 
   @override
@@ -708,6 +720,22 @@ class _UserProfilePageState extends State<UserProfilePage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => FermenterControllerManagerPage(profileId: _profileId),
+      ),
+    );
+  }
+
+  void _openPackagingProfileManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PackagingProfileManagerPage(profileId: _profileId),
+      ),
+    );
+  }
+
+  void _openFiningAgentsManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FiningAgentsPage(profileId: _profileId),
       ),
     );
   }
@@ -1145,10 +1173,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 Expanded(
                   child: TextField(
                     controller: _userNameCtrl,
-                    decoration: const InputDecoration(
+                    focusNode: _userNameFocusNode,
+                    decoration: InputDecoration(
                       labelText: 'Name',
                       hintText: 'z. B. Alex Studer',
+                      errorText: _userNameError,
                     ),
+                    onChanged: (_) {
+                      if (_userNameError != null) {
+                        setState(() => _userNameError = null);
+                      }
+                    },
                   ),
                 ),
               ],
@@ -1193,6 +1228,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
           onPressed: _openFermenterControllerManager,
         ),
         _managerButton(
+          icon: Icons.inventory_2_outlined,
+          label: 'Abfüllen & Lagern',
+          onPressed: _openPackagingProfileManager,
+        ),
+        _managerButton(
+          icon: Icons.filter_alt_outlined,
+          label: 'Klärmittel / Schönungsmittel',
+          onPressed: _openFiningAgentsManager,
+        ),
+        _managerButton(
           icon: Icons.biotech_outlined,
           label: 'Hefedatenbank',
           onPressed: _openYeastBankManager,
@@ -1214,11 +1259,50 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 220),
       child: OutlinedButton.icon(
-        onPressed: onPressed,
+        onPressed: () async {
+          if (!_ensureUserName()) return;
+          final saved = await _saveProfileIfNeeded();
+          if (!saved) return;
+          onPressed();
+        },
         icon: Icon(icon),
         label: Text(label),
       ),
     );
+  }
+
+  bool _ensureUserName() {
+    final name = _userNameCtrl.text.trim();
+    if (name.isNotEmpty) {
+      if (_userNameError != null) {
+        setState(() => _userNameError = null);
+      }
+      return true;
+    }
+    setState(() => _userNameError = 'Name erforderlich');
+    _userNameFocusNode.requestFocus();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Name fehlt'),
+        content: const Text(
+          'Bitte gib zuerst einen Profilnamen ein, bevor du weitere Ressourcen verwaltest.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    return false;
+  }
+
+  Future<bool> _saveProfileIfNeeded() async {
+    if (_isSaving) return false;
+    final success = await _saveProfile(showFeedback: false);
+    return success;
   }
 
 }
@@ -2584,6 +2668,8 @@ class FineTuningProfile {
   double hopNose = 0.0;
   double hopPalate = 0.0;
   double hopFinish = 0.0;
+  final List<SpecialAddition> specialAdditions = [];
+  final List<String> specialStorage = [];
 
   final Map<String, double> _baseline = {};
 
@@ -2616,6 +2702,26 @@ class FineTuningProfile {
     if (base == null) return 0.0;
     return current - base;
   }
+}
+
+class SpecialAddition {
+  SpecialAddition({
+    required this.title,
+    required this.focus,
+    required this.intensity,
+  });
+
+  final String title;
+  final double focus;
+  final double intensity;
+}
+
+String describeAdditionFocus(double value) {
+  if (value <= 0.2) return 'Antrunk';
+  if (value >= 0.8) return 'Abgang';
+  if (value < 0.5) return 'Zwischenphase (Richtung Antrunk)';
+  if (value > 0.5) return 'Zwischenphase (Richtung Abgang)';
+  return 'Zwischenphase';
 }
 
 const Map<String, Map<String, double>> _beerPresets = {
@@ -3433,18 +3539,409 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => RecipeSummaryPage(
+                      builder: (_) => SpecialAdditionsPage(
                         profile: widget.profile,
                       ),
                     ),
                   );
                 },
-                child: const Text('Weiter zu Rezept erstellen ?'),
+                child: const Text('Spezielle Zugaben festlegen'),
               ),
             )
           ],
         ),
       ),
+    );
+  }
+}
+
+class SpecialAdditionsPage extends StatefulWidget {
+  const SpecialAdditionsPage({super.key, required this.profile});
+
+  final FineTuningProfile profile;
+
+  @override
+  State<SpecialAdditionsPage> createState() => _SpecialAdditionsPageState();
+}
+
+class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
+  final TextEditingController _titleCtrl = TextEditingController();
+  final TextEditingController _storageCtrl = TextEditingController();
+  double _focusValue = 0.5;
+  double _intensityValue = 0.5;
+  String? _titleError;
+  String? _storageError;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _storageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Spezielle Zugaben'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Image.asset(
+              'assets/icon.png',
+              height: 40,
+              semanticLabel: 'AiBrewGenius',
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _UserNameBanner(),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                children: [
+                  Text(
+                    'Füge deinem Bier besondere Schritte wie Barrel Aging, Holzchips oder Speziallagerungen hinzu.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Bisherige Zugaben',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  if (widget.profile.specialAdditions.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: const Text(
+                        'Noch keine speziellen Zugaben definiert.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: [
+                        ...widget.profile.specialAdditions
+                            .asMap()
+                            .entries
+                            .map(
+                              (entry) {
+                                final addition = entry.value;
+                                final antrunkPercent =
+                                    ((1 - addition.focus) * 100).round();
+                                final abgangPercent = 100 - antrunkPercent;
+                                final intensityPercent =
+                                    (addition.intensity * 100).round();
+                                return Card(
+                                  color: const Color(0xFF0F172A),
+                                  child: ListTile(
+                                    title: Text(addition.title),
+                                    subtitle: Text(
+                                      'Antrunk $antrunkPercent% · Abgang $abgangPercent% · Intensität $intensityPercent%',
+                                    ),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: () =>
+                                          _removeAddition(entry.key),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                      ],
+                    ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Neue Zugabe hinzufügen',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _titleCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Bezeichnung',
+                      hintText: 'z. B. Rumfass Lagerung',
+                      errorText: _titleError,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                  _FocusSlider(
+                    value: _focusValue,
+                    onChanged: (v) => setState(() => _focusValue = v),
+                  ),
+                  const SizedBox(height: 12),
+                  _IntensitySlider(
+                    value: _intensityValue,
+                    onChanged: (v) => setState(() => _intensityValue = v),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: _addAddition,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Hinzufügen'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(
+                    height: 32,
+                    thickness: 1,
+                    color: Colors.white24,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Spezielle Lagerung',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  if (widget.profile.specialStorage.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: const Text(
+                        'Noch keine Lagerungsarten definiert.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    )
+                  else
+                    Column(
+                      children: [
+                        ...widget.profile.specialStorage
+                            .asMap()
+                            .entries
+                            .map(
+                              (entry) => Card(
+                                color: const Color(0xFF0F172A),
+                                child: ListTile(
+                                  title: Text(entry.value),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () =>
+                                        _removeStorage(entry.key),
+                                  ),
+                                ),
+                              ),
+                            ),
+                      ],
+                    ),
+                  TextField(
+                    controller: _storageCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'z. B. Barrel Aged',
+                      errorText: _storageError,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: _addStorage,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Lagerung hinzufügen'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: _goToSummary,
+                  child: const Text('Überspringen'),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _goToSummary,
+                  child: const Text('Weiter zum Rezept'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addAddition() {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) {
+      setState(() => _titleError = 'Bezeichnung erforderlich');
+      return;
+    }
+    setState(() {
+      _titleError = null;
+      widget.profile.specialAdditions.add(
+        SpecialAddition(
+          title: title,
+          focus: _focusValue,
+          intensity: _intensityValue,
+        ),
+      );
+      _titleCtrl.clear();
+      _focusValue = 0.5;
+      _intensityValue = 0.5;
+    });
+  }
+
+  void _removeAddition(int index) {
+    setState(() {
+      widget.profile.specialAdditions.removeAt(index);
+    });
+  }
+
+  void _addStorage() {
+    final entry = _storageCtrl.text.trim();
+    if (entry.isEmpty) {
+      setState(() => _storageError = 'Bitte eine Lagerung eingeben');
+      return;
+    }
+    setState(() {
+      _storageError = null;
+      widget.profile.specialStorage.add(entry);
+      _storageCtrl.clear();
+    });
+  }
+
+  void _removeStorage(int index) {
+    setState(() {
+      widget.profile.specialStorage.removeAt(index);
+    });
+  }
+
+  void _goToSummary() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RecipeSummaryPage(profile: widget.profile),
+      ),
+    );
+  }
+}
+
+class _FocusSlider extends StatelessWidget {
+  const _FocusSlider({required this.value, required this.onChanged});
+
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final antrunkPercent = ((1 - value) * 100).round();
+    final abgangPercent = 100 - antrunkPercent;
+    final sliderTheme = SliderTheme.of(context).copyWith(
+      activeTrackColor: Colors.white60,
+      inactiveTrackColor: Colors.white24,
+      thumbColor: Colors.white,
+      overlayColor: Colors.white10,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _SliderLabel(title: 'Antrunk', percent: antrunkPercent),
+            Expanded(
+              child: SliderTheme(
+                data: sliderTheme,
+                child: Slider(
+                  value: value,
+                  onChanged: onChanged,
+                ),
+              ),
+            ),
+            _SliderLabel(title: 'Abgang', percent: abgangPercent),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            describeAdditionFocus(value),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white70,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IntensitySlider extends StatelessWidget {
+  const _IntensitySlider({required this.value, required this.onChanged});
+
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (value * 100).round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('Intensität'),
+            const SizedBox(width: 8),
+            Text('$percent%'),
+          ],
+        ),
+        Slider(
+          value: value,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _SliderLabel extends StatelessWidget {
+  const _SliderLabel({required this.title, required this.percent});
+
+  final String title;
+  final int percent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title),
+        Text(
+          '$percent%',
+          style: const TextStyle(fontSize: 13, color: Colors.white70),
+        ),
+      ],
     );
   }
 }
@@ -3627,6 +4124,76 @@ List<Widget> buildRecipeSummarySections(FineTuningProfile profile) {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  if (profile.specialAdditions.isNotEmpty) {
+    widgets.add(const Divider(
+      height: 24,
+      thickness: 1,
+      color: Colors.white24,
+    ));
+    widgets.add(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Spezielle Zugaben & Lagerungen',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...profile.specialAdditions.map(
+              (addition) {
+                final antrunkPercent =
+                    ((1 - addition.focus) * 100).round();
+                final abgangPercent = 100 - antrunkPercent;
+                final intensityPercent =
+                    (addition.intensity * 100).round();
+                return Padding(
+                  padding: const EdgeInsets.only(left: 20, bottom: 8),
+                  child: Text(
+                    '${addition.title}: Antrunk $antrunkPercent% · Abgang $abgangPercent% · Intensität $intensityPercent%',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  if (profile.specialStorage.isNotEmpty) {
+    widgets.add(
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Spezielle Lagerung',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            ...profile.specialStorage.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(left: 20, bottom: 6),
+                child: Text(
+                  entry,
+                  style: const TextStyle(fontSize: 14),
                 ),
               ),
             ),
@@ -5060,6 +5627,670 @@ class FermenterControllerManagerPage extends StatefulWidget {
   @override
   State<FermenterControllerManagerPage> createState() =>
       _FermenterControllerManagerPageState();
+}
+
+class FiningAgentsPage extends StatefulWidget {
+  const FiningAgentsPage({super.key, required this.profileId});
+
+  final String profileId;
+
+  @override
+  State<FiningAgentsPage> createState() => _FiningAgentsPageState();
+}
+
+class _FiningAgentsPageState extends State<FiningAgentsPage> {
+  final FiningAgentsService _service = FiningAgentsService();
+  bool _isLoading = true;
+  bool _isSaving = false;
+  FiningAgents? _settings;
+  final Map<String, bool> _values = {};
+  final List<TextEditingController> _extraCtrls = [];
+  final TextEditingController _newExtraCtrl = TextEditingController();
+  String? _error;
+
+  static const List<_FiningOption> _options = [
+    _FiningOption(
+      key: 'irish_moss',
+      title: 'Irish Moss',
+      subtitle: 'Carrageen/Rotalgextrakt für die Würzekochung.',
+    ),
+    _FiningOption(
+      key: 'whirlfloc',
+      title: 'Whirlfloc-Tabletten',
+      subtitle: 'Praktische Tabletten auf Irish-Moss-Basis.',
+    ),
+    _FiningOption(
+      key: 'gelatin',
+      title: 'Gelatine',
+      subtitle: 'Klassisches Schönungsmittel nach der Gärung.',
+    ),
+    _FiningOption(
+      key: 'biersol',
+      title: 'Biersol (Kieselsol)',
+      subtitle: 'Flüssigschönung für die Endklärung.',
+    ),
+    _FiningOption(
+      key: 'polyclar',
+      title: 'Polyclar/PVPP',
+      subtitle: 'Entfernt Polyphenole für klare Biere.',
+    ),
+    _FiningOption(
+      key: 'isinglass',
+      title: 'Isinglass',
+      subtitle: 'Fischblasen-Schönung, typisch britisch.',
+    ),
+    _FiningOption(
+      key: 'bentonite',
+      title: 'Bentonit',
+      subtitle: 'Tonerde, häufiger im Wein- und Spezialbierbereich.',
+    ),
+    _FiningOption(
+      key: 'egg_whites',
+      title: 'Egg Whites',
+      subtitle: 'Selten genutzt, eher beim Wein.',
+    ),
+    _FiningOption(
+      key: 'activated_carbon',
+      title: 'Aktivkohle',
+      subtitle: 'Für Spezialreinigung und besondere Effekte.',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    for (final ctrl in _extraCtrls) {
+      ctrl.dispose();
+    }
+    _newExtraCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final data = await _service.fetchSettings(widget.profileId);
+      if (!mounted) return;
+      setState(() {
+        _settings = data;
+        _values['irish_moss'] = data.irishMoss;
+        _values['whirlfloc'] = data.whirlfloc;
+        _values['gelatin'] = data.gelatin;
+        _values['biersol'] = data.biersol;
+        _values['polyclar'] = data.polyclar;
+        _values['isinglass'] = data.isinglass;
+        _values['bentonite'] = data.bentonite;
+        _values['egg_whites'] = data.eggWhites;
+        _values['activated_carbon'] = data.activatedCarbon;
+        for (final ctrl in _extraCtrls) {
+          ctrl.dispose();
+        }
+        _extraCtrls
+          ..clear()
+          ..addAll(
+            data.extras
+                .map((extra) => TextEditingController(text: extra)),
+          );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Klärmittel / Schönungsmittel')),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade900.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('Fehler: $_error'),
+                    ),
+                  ],
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        ..._options.map(
+                          (option) => CheckboxListTile(
+                            value: _values[option.key] ?? false,
+                            onChanged: (value) {
+                              setState(() {
+                                _values[option.key] = value ?? false;
+                              });
+                            },
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(option.title),
+                            subtitle: Text(option.subtitle),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Weitere Mittel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ..._extraCtrls.asMap().entries.map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: entry.value,
+                                    decoration: InputDecoration(
+                                      labelText: 'Zusatz ${entry.key + 1}',
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => _removeExtra(entry.key),
+                                  icon: const Icon(Icons.delete_outline),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        TextField(
+                          controller: _newExtraCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Neues Mittel (ENTER zum Hinzufügen)',
+                          ),
+                          onSubmitted: (_) => _addExtra(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSaving ? null : _save,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_alt),
+                      label: Text(_isSaving ? 'Speichert …' : 'Speichern'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  void _addExtra() {
+    final value = _newExtraCtrl.text.trim();
+    if (value.isEmpty) return;
+    setState(() {
+      _extraCtrls.add(TextEditingController(text: value));
+      _newExtraCtrl.clear();
+    });
+  }
+
+  void _removeExtra(int index) {
+    setState(() {
+      _extraCtrls[index].dispose();
+      _extraCtrls.removeAt(index);
+    });
+  }
+
+  Future<void> _save() async {
+    if (_settings == null) return;
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      final updated = FiningAgents(
+        userProfileId: widget.profileId,
+        irishMoss: _values['irish_moss'] ?? false,
+        whirlfloc: _values['whirlfloc'] ?? false,
+        gelatin: _values['gelatin'] ?? false,
+        biersol: _values['biersol'] ?? false,
+        polyclar: _values['polyclar'] ?? false,
+        isinglass: _values['isinglass'] ?? false,
+        bentonite: _values['bentonite'] ?? false,
+        eggWhites: _values['egg_whites'] ?? false,
+        activatedCarbon: _values['activated_carbon'] ?? false,
+        extras: _extraCtrls
+            .map((ctrl) => ctrl.text.trim())
+            .where((text) => text.isNotEmpty)
+            .toList(),
+      );
+      final saved = await _service.saveSettings(updated);
+      if (!mounted) return;
+      setState(() {
+        _settings = saved;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Schönungsmittel gespeichert')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+}
+
+class _FiningOption {
+  const _FiningOption({
+    required this.key,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String key;
+  final String title;
+  final String subtitle;
+}
+
+class PackagingProfileManagerPage extends StatefulWidget {
+  const PackagingProfileManagerPage({super.key, required this.profileId});
+
+  final String profileId;
+
+  @override
+  State<PackagingProfileManagerPage> createState() =>
+      _PackagingProfileManagerPageState();
+}
+
+class _PackagingProfileManagerPageState
+    extends State<PackagingProfileManagerPage> {
+  final PackagingProfileService _service = PackagingProfileService();
+  bool _isLoading = true;
+  List<PackagingProfile> _profiles = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final items = await _service.fetchProfiles(widget.profileId);
+      if (!mounted) return;
+      setState(() {
+        _profiles = items;
+        _profiles.sort(
+          (a, b) {
+            if (a.isDefault != b.isDefault) {
+              return a.isDefault ? -1 : 1;
+            }
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          },
+        );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Abfüllen & Lagern')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openForm(),
+        icon: const Icon(Icons.add),
+        label: const Text('Neu'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: _buildBody(),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: Text(
+          'Konnte Profile nicht laden:\n$_error',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    if (_profiles.isEmpty) {
+      return const Center(
+        child: Text('Noch keine Abfüll- und Lagerprofile vorhanden.'),
+      );
+    }
+    return ListView.separated(
+      itemCount: _profiles.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final profile = _profiles[index];
+        final kegInfo = <String>[];
+        final bottleInfo = <String>[];
+        if (profile.kegEnabled) {
+          final carb = profile.kegCarbonationTempC != null
+              ? '${profile.kegCarbonationTempC!.toStringAsFixed(1)} °C'
+              : '–';
+          final storage = profile.kegStorageTempC != null
+              ? '${profile.kegStorageTempC!.toStringAsFixed(1)} °C'
+              : '–';
+          final liters = profile.kegVolumeLiters != null
+              ? ', ${profile.kegVolumeLiters!.toStringAsFixed(1)} L'
+              : '';
+          kegInfo.add('Keg: Karb $carb · Lager $storage$liters');
+        }
+        if (profile.bottleEnabled) {
+          final carb = profile.bottleCarbonationTempC != null
+              ? '${profile.bottleCarbonationTempC!.toStringAsFixed(1)} °C'
+              : '–';
+          final storage = profile.bottleStorageTempC != null
+              ? '${profile.bottleStorageTempC!.toStringAsFixed(1)} °C'
+              : '–';
+          bottleInfo.add('Flaschen: Karb $carb · Lager $storage');
+        }
+        final info = [...kegInfo, ...bottleInfo];
+        if (info.isEmpty) {
+          info.add('Keine Angaben');
+        }
+        return Card(
+          color: const Color(0xFF0F172A),
+          child: ListTile(
+            leading: Icon(
+              profile.isDefault ? Icons.star : Icons.star_border,
+              color: profile.isDefault ? Colors.amber : Colors.white54,
+            ),
+            title: Text(profile.name),
+            subtitle: info.isEmpty
+                ? null
+                : Text(
+                    info.join(' · '),
+                  ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _openForm(editing: profile),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openForm({PackagingProfile? editing}) async {
+    final nameCtrl = TextEditingController(text: editing?.name ?? '');
+    final bottleCarbCtrl = TextEditingController(
+      text: editing?.bottleCarbonationTempC?.toString() ?? '',
+    );
+    final bottleStorageCtrl = TextEditingController(
+      text: editing?.bottleStorageTempC?.toString() ?? '',
+    );
+    final kegCarbCtrl = TextEditingController(
+      text: editing?.kegCarbonationTempC?.toString() ?? '',
+    );
+    final kegStorageCtrl = TextEditingController(
+      text: editing?.kegStorageTempC?.toString() ?? '',
+    );
+    final volumeCtrl = TextEditingController(
+      text: editing?.kegVolumeLiters?.toString() ?? '',
+    );
+    bool bottleEnabled = editing?.bottleEnabled ?? true;
+    bool kegEnabled = editing?.kegEnabled ?? false;
+    bool isDefault = editing?.isDefault ?? false;
+    String? nameError;
+    String? typeError;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(editing == null
+              ? 'Profil hinzufügen'
+              : 'Profil bearbeiten'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Profilname',
+                    errorText: nameError,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (typeError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      typeError!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
+                  ),
+                SwitchListTile(
+                  value: bottleEnabled,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Flaschen abfüllen'),
+                  onChanged: (value) =>
+                      setState(() => bottleEnabled = value),
+                ),
+                if (bottleEnabled) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: bottleCarbCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Flaschen – Karbonisierung (°C)',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: bottleStorageCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Flaschen – Lagerung (°C)',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                SwitchListTile(
+                  value: kegEnabled,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Kegs abfüllen'),
+                  onChanged: (value) =>
+                      setState(() => kegEnabled = value),
+                ),
+                if (kegEnabled) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: kegCarbCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Keg – Karbonisierung (°C)',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: kegStorageCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Keg – Lagerung (°C)',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: volumeCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Keg Volumen (L)',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                CheckboxListTile(
+                  value: isDefault,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('Als Standard markieren'),
+                  onChanged: (value) =>
+                      setState(() => isDefault = value ?? false),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) {
+                  setState(() => nameError = 'Name erforderlich');
+                  return;
+                }
+                if (!bottleEnabled && !kegEnabled) {
+                  setState(() =>
+                      typeError = 'Mindestens Flaschen oder Keg aktivieren');
+                  return;
+                }
+                Navigator.of(dialogCtx).pop(true);
+              },
+              child: const Text('Speichern'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != true) return;
+
+    final profile = PackagingProfile(
+      id: editing?.id,
+      userProfileId: widget.profileId,
+      name: nameCtrl.text.trim(),
+      bottleEnabled: bottleEnabled,
+      bottleCarbonationTempC:
+          bottleEnabled ? _parseDouble(bottleCarbCtrl.text) : null,
+      bottleStorageTempC:
+          bottleEnabled ? _parseDouble(bottleStorageCtrl.text) : null,
+      kegEnabled: kegEnabled,
+      kegCarbonationTempC:
+          kegEnabled ? _parseDouble(kegCarbCtrl.text) : null,
+      kegStorageTempC:
+          kegEnabled ? _parseDouble(kegStorageCtrl.text) : null,
+      kegVolumeLiters:
+          kegEnabled ? _parseDouble(volumeCtrl.text) : null,
+      isDefault: isDefault,
+    );
+
+    try {
+      final saved = await _service.saveProfile(profile);
+      if (!mounted) return;
+      setState(() {
+        if (saved.isDefault) {
+          _profiles = _profiles
+              .map((existing) => existing.id == saved.id
+                  ? existing
+                  : existing.copyWith(isDefault: false))
+              .toList();
+        }
+        final index =
+            _profiles.indexWhere((element) => element.id == saved.id);
+        if (index >= 0) {
+          _profiles[index] = saved;
+        } else {
+          _profiles.add(saved);
+        }
+        _profiles.sort(
+          (a, b) {
+            if (a.isDefault != b.isDefault) {
+              return a.isDefault ? -1 : 1;
+            }
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          },
+        );
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              editing == null ? 'Profil erstellt' : 'Profil aktualisiert',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
+      );
+    }
+  }
+
+  double? _parseDouble(String value) {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned.replaceAll(',', '.'));
+  }
 }
 
 class _FermenterControllerManagerPageState

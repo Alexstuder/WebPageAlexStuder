@@ -62,6 +62,38 @@ CREATE TABLE aibrewgenius.fermenters (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
 
+CREATE TABLE aibrewgenius.packaging_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  bottle_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  bottle_carbonation_temp_c DOUBLE PRECISION,
+  bottle_storage_temp_c DOUBLE PRECISION,
+  keg_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  keg_carbonation_temp_c DOUBLE PRECISION,
+  keg_storage_temp_c DOUBLE PRECISION,
+  keg_volume_l DOUBLE PRECISION,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TABLE aibrewgenius.fining_agents (
+  user_profile_id TEXT PRIMARY KEY REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  irish_moss BOOLEAN NOT NULL DEFAULT FALSE,
+  whirlfloc BOOLEAN NOT NULL DEFAULT FALSE,
+  gelatin BOOLEAN NOT NULL DEFAULT FALSE,
+  biersol BOOLEAN NOT NULL DEFAULT FALSE,
+  polyclar BOOLEAN NOT NULL DEFAULT FALSE,
+  isinglass BOOLEAN NOT NULL DEFAULT FALSE,
+  bentonite BOOLEAN NOT NULL DEFAULT FALSE,
+  egg_whites BOOLEAN NOT NULL DEFAULT FALSE,
+  activated_carbon BOOLEAN NOT NULL DEFAULT FALSE,
+  extras JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
 CREATE TABLE aibrewgenius.yeast_bank_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
@@ -112,6 +144,10 @@ CREATE UNIQUE INDEX fermenters_default_unique
   ON aibrewgenius.fermenters(user_profile_id)
   WHERE is_default;
 
+CREATE UNIQUE INDEX packaging_profiles_default_unique
+  ON aibrewgenius.packaging_profiles(user_profile_id)
+  WHERE is_default;
+
 CREATE UNIQUE INDEX fermenter_controllers_default_unique
   ON aibrewgenius.fermenter_controllers(user_profile_id)
   WHERE is_default;
@@ -139,6 +175,11 @@ BEFORE UPDATE ON aibrewgenius.fermenters
 FOR EACH ROW
 EXECUTE FUNCTION aibrewgenius.set_updated_at();
 
+CREATE TRIGGER packaging_profiles_set_updated_at
+BEFORE UPDATE ON aibrewgenius.packaging_profiles
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
 CREATE TRIGGER yeast_bank_entries_set_updated_at
 BEFORE UPDATE ON aibrewgenius.yeast_bank_entries
 FOR EACH ROW
@@ -154,6 +195,11 @@ BEFORE UPDATE ON aibrewgenius.fermenter_controllers
 FOR EACH ROW
 EXECUTE FUNCTION aibrewgenius.set_updated_at();
 
+CREATE TRIGGER fining_agents_set_updated_at
+BEFORE UPDATE ON aibrewgenius.fining_agents
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
 GRANT USAGE ON SCHEMA aibrewgenius TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA aibrewgenius TO anon;
 
@@ -162,9 +208,11 @@ ALTER TABLE aibrewgenius.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.water_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.brew_kettles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.fermenters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aibrewgenius.packaging_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.yeast_bank_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.malt_depots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE aibrewgenius.fermenter_controllers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aibrewgenius.fining_agents ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY user_profiles_select_anon
   ON aibrewgenius.user_profiles
@@ -260,6 +308,31 @@ CREATE POLICY fermenters_delete
   TO anon
   USING (TRUE);
 
+CREATE POLICY packaging_profiles_select
+  ON aibrewgenius.packaging_profiles
+  FOR SELECT
+  TO anon
+  USING (TRUE);
+
+CREATE POLICY packaging_profiles_insert
+  ON aibrewgenius.packaging_profiles
+  FOR INSERT
+  TO anon
+  WITH CHECK (TRUE);
+
+CREATE POLICY packaging_profiles_update
+  ON aibrewgenius.packaging_profiles
+  FOR UPDATE
+  TO anon
+  USING (TRUE)
+  WITH CHECK (TRUE);
+
+CREATE POLICY packaging_profiles_delete
+  ON aibrewgenius.packaging_profiles
+  FOR DELETE
+  TO anon
+  USING (TRUE);
+
 CREATE POLICY yeast_bank_entries_select
   ON aibrewgenius.yeast_bank_entries
   FOR SELECT
@@ -331,6 +404,31 @@ CREATE POLICY fermenter_controllers_update
 
 CREATE POLICY fermenter_controllers_delete
   ON aibrewgenius.fermenter_controllers
+  FOR DELETE
+  TO anon
+  USING (TRUE);
+
+CREATE POLICY fining_agents_select
+  ON aibrewgenius.fining_agents
+  FOR SELECT
+  TO anon
+  USING (TRUE);
+
+CREATE POLICY fining_agents_insert
+  ON aibrewgenius.fining_agents
+  FOR INSERT
+  TO anon
+  WITH CHECK (TRUE);
+
+CREATE POLICY fining_agents_update
+  ON aibrewgenius.fining_agents
+  FOR UPDATE
+  TO anon
+  USING (TRUE)
+  WITH CHECK (TRUE);
+
+CREATE POLICY fining_agents_delete
+  ON aibrewgenius.fining_agents
   FOR DELETE
   TO anon
   USING (TRUE);
