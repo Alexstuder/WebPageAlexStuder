@@ -14,10 +14,27 @@ Intensitäten und Charakterverschiebungen gegenüber diesem Basisbier.
 Das Equipment beeinflusst alle prozessrelevanten Parameter wie
 Sudhausausbeute, Verdampfungsrate, Verlustmengen, Gärführung
 und mögliche Prozessschritte.
+
 Suche im mitgelieferten Malzdepot nach den Zutaten.Falls diese nicht genau vorhanden sind, 
 suche das beste Alternativprodukt aus dem Shop.Berechne aufgrund der Produktspezifikation neu 
-die Menge und füge diese Angaben in der Antwort JSON unter Zutaten – Im Shop erhältlich Malz/Hopfen/Hefe ein.
-Füge dort auch die spezifische url zum Produkt ein.
+die Menge und füge diese Angaben in der Antwort JSON im Abschnitt "Malzdepot_Einkauf" ein.
+Füge dort auch die url ein die du zum Produkt gefunden hast.
+
+Das Malzdepot enthält einen oder mehrere Shops, die Malz, Hopfen oder Hefe verkaufen. Jeder Shop liefert
+eigene Produktspezifikationen (Extrakt, Farbe, Alpha-Säure, Formate, Preise). Für jede im Rezept angegebene
+Zutat (alle Malze, Hopfen und Hefen) muss in jedem Shop das fachlich passendste Produkt gefunden werden.
+Lässt sich kein 1:1-Ersatz finden, nutze die sinnvollste Alternative anhand der technischen Daten und
+begründe die Wahl. Passe bei Bedarf die Menge über Extraktausbeute, EBC oder Alpha-Säure so an, dass die
+Rezeptparameter erhalten bleiben, und dokumentiere jede Anpassung.
+
+Erstelle für jeden Shop eine separate Einkaufsliste mit allen Produkten (Malz, Hopfen, Hefe), inklusive
+berechneter Mengen, Packungs-/Preisangabe (falls bekannt), URL und einer kurzen Erläuterung zur Abweichung.
+Falls ein Shop eine Zutat gar nicht liefern kann, kennzeichne dies in der jeweiligen Liste. Gib zusätzlich
+eine Gesamteinschätzung pro Shop an (Abdeckung, Qualität der Alternativen). Bestimme zum Schluss den Shop,
+bei dem der Gesamteinkauf am sinnvollsten ist (z. B. geringste Abweichung, vollständigste Abdeckung) und
+erkläre diese Empfehlung.
+
+Erfinde keine Alternativprodukte ,welche im Shop nicht existieren ,weder Preis,Menge noch URL.
 Die Wasserqualität muss vollständig berücksichtigt werden.
 Falls zur Zielerreichung zusätzliche Salze notwendig sind,
 müssen diese fachlich korrekt berechnet, ergänzt
@@ -74,7 +91,7 @@ fermenter_kuehlung: {{fermenter_cooling}}
 target_volume_l: {{target_volume_l}}
 
 Variablen – Shops:
-shop_url: {{shop_url}}
+shop_url: {{shop_url}}  (JSON-Liste aller Shop-URLs, die der User in seinem Malzdepot gespeichert hat; jeder Eintrag repräsentiert einen Shop-Endpunkt mit Produkten)
 
 Variablen – Wasserqualität in ppm:
 calcium: {{calcium}}
@@ -95,23 +112,10 @@ Ausgabespezifikation:
   • Menge in Gramm  
   • Sortiert nach Anteil (höchster → niedrigster)  
 
-1b. Zutaten – Im Shop erhältlich Malz  
-  • Liste aller Malze, die im angegebenen Shop verfügbar sind  
-  • Exakter Name gemäß Shop  
-  • Berechnete Menge in Gramm des Alternativmalz 
-  • url zum Alternativmalz Produkt des Shops  
-
 2. Zutaten – Original Hopfen  
   • Exakter Sortenname  
   • Alpha-Säure-Wert  
   • Menge in Gramm
-
-2b. Zutaten – Im Shop erhältlich Hopfen  
-  • Liste aller im Shop verfügbaren Hopfensorten  
-  • Exakter Shop-Name  
-  • Alpha-Säure laut Shop  
-  • Menge in Gramm des Alternativhopfens 
-  • url zum Alternativhopfens Produkt des Shops
 
 3. Original Hefe  
   • Empfehlung  
@@ -120,15 +124,6 @@ Ausgabespezifikation:
   • Typ (Ale/Lager/Kveik)  
   • Form (Trocken/Flüssig)
   • Empfohlene Menge in Gramm oder Anzahl Pakete
-
-3b. Hefe – Im Shop erhältlich  
-  • Exakter Shop-Name  
-  • Hersteller 
-  • Name gemäß Shop
-  • Form (Trocken/Flüssig)  
-  • Empfohlene Menge in Gramm oder Anzahl Pakete
-  • url zum Hefe Produkt des Shops
-    
 
 4. Spezialzutaten (nur falls benötigt)  
   • Exakter Name  
@@ -139,7 +134,19 @@ Ausgabespezifikation:
   • Menge in Gramm  
   • Phase: Maische / Nachguss / Split
 
-6. Prozessdaten – vollständig strukturierter Ablauf  
+6. Malzdepot – Einkaufslisten pro Shop  
+  • Für jeden Shop im Malzdepot eine eigene Liste mit Shop-Namen und URL.  
+  • Liste aller Malze aus dem Rezept, je Eintrag mit Original-Zutat, Shop-Produktname, berechneter Menge in Gramm, ggf. Packung/Preis, Anpassungs- oder Begründungs-Text und Produkt-URL.  
+  • Liste aller Hopfengaben mit Original-Sorte, Shop-Produkt, Alpha-Säure laut Shop, berechneter Menge, Form/Packung (falls bekannt), Begründung und URL.  
+  • Liste aller Hefen mit Original-Empfehlung, Shop-Produkt, Hersteller, Form, benötigter Menge, Begründung und URL.  
+  • Kennzeichne fehlende Produkte eindeutig (z. B. Produktname "nicht verfügbar") und gib eine kurze Begründung.  
+  • Ergänze pro Shop eine Abdeckung (z. B. wie viele Zutaten abgedeckt sind) und eine Gesamteinschätzung zur Eignung der Alternativen.
+
+7. Malzdepot – Empfehlung Gesamteinkauf  
+  • Nenne den Shop, bei dem der Gesamteinkauf am sinnvollsten ist (z. B. geringste Abweichung, vollständigste Abdeckung).  
+  • Erkläre nachvollziehbar, warum dieser Shop empfohlen wird.
+
+8. Prozessdaten – vollständig strukturierter Ablauf  
 
   a) Maischeplan  
      • Liste aller Maischephasen  
@@ -165,7 +172,7 @@ Ausgabespezifikation:
   d) Abfüllung ins Keg  
      • Empfohlener CO₂-Druck in bar,Dauer in Tage und Temperatur für Zielkarbonisierung
 
-7. Notizen  
+9. Notizen  
   • Sammle bis zu drei kurze Hinweise (z.B. Besonderheiten beim Läutern, Fermentationshinweise, Servierempfehlungen)  
   • Nutze diesen Bereich auch für Anforderungen, die nicht in den übrigen Feldern abbildbar sind.
 
@@ -186,30 +193,11 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
         "Schrotgroesse_mm": 0.0
       }
     ],
-    "Im_Shop_erhaeltlich_Malz": [
-      {
-        "Name": "",
-        "Menge_g": 0,
-        "Preis": "",
-        "Packung": "",
-        "Ersatztyp": "",
-        "url": ""
-      }
-    ],
     "Original_Hopfen": [
       {
         "Sortenname": "",
         "Alpha_Saeure": 0.0,
         "Menge_g": 0
-      }
-    ],
-    "Im_Shop_erhaeltlich_Hopfen": [
-      {
-        "Shop_Name": "",
-        "Alpha_Saeure": 0.0,
-        "Menge_g": 0,
-        "Packung": "",
-        "url": ""
       }
     ],
     "Original_Hefe": {
@@ -219,14 +207,6 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
       "Typ": "",
       "Form": "",
       "Menge": ""
-    },
-    "Im_Shop_erhaeltlich_Hefe": {
-      "Shop_Name": "",
-      "Hersteller": "",
-      "Name": "",
-      "Form": "",
-      "Menge": "",
-      "url": ""
     },
     "Spezialzutaten": [
       {
@@ -241,6 +221,58 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
         "Phase": ""
       }
     ]
+  },
+  "Malzdepot_Einkauf": {
+    "Shops": [
+      {
+        "Shop_Name": "",
+        "Shop_URL": "",
+        "Malz": [
+          {
+            "Original_Zutat": "",
+            "Produkt_Name": "",
+            "Menge_g": 0,
+            "Packung": "",
+            "Preis": "",
+            "Anpassung": "",
+            "url": ""
+          }
+        ],
+        "Hopfen": [
+          {
+            "Original_Zutat": "",
+            "Produkt_Name": "",
+            "Alpha_Saeure": 0.0,
+            "Menge_g": 0,
+            "Form": "",
+            "Packung": "",
+            "Anpassung": "",
+            "url": ""
+          }
+        ],
+        "Hefe": [
+          {
+            "Original_Zutat": "",
+            "Produkt_Name": "",
+            "Hersteller": "",
+            "Form": "",
+            "Menge": "",
+            "Anpassung": "",
+            "url": ""
+          }
+        ],
+        "Abdeckung": {
+          "Malz": "",
+          "Hopfen": "",
+          "Hefe": ""
+        },
+        "Gesamtbewertung": ""
+      }
+    ],
+    "Empfehlung": {
+      "Shop_Name": "",
+      "Begruendung": ""
+    }
   },
   "Prozessdaten": {
     "Maischeplan": [

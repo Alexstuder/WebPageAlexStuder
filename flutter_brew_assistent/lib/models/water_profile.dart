@@ -3,6 +3,7 @@ class WaterProfile {
     this.id,
     required this.userProfileId,
     required this.name,
+    this.isDefault = false,
     this.ph,
     this.calciumPpm = 0,
     this.magnesiumPpm = 0,
@@ -17,6 +18,7 @@ class WaterProfile {
   final String? id;
   final String userProfileId;
   final String name;
+  final bool isDefault;
   final double? ph;
   final double calciumPpm;
   final double magnesiumPpm;
@@ -31,6 +33,7 @@ class WaterProfile {
     String? id,
     String? userProfileId,
     String? name,
+    bool? isDefault,
     double? ph,
     double? calciumPpm,
     double? magnesiumPpm,
@@ -45,6 +48,7 @@ class WaterProfile {
       id: id ?? this.id,
       userProfileId: userProfileId ?? this.userProfileId,
       name: name ?? this.name,
+      isDefault: isDefault ?? this.isDefault,
       ph: ph ?? this.ph,
       calciumPpm: calciumPpm ?? this.calciumPpm,
       magnesiumPpm: magnesiumPpm ?? this.magnesiumPpm,
@@ -62,6 +66,7 @@ class WaterProfile {
       if (id != null) 'id': id,
       'user_profile_id': userProfileId,
       'name': name,
+      'is_default': isDefault,
       'ph': ph,
       'calcium_ppm': calciumPpm,
       'magnesium_ppm': magnesiumPpm,
@@ -80,6 +85,7 @@ class WaterProfile {
       id: json['id'] as String?,
       userProfileId: json['user_profile_id'] as String? ?? '',
       name: json['name'] as String? ?? '',
+      isDefault: (json['is_default'] as bool?) ?? false,
       ph: (json['ph'] as num?)?.toDouble(),
       calciumPpm: (json['calcium_ppm'] as num?)?.toDouble() ?? 0,
       magnesiumPpm: (json['magnesium_ppm'] as num?)?.toDouble() ?? 0,

@@ -4,6 +4,7 @@ class BrewKettle {
     required this.userProfileId,
     required this.brand,
     this.model,
+    this.isDefault = false,
     this.volumeLiters,
     this.notes,
     this.createdAt,
@@ -14,6 +15,7 @@ class BrewKettle {
   final String userProfileId;
   final String brand;
   final String? model;
+  final bool isDefault;
   final double? volumeLiters;
   final String? notes;
   final DateTime? createdAt;
@@ -24,6 +26,7 @@ class BrewKettle {
     String? userProfileId,
     String? brand,
     String? model,
+    bool? isDefault,
     double? volumeLiters,
     String? notes,
     DateTime? createdAt,
@@ -34,6 +37,7 @@ class BrewKettle {
       userProfileId: userProfileId ?? this.userProfileId,
       brand: brand ?? this.brand,
       model: model ?? this.model,
+      isDefault: isDefault ?? this.isDefault,
       volumeLiters: volumeLiters ?? this.volumeLiters,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
@@ -49,6 +53,7 @@ class BrewKettle {
       userProfileId: json['user_profile_id'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
       model: json['model'] as String?,
+      isDefault: (json['is_default'] as bool?) ?? false,
       volumeLiters: (json['volume_liters'] as num?)?.toDouble(),
       notes: json['notes'] as String?,
       createdAt: parseDate(json['created_at'] as String?),
@@ -62,6 +67,7 @@ class BrewKettle {
       'user_profile_id': userProfileId,
       'brand': brand,
       'model': model,
+      'is_default': isDefault,
       'volume_liters': volumeLiters,
       'notes': notes,
     };

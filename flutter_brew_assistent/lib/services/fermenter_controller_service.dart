@@ -18,6 +18,7 @@ class FermenterControllerService {
     final data = await _table()
         .select()
         .eq('user_profile_id', userProfileId)
+        .order('is_default', ascending: false)
         .order('created_at');
     return data
         .cast<Map<String, dynamic>>()
@@ -27,6 +28,11 @@ class FermenterControllerService {
 
   Future<FermenterControllerModel> saveController(
       FermenterControllerModel controller) async {
+    if (controller.isDefault) {
+      await _table()
+          .update({'is_default': false})
+          .eq('user_profile_id', controller.userProfileId);
+    }
     final data = await _table().upsert(controller.toJson()).select().single();
     return FermenterControllerModel.fromJson(data);
   }

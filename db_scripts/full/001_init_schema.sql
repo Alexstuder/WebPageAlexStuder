@@ -24,6 +24,7 @@ CREATE TABLE aibrewgenius.water_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
   ph DOUBLE PRECISION,
   calcium_ppm DOUBLE PRECISION DEFAULT 0,
   magnesium_ppm DOUBLE PRECISION DEFAULT 0,
@@ -40,6 +41,7 @@ CREATE TABLE aibrewgenius.brew_kettles (
   user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
   brand TEXT NOT NULL,
   model TEXT,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
   volume_liters DOUBLE PRECISION,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
@@ -51,6 +53,7 @@ CREATE TABLE aibrewgenius.fermenters (
   user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
   brand TEXT NOT NULL,
   type TEXT,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
   volume_liters DOUBLE PRECISION,
   has_heating BOOLEAN NOT NULL DEFAULT FALSE,
   has_cooling BOOLEAN NOT NULL DEFAULT FALSE,
@@ -89,12 +92,29 @@ CREATE TABLE aibrewgenius.fermenter_controllers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
   username TEXT,
   api_key TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
+
+CREATE UNIQUE INDEX water_profiles_default_unique
+  ON aibrewgenius.water_profiles(user_profile_id)
+  WHERE is_default;
+
+CREATE UNIQUE INDEX brew_kettles_default_unique
+  ON aibrewgenius.brew_kettles(user_profile_id)
+  WHERE is_default;
+
+CREATE UNIQUE INDEX fermenters_default_unique
+  ON aibrewgenius.fermenters(user_profile_id)
+  WHERE is_default;
+
+CREATE UNIQUE INDEX fermenter_controllers_default_unique
+  ON aibrewgenius.fermenter_controllers(user_profile_id)
+  WHERE is_default;
 
 CREATE OR REPLACE FUNCTION aibrewgenius.set_updated_at()
 RETURNS TRIGGER AS $$

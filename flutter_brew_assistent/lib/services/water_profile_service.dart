@@ -18,6 +18,7 @@ class WaterProfileService {
     final data = await _table()
         .select()
         .eq('user_profile_id', userProfileId)
+        .order('is_default', ascending: false)
         .order('created_at');
     return data
         .cast<Map<String, dynamic>>()
@@ -26,11 +27,13 @@ class WaterProfileService {
   }
 
   Future<WaterProfile> saveProfile(WaterProfile profile) async {
+    if (profile.isDefault) {
+      await _table()
+          .update({'is_default': false})
+          .eq('user_profile_id', profile.userProfileId);
+    }
     final payload = profile.toJson();
-    final data = await _table()
-        .upsert(payload)
-        .select()
-        .single();
+    final data = await _table().upsert(payload).select().single();
     return WaterProfile.fromJson(data);
   }
 

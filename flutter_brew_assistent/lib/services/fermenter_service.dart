@@ -17,6 +17,7 @@ class FermenterService {
     final data = await _table()
         .select()
         .eq('user_profile_id', userProfileId)
+        .order('is_default', ascending: false)
         .order('created_at');
     return data
         .cast<Map<String, dynamic>>()
@@ -25,6 +26,11 @@ class FermenterService {
   }
 
   Future<Fermenter> saveFermenter(Fermenter fermenter) async {
+    if (fermenter.isDefault) {
+      await _table()
+          .update({'is_default': false})
+          .eq('user_profile_id', fermenter.userProfileId);
+    }
     final data = await _table().upsert(fermenter.toJson()).select().single();
     return Fermenter.fromJson(data);
   }

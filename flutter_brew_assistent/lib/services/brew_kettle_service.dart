@@ -17,6 +17,7 @@ class BrewKettleService {
     final data = await _table()
         .select()
         .eq('user_profile_id', userProfileId)
+        .order('is_default', ascending: false)
         .order('created_at');
     return data
         .cast<Map<String, dynamic>>()
@@ -25,6 +26,11 @@ class BrewKettleService {
   }
 
   Future<BrewKettle> saveKettle(BrewKettle kettle) async {
+    if (kettle.isDefault) {
+      await _table()
+          .update({'is_default': false})
+          .eq('user_profile_id', kettle.userProfileId);
+    }
     final data = await _table().upsert(kettle.toJson()).select().single();
     return BrewKettle.fromJson(data);
   }

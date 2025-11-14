@@ -4,6 +4,7 @@ class Fermenter {
     required this.userProfileId,
     required this.brand,
     this.type,
+    this.isDefault = false,
     this.volumeLiters,
     this.hasHeating = false,
     this.hasCooling = false,
@@ -16,6 +17,7 @@ class Fermenter {
   final String userProfileId;
   final String brand;
   final String? type;
+  final bool isDefault;
   final double? volumeLiters;
   final bool hasHeating;
   final bool hasCooling;
@@ -28,6 +30,7 @@ class Fermenter {
     String? userProfileId,
     String? brand,
     String? type,
+    bool? isDefault,
     double? volumeLiters,
     bool? hasHeating,
     bool? hasCooling,
@@ -40,6 +43,7 @@ class Fermenter {
       userProfileId: userProfileId ?? this.userProfileId,
       brand: brand ?? this.brand,
       type: type ?? this.type,
+      isDefault: isDefault ?? this.isDefault,
       volumeLiters: volumeLiters ?? this.volumeLiters,
       hasHeating: hasHeating ?? this.hasHeating,
       hasCooling: hasCooling ?? this.hasCooling,
@@ -57,6 +61,7 @@ class Fermenter {
       userProfileId: json['user_profile_id'] as String? ?? '',
       brand: json['brand'] as String? ?? '',
       type: json['type'] as String?,
+      isDefault: (json['is_default'] as bool?) ?? false,
       volumeLiters: (json['volume_liters'] as num?)?.toDouble(),
       hasHeating: (json['has_heating'] as bool?) ?? false,
       hasCooling: (json['has_cooling'] as bool?) ?? false,
@@ -72,6 +77,7 @@ class Fermenter {
       'user_profile_id': userProfileId,
       'brand': brand,
       'type': type,
+      'is_default': isDefault,
       'volume_liters': volumeLiters,
       'has_heating': hasHeating,
       'has_cooling': hasCooling,

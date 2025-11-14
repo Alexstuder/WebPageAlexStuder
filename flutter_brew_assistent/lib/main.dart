@@ -282,6 +282,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoadingWaterProfiles = true;
   bool _isSavingWaterProfile = false;
   String? _waterProfilesError;
+  bool _waterProfileIsDefault = false;
 
   static const List<String> _controllerOptions = [
     'Kein Controller',
@@ -383,9 +384,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (!mounted) return;
       setState(() {
         _waterProfiles = profiles;
+        _sortWaterProfiles();
       });
       if (profiles.isNotEmpty) {
-        _applyWaterProfile(profiles.first, recalc: true);
+        final initial = profiles.firstWhere(
+          (p) => p.isDefault,
+          orElse: () => profiles.first,
+        );
+        _applyWaterProfile(initial, recalc: true);
       } else {
         _startNewWaterProfile();
       }
@@ -406,6 +412,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _applyWaterProfile(WaterProfile profile, {bool recalc = true}) {
     setState(() {
       _selectedWaterProfile = profile;
+      _waterProfileIsDefault = profile.isDefault;
       _waterProfileNameCtrl.text = profile.name;
       _waterPhCtrl.text = _doubleToText(profile.ph, emptyIfNull: true);
       _calciumCtrl.text = _doubleToText(profile.calciumPpm, emptyIfNull: true);
@@ -430,6 +437,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _startNewWaterProfile() {
     setState(() {
       _selectedWaterProfile = null;
+      _waterProfileIsDefault = false;
       _waterProfileNameCtrl.clear();
       _waterPhCtrl.clear();
       _calciumCtrl.clear();
@@ -465,6 +473,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       setState(() {
         _upsertWaterProfile(saved);
         _selectedWaterProfile = saved;
+        _waterProfileIsDefault = saved.isDefault;
       });
       _recalculateWaterStats();
       if (mounted) {
@@ -494,6 +503,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       id: _selectedWaterProfile?.id,
       userProfileId: _profileId,
       name: name,
+      isDefault: _waterProfileIsDefault,
       ph: _parseOptionalDouble(_waterPhCtrl),
       calciumPpm: _parseControllerValue(_calciumCtrl),
       magnesiumPpm: _parseControllerValue(_magnesiumCtrl),
@@ -505,6 +515,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   void _upsertWaterProfile(WaterProfile profile) {
+    if (profile.isDefault) {
+      _waterProfiles = _waterProfiles
+          .map((p) => p.id == profile.id ? p : p.copyWith(isDefault: false))
+          .toList();
+    }
     final index =
         _waterProfiles.indexWhere((p) => p.id == profile.id);
     if (index >= 0) {
@@ -512,7 +527,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } else {
       _waterProfiles.add(profile);
     }
-    _waterProfiles.sort((a, b) => a.name.compareTo(b.name));
+    _sortWaterProfiles();
   }
 
   WaterProfile? _findWaterProfile(String? id) {
@@ -521,6 +536,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (profile.id == id) return profile;
     }
     return null;
+  }
+
+  void _sortWaterProfiles() {
+    _waterProfiles.sort((a, b) {
+      if (a.isDefault != b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      return a.name.compareTo(b.name);
+    });
   }
 
   String? get _selectedWaterProfileId {
@@ -748,7 +772,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               .map(
                                 (profile) => DropdownMenuEntry<String>(
                                   value: profile.id!,
-                                  label: profile.name,
+                                  label:
+                                      '${profile.name}${profile.isDefault ? ' ★' : ''}',
                                 ),
                               )
                               .toList(),
@@ -790,6 +815,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                       ),
                     ],
+                  ),
+                  CheckboxListTile(
+                    value: _waterProfileIsDefault,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Als Standard verwenden (★)'),
+                    onChanged: (value) {
+                      setState(() {
+                        _waterProfileIsDefault = value ?? false;
+                      });
+                    },
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -1378,6 +1414,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       if (!mounted) return;
       setState(() {
         _kettles = items;
+        _sortKettles();
       });
     } catch (e) {
       if (!mounted) return;
@@ -1439,6 +1476,10 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            leading: Icon(
+              kettle.isDefault ? Icons.star : Icons.star_border,
+              color: kettle.isDefault ? Colors.amber : Colors.white54,
+            ),
             title: Text(titleText.trim()),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1469,6 +1510,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       text: editing?.volumeLiters?.toString() ?? '',
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+    bool isDefault = editing?.isDefault ?? false;
     String? brandError;
 
     final result = await showDialog<bool>(
@@ -1512,6 +1554,14 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                     labelText: 'Notizen',
                   ),
                 ),
+                CheckboxListTile(
+                  value: isDefault,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Als Standard verwenden (★)'),
+                  onChanged: (value) =>
+                      setState(() => isDefault = value ?? false),
+                ),
               ],
             ),
           ),
@@ -1542,6 +1592,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       userProfileId: widget.profileId,
       brand: brandCtrl.text.trim(),
       model: modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
+      isDefault: isDefault,
       volumeLiters: _parseDouble(volumeCtrl.text),
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
@@ -1550,6 +1601,13 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       final saved = await _service.saveKettle(kettle);
       if (!mounted) return;
       setState(() {
+        if (saved.isDefault) {
+          _kettles = _kettles
+              .map((existing) => existing.id == saved.id
+                  ? existing
+                  : existing.copyWith(isDefault: false))
+              .toList();
+        }
         _upsert(saved);
       });
       if (mounted) {
@@ -1576,9 +1634,16 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     } else {
       _kettles.add(kettle);
     }
-    _kettles.sort(
-      (a, b) => a.brand.toLowerCase().compareTo(b.brand.toLowerCase()),
-    );
+    _sortKettles();
+  }
+
+  void _sortKettles() {
+    _kettles.sort((a, b) {
+      if (a.isDefault != b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      return a.brand.toLowerCase().compareTo(b.brand.toLowerCase());
+    });
   }
 
   double? _parseDouble(String value) {
@@ -1619,6 +1684,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       if (!mounted) return;
       setState(() {
         _fermenters = items;
+        _sortFermenters();
       });
     } catch (e) {
       if (!mounted) return;
@@ -1680,6 +1746,10 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            leading: Icon(
+              fermenter.isDefault ? Icons.star : Icons.star_border,
+              color: fermenter.isDefault ? Colors.amber : Colors.white54,
+            ),
             title: Text(titleText.trim()),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1713,6 +1783,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool hasHeating = editing?.hasHeating ?? false;
     bool hasCooling = editing?.hasCooling ?? false;
+    bool isDefault = editing?.isDefault ?? false;
     String? brandError;
 
     final result = await showDialog<bool>(
@@ -1773,6 +1844,14 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                   onChanged: (value) =>
                       setState(() => hasCooling = value ?? false),
                 ),
+                CheckboxListTile(
+                  value: isDefault,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Als Standard verwenden (★)'),
+                  onChanged: (value) =>
+                      setState(() => isDefault = value ?? false),
+                ),
               ],
             ),
           ),
@@ -1806,6 +1885,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       volumeLiters: _parseDouble(volumeCtrl.text),
       hasHeating: hasHeating,
       hasCooling: hasCooling,
+      isDefault: isDefault,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
 
@@ -1813,6 +1893,13 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       final saved = await _service.saveFermenter(fermenter);
       if (!mounted) return;
       setState(() {
+        if (saved.isDefault) {
+          _fermenters = _fermenters
+              .map((existing) => existing.id == saved.id
+                  ? existing
+                  : existing.copyWith(isDefault: false))
+              .toList();
+        }
         final index =
             _fermenters.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
@@ -1820,9 +1907,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
         } else {
           _fermenters.add(saved);
         }
-        _fermenters.sort(
-          (a, b) => a.brand.toLowerCase().compareTo(b.brand.toLowerCase()),
-        );
+        _sortFermenters();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1845,6 +1930,15 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final cleaned = value.trim();
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned.replaceAll(',', '.'));
+  }
+
+  void _sortFermenters() {
+    _fermenters.sort((a, b) {
+      if (a.isDefault != b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      return a.brand.toLowerCase().compareTo(b.brand.toLowerCase());
+    });
   }
 }
 
@@ -3849,13 +3943,13 @@ class _EquipmentPageState extends State<EquipmentPage> {
         _fermenters = results[2] as List<Fermenter>;
         _controllers = results[3] as List<FermenterControllerModel>;
         _maltDepots = results[4] as List<MaltDepotEntryModel>;
-        _selectedKettle = _kettles.isNotEmpty ? _kettles.first : null;
+        _selectedKettle = _pickDefault(_kettles, (k) => k.isDefault);
         _selectedWaterProfile =
-            _waterProfiles.isNotEmpty ? _waterProfiles.first : null;
+            _pickDefault(_waterProfiles, (p) => p.isDefault);
         _selectedFermenter =
-            _fermenters.isNotEmpty ? _fermenters.first : null;
+            _pickDefault(_fermenters, (f) => f.isDefault);
         _selectedController =
-            _controllers.isNotEmpty ? _controllers.first : null;
+            _pickDefault(_controllers, (c) => c.isDefault);
         _selectedMaltDepot =
             _maltDepots.isNotEmpty ? _maltDepots.first : null;
       });
@@ -3918,6 +4012,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                           if (kettle == null) return;
                           setState(() => _selectedKettle = kettle);
                         },
+                        isDefaultBuilder: (kettle) => kettle.isDefault,
                         labelBuilder: (kettle) =>
                             kettle.model?.isNotEmpty == true
                                 ? '${kettle.brand} ${kettle.model}'
@@ -3932,6 +4027,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                           if (profile == null) return;
                           setState(() => _selectedWaterProfile = profile);
                         },
+                        isDefaultBuilder: (profile) => profile.isDefault,
                         labelBuilder: (profile) => profile.name,
                       ),
                       const SizedBox(height: 18),
@@ -3943,6 +4039,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                           if (fermenter == null) return;
                           setState(() => _selectedFermenter = fermenter);
                         },
+                        isDefaultBuilder: (fermenter) => fermenter.isDefault,
                         labelBuilder: (fermenter) => fermenter.type?.isNotEmpty == true
                             ? '${fermenter.brand} ${fermenter.type}'
                             : fermenter.brand,
@@ -3956,6 +4053,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                           if (controller == null) return;
                           setState(() => _selectedController = controller);
                         },
+                        isDefaultBuilder: (controller) => controller.isDefault,
                         labelBuilder: (controller) => controller.name,
                       ),
                       const SizedBox(height: 18),
@@ -4049,6 +4147,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
     }
   }
 
+  T? _pickDefault<T>(List<T> items, bool Function(T item) isDefault) {
+    if (items.isEmpty) return null;
+    for (final item in items) {
+      if (isDefault(item)) return item;
+    }
+    return items.first;
+  }
+
   String _buildPrompt(String template) {
     String formatScore(double value) => value.toStringAsFixed(2);
     String formatWater(double? value) => (value ?? 0).toStringAsFixed(2);
@@ -4112,6 +4218,7 @@ class _EquipmentSection<T> extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     required this.labelBuilder,
+    this.isDefaultBuilder,
   });
 
   final String title;
@@ -4119,6 +4226,7 @@ class _EquipmentSection<T> extends StatelessWidget {
   final T? selected;
   final ValueChanged<T?> onSelected;
   final String Function(T item) labelBuilder;
+  final bool Function(T item)? isDefaultBuilder;
   // Detail rendering removed per latest requirements – only name shown.
 
   @override
@@ -4132,7 +4240,7 @@ class _EquipmentSection<T> extends StatelessWidget {
         ),
       );
     }
-    final T current = selected ?? items.first;
+    final T current = selected ?? _defaultItem() ?? items.first;
     return Card(
       color: const Color(0xFF0F172A),
       child: Padding(
@@ -4156,17 +4264,31 @@ class _EquipmentSection<T> extends StatelessWidget {
                     .map(
                       (item) => DropdownMenuEntry<T>(
                         value: item,
-                        label: labelBuilder(item),
+                        label: _decorateLabel(item),
                       ),
                     )
                     .toList(),
               )
             else
-              Text(labelBuilder(current)),
+              Text(_decorateLabel(current)),
           ],
         ),
       ),
     );
+  }
+
+  String _decorateLabel(T item) {
+    final label = labelBuilder(item);
+    final isDefault = isDefaultBuilder?.call(item) ?? false;
+    return isDefault ? '$label ★' : label;
+  }
+
+  T? _defaultItem() {
+    if (isDefaultBuilder == null) return null;
+    for (final item in items) {
+      if (isDefaultBuilder!(item)) return item;
+    }
+    return null;
   }
 }
 
@@ -4285,18 +4407,13 @@ class RecipeDisplayPage extends StatelessWidget {
 List<Widget> _buildSections(Map<String, dynamic> parsed) {
   final zutaten = _asMap(parsed['Zutaten'] ?? parsed['zutaten']);
   final prozess = _asMap(parsed['Prozessdaten'] ?? parsed['prozessdaten']);
+  final malzdepot =
+      _asMap(parsed['Malzdepot_Einkauf'] ?? parsed['malzdepot_einkauf']);
 
   final sections = <Widget>[
     _RecipeSection(
       title: 'Zutaten – Original Malz',
       entries: _formatList(zutaten['Original_Malz'] ?? zutaten['original_malz']),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Zutaten – Shop Malz',
-      entries: _formatList(
-        zutaten['Im_Shop_erhaeltlich_Malz'] ?? zutaten['shop_malz'],
-      ),
     ),
     const Divider(height: 32, color: Colors.white24),
     _RecipeSection(
@@ -4306,23 +4423,9 @@ List<Widget> _buildSections(Map<String, dynamic> parsed) {
     ),
     const Divider(height: 32, color: Colors.white24),
     _RecipeSection(
-      title: 'Zutaten – Shop Hopfen',
-      entries: _formatList(
-        zutaten['Im_Shop_erhaeltlich_Hopfen'] ?? zutaten['shop_hopfen'],
-      ),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
       title: 'Zutaten – Original Hefe',
       entries:
           _formatList(zutaten['Original_Hefe'] ?? zutaten['original_hefe']),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Zutaten – Shop Hefe',
-      entries: _formatList(
-        zutaten['Im_Shop_erhaeltlich_Hefe'] ?? zutaten['shop_hefe'],
-      ),
     ),
     const Divider(height: 32, color: Colors.white24),
     _RecipeSection(
@@ -4336,6 +4439,17 @@ List<Widget> _buildSections(Map<String, dynamic> parsed) {
       entries: _formatList(
         zutaten['Wasseraufbereitung'] ?? zutaten['wasseraufbereitung'],
       ),
+    ),
+    const Divider(height: 32, color: Colors.white24),
+    _RecipeSection(
+      title: 'Malzdepot – Shops',
+      entries: _formatMalzdepotShops(malzdepot['Shops'] ?? malzdepot['shops']),
+    ),
+    const Divider(height: 32, color: Colors.white24),
+    _RecipeSection(
+      title: 'Malzdepot – Empfehlung',
+      entries:
+          _formatList(malzdepot['Empfehlung'] ?? malzdepot['empfehlung']),
     ),
     const Divider(height: 32, color: Colors.white24),
     _RecipeSection(
@@ -4420,6 +4534,59 @@ class _LinkSegment {
 
   final String text;
   final bool isLink;
+}
+
+List<_RecipeEntry> _formatMalzdepotShops(dynamic input) {
+  if (input == null) return [const _RecipeEntry(text: 'Keine Angaben')];
+  final shops = input is List ? input : [input];
+  if (shops.isEmpty) return [const _RecipeEntry(text: 'Keine Angaben')];
+  final entries = <_RecipeEntry>[];
+
+  for (final shop in shops) {
+    if (shop is! Map) {
+      entries.add(_entry(shop.toString()));
+      continue;
+    }
+    final shopMap = shop.map((key, val) => MapEntry(key.toString(), val));
+    final shopName =
+        _stringField(shopMap['Shop_Name'] ?? shopMap['shop_name']) ??
+            'Shop';
+    final shopUrl =
+        _stringField(shopMap['Shop_URL'] ?? shopMap['shop_url']);
+
+    entries.add(
+      _RecipeEntry(
+        text: shopUrl != null ? '$shopName ($shopUrl)' : shopName,
+        link: shopUrl,
+      ),
+    );
+
+    void addCategory(String label, dynamic data) {
+      final formatted = _formatList(data);
+      entries.add(_entry('$label:'));
+      entries.addAll(_prefixEntries(formatted, '  - '));
+    }
+
+    addCategory('Malz', shopMap['Malz'] ?? shopMap['malz']);
+    addCategory('Hopfen', shopMap['Hopfen'] ?? shopMap['hopfen']);
+    addCategory('Hefe', shopMap['Hefe'] ?? shopMap['hefe']);
+
+    final abdeckung = shopMap['Abdeckung'] ?? shopMap['abdeckung'];
+    if (abdeckung != null) {
+      entries.add(_entry('Abdeckung:'));
+      entries.addAll(_prefixEntries(_formatList(abdeckung), '  - '));
+    }
+
+    final bewertung =
+        shopMap['Gesamtbewertung'] ?? shopMap['gesamtbewertung'];
+    if (bewertung != null) {
+      entries.add(_entry('Bewertung: ${_formatSimpleValue(bewertung)}'));
+    }
+
+    entries.add(const _RecipeEntry(text: ''));
+  }
+
+  return entries.isEmpty ? [const _RecipeEntry(text: 'Keine Angaben')] : entries;
 }
 
 List<_RecipeEntry> _formatList(dynamic input) {
@@ -4918,6 +5085,7 @@ class _FermenterControllerManagerPageState
       if (!mounted) return;
       setState(() {
         _controllers = items;
+        _sortControllers();
       });
     } catch (e) {
       if (!mounted) return;
@@ -4970,6 +5138,10 @@ class _FermenterControllerManagerPageState
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            leading: Icon(
+              controller.isDefault ? Icons.star : Icons.star_border,
+              color: controller.isDefault ? Colors.amber : Colors.white54,
+            ),
             title: Text(controller.name),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -5000,6 +5172,7 @@ class _FermenterControllerManagerPageState
     final usernameCtrl = TextEditingController(text: editing?.username ?? '');
     final apiKeyCtrl = TextEditingController(text: editing?.apiKey ?? '');
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+    bool isDefault = editing?.isDefault ?? false;
     String? nameError;
 
     final result = await showDialog<bool>(
@@ -5036,6 +5209,14 @@ class _FermenterControllerManagerPageState
                   maxLines: 3,
                   decoration: const InputDecoration(labelText: 'Notizen'),
                 ),
+                CheckboxListTile(
+                  value: isDefault,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Als Standard verwenden (★)'),
+                  onChanged: (value) =>
+                      setState(() => isDefault = value ?? false),
+                ),
               ],
             ),
           ),
@@ -5065,6 +5246,7 @@ class _FermenterControllerManagerPageState
       id: editing?.id,
       userProfileId: widget.profileId,
       name: nameCtrl.text.trim(),
+      isDefault: isDefault,
       username:
           usernameCtrl.text.trim().isEmpty ? null : usernameCtrl.text.trim(),
       apiKey: apiKeyCtrl.text.trim().isEmpty ? null : apiKeyCtrl.text.trim(),
@@ -5075,6 +5257,13 @@ class _FermenterControllerManagerPageState
       final saved = await _service.saveController(controller);
       if (!mounted) return;
       setState(() {
+        if (saved.isDefault) {
+          _controllers = _controllers
+              .map((existing) => existing.id == saved.id
+                  ? existing
+                  : existing.copyWith(isDefault: false))
+              .toList();
+        }
         final index =
             _controllers.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
@@ -5082,9 +5271,7 @@ class _FermenterControllerManagerPageState
         } else {
           _controllers.add(saved);
         }
-        _controllers.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
+        _sortControllers();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -5103,4 +5290,12 @@ class _FermenterControllerManagerPageState
     }
   }
 
+  void _sortControllers() {
+    _controllers.sort((a, b) {
+      if (a.isDefault != b.isDefault) {
+        return a.isDefault ? -1 : 1;
+      }
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+  }
 }
