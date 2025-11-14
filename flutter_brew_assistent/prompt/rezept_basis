@@ -9,11 +9,15 @@ Keine Erklärtexte, keine Kommentare, keine Zusatzfelder, keine Rückfragen.
 Ziel:
 Erstelle ein vollständiges Bierrezept für {{target_volume_l}} Liter Bier.
 Ausgangspunkt ist das Basisbier : {{basis_bier}}.
-Die Geschmackssteuerung definiert alle gewünschten Abweichungen,
+Die Geschmackssteuerung unter den Variablen – Geschmackssteuerung ,definiert alle gewünschten Abweichungen,
 Intensitäten und Charakterverschiebungen gegenüber diesem Basisbier.
 Das Equipment beeinflusst alle prozessrelevanten Parameter wie
 Sudhausausbeute, Verdampfungsrate, Verlustmengen, Gärführung
 und mögliche Prozessschritte.
+Suche im mitgelieferten Malzdepot nach den Zutaten.Falls diese nicht genau vorhanden sind, 
+suche das beste Alternativprodukt aus dem Shop.Berechne aufgrund der Produktspezifikation neu 
+die Menge und füge diese Angaben in der Antwort JSON unter Zutaten – Im Shop erhältlich Malz/Hopfen/Hefe ein.
+Füge dort auch die spezifische url zum Produkt ein.
 Die Wasserqualität muss vollständig berücksichtigt werden.
 Falls zur Zielerreichung zusätzliche Salze notwendig sind,
 müssen diese fachlich korrekt berechnet, ergänzt
@@ -95,7 +99,7 @@ Ausgabespezifikation:
   • Liste aller Malze, die im angegebenen Shop verfügbar sind  
   • Exakter Name gemäß Shop  
   • Berechnete Menge in Gramm des Alternativmalz 
-  • url zum Produkt des Shops  
+  • url zum Alternativmalz Produkt des Shops  
 
 2. Zutaten – Original Hopfen  
   • Exakter Sortenname  
@@ -107,7 +111,7 @@ Ausgabespezifikation:
   • Exakter Shop-Name  
   • Alpha-Säure laut Shop  
   • Menge in Gramm des Alternativhopfens 
-  • url zum Produkt des Shops
+  • url zum Alternativhopfens Produkt des Shops
 
 3. Original Hefe  
   • Empfehlung  
@@ -123,7 +127,7 @@ Ausgabespezifikation:
   • Name gemäß Shop
   • Form (Trocken/Flüssig)  
   • Empfohlene Menge in Gramm oder Anzahl Pakete
-  • url zum Produkt des Shops
+  • url zum Hefe Produkt des Shops
     
 
 4. Spezialzutaten (nur falls benötigt)  

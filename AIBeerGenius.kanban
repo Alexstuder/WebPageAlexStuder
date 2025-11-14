@@ -12,6 +12,15 @@
           "labels": [],
           "checkboxes": [],
           "comments": []
+        },
+        {
+          "id": "e4f0ef6d-8e12-44aa-9803-d7b39e16b6ae",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Default  Stern im user_profile : Braukessel, Fermentierer, Wasser, Kontroller ,Abfüllen und LAgern",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
         }
       ]
     },
