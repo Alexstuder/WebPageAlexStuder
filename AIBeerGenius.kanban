@@ -1,0 +1,41 @@
+{
+  "lists": [
+    {
+      "id": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+      "title": "Backlog",
+      "cards": [
+        {
+          "id": "9dc78b79-5450-4ad9-8625-eb089680ba0e",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Abüllung und Lagerung bei User_profile hinzufügen",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "912cbbea-7706-4989-b9c5-4c9205be37a3",
+      "title": "To Do",
+      "cards": []
+    },
+    {
+      "id": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",
+      "title": "Doing",
+      "cards": []
+    },
+    {
+      "id": "d315180d-7a16-43f6-aa98-33e946c2d701",
+      "title": "Done",
+      "cards": []
+    }
+  ],
+  "archive": {
+    "lists": [],
+    "cards": []
+  },
+  "settings": {
+    "labels": []
+  }
+}
