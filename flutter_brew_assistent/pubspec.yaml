@@ -25,6 +25,7 @@ flutter:
   assets:
     - .env
     - assets/icon.png
+    - prompt/rezept_basis
 
 flutter_launcher_icons:
   image_path: "assets/icon.png"
