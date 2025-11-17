@@ -3,68 +3,21 @@
     {
       "id": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
       "title": "Backlog",
-      "cards": [
-        {
-          "id": "8726885e-8a59-4488-a59b-5a86c48f597e",
-          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
-          "title": "Biersol Irish moos oder ähnliches soll berücksichtig werden können",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        },
-        {
-          "id": "1b8f2ece-fdf4-42af-b8f0-dd6f2d532a1e",
-          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
-          "title": "ISSUE : auf \"Dein Bier Rezpet für ein Bock im Stile eines Bock korrigieren",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        },
-        {
-          "id": "40308cf6-d49e-4e7a-a822-d515d0c9aa38",
-          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
-          "title": "Wasserprofil : Default wird nicht sofort beim anklicken angezeigt und wird aber bei jedem profil aber zugeordnet",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        }
-      ]
+      "cards": []
     },
     {
       "id": "912cbbea-7706-4989-b9c5-4c9205be37a3",
       "title": "To Do",
-      "cards": [
-        {
-          "id": "e4f0ef6d-8e12-44aa-9803-d7b39e16b6ae",
-          "listId": "912cbbea-7706-4989-b9c5-4c9205be37a3",
-          "title": "Default  Stern im user_profile : Braukessel, Fermentierer, Wasser, Kontroller ,Abfüllen und LAgern",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        }
-      ]
+      "cards": []
     },
     {
       "id": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",
       "title": "Doing",
       "cards": [
         {
-          "id": "9dc78b79-5450-4ad9-8625-eb089680ba0e",
+          "id": "e346deab-5a59-454a-b1b5-3a9756ca3cd6",
           "listId": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",
-          "title": "Abüllung und Lagerung bei User_profile hinzufügen",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        },
-        {
-          "id": "fb1907ec-b0f5-40e5-8d24-280c68371b3f",
-          "listId": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",
-          "title": "Spezielle Zutraten wie schoko, kaffe, vanille oder ähnliches soll beigegeben werden können",
+          "title": "Kein Delete Button auf allen User Profilen vorhanden",
           "description": "",
           "labels": [],
           "checkboxes": [],
@@ -75,7 +28,71 @@
     {
       "id": "d315180d-7a16-43f6-aa98-33e946c2d701",
       "title": "Done",
-      "cards": []
+      "cards": [
+        {
+          "id": "40308cf6-d49e-4e7a-a822-d515d0c9aa38",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Wasserprofil : Default wird nicht sofort beim anklicken angezeigt und wird aber bei jedem profil aber zugeordnet",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "e4f0ef6d-8e12-44aa-9803-d7b39e16b6ae",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Default  Stern im user_profile : Braukessel, Fermentierer, Wasser, Kontroller ,Abfüllen und LAgern",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "1b8f2ece-fdf4-42af-b8f0-dd6f2d532a1e",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "ISSUE : auf \"Dein Bier Rezpet für ein Bock im Stile eines Bock korrigieren",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "8726885e-8a59-4488-a59b-5a86c48f597e",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Biersol Irish moos oder ähnliches soll berücksichtig werden können",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "e6676006-bf1f-4dba-8520-abf77245baa0",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Alle +Neu Button im Equipment nach oben",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "fb1907ec-b0f5-40e5-8d24-280c68371b3f",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Spezielle Zutraten wie schoko, kaffe, vanille oder ähnliches soll beigegeben werden können",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "9dc78b79-5450-4ad9-8625-eb089680ba0e",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Abüllung und Lagerung bei User_profile hinzufügen",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
     }
   ],
   "archive": {

@@ -90,22 +90,32 @@ async function handleBrewRequest(req, res) {
       return;
     }
 
-    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const openAiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
+        model: process.env.OPENAI_MODEL || 'gpt-5.1',
+        input: [
           {
             role: 'system',
-            content: 'Du bist ein erfahrener Braumeister. Erstelle strukturierte Bierrezepte mit Zutatenliste, Brauschritten und optionalen Varianten.',
+            content: [
+              {
+                type: 'input_text',
+                text: 'Du bist ein erfahrener Braumeister. Erstelle strukturierte Bierrezepte mit Zutatenliste, Brauschritten und optionalen Varianten.',
+              },
+            ],
           },
           {
             role: 'user',
-            content: `Erstelle ein Bier-Rezept basierend auf: ${prompt}`,
+            content: [
+              {
+                type: 'input_text',
+                text: prompt,
+              },
+            ],
           },
         ],
         temperature: 0.7,
@@ -115,14 +125,18 @@ async function handleBrewRequest(req, res) {
     const payload = await openAiResponse.json();
 
     if (!openAiResponse.ok) {
-      respondJson(res, openAiResponse.status, payload);
+      console.error('OpenAI API error:', openAiResponse.status, payload);
+      respondJson(res, openAiResponse.status, {
+        error: payload?.error?.message || payload?.error || 'OpenAI API request failed.',
+        details: payload,
+      });
       return;
     }
 
-    const content = payload?.choices?.[0]?.message?.content;
+    const content = extractResponseText(payload);
 
-    if (!content || typeof content !== 'string') {
-      respondJson(res, 502, { error: 'Antwort von OpenAI unvollständig.' });
+    if (!content) {
+      respondJson(res, 502, { error: 'Antwort von OpenAI unvollständig.', payload });
       return;
     }
 
@@ -131,6 +145,37 @@ async function handleBrewRequest(req, res) {
     console.error('Proxy error:', error);
     respondJson(res, 500, { error: 'Interner Proxy-Fehler.' });
   }
+}
+
+function extractResponseText(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const textParts = [];
+  const outputs = Array.isArray(payload.output) ? payload.output : [];
+  outputs.forEach(item => {
+    if (!item) return;
+    if (item.type === 'message' && Array.isArray(item.content)) {
+      item.content.forEach(block => {
+        if (block?.type === 'output_text' && typeof block.text === 'string') {
+          textParts.push(block.text);
+        }
+      });
+    } else if (typeof item.text === 'string') {
+      textParts.push(item.text);
+    }
+  });
+  if (textParts.length === 0) {
+    const fallback = payload.output_text;
+    if (typeof fallback === 'string') {
+      textParts.push(fallback);
+    } else if (Array.isArray(fallback)) {
+      fallback.forEach(entry => {
+        if (typeof entry === 'string') {
+          textParts.push(entry);
+        }
+      });
+    }
+  }
+  return textParts.join('\n').trim();
 }
 
 async function handleRaptTokenRequest(res) {

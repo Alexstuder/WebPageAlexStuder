@@ -15,27 +15,38 @@ Das Equipment beeinflusst alle prozessrelevanten Parameter wie
 Sudhausausbeute, Verdampfungsrate, Verlustmengen, Gärführung
 und mögliche Prozessschritte.
 
-Das Malzdepot enthält einen oder mehrere Shops, die Malz, Hopfen oder Hefe verkaufen. 
-Für jede im Rezept definierte Zutat muss in jedem einzelnen Shop das jeweils nächste passende reale Produkt gesucht werden. 
-Keine Produkte, Mengenangaben oder URLs dürfen erfunden werden; alles muss aus tatsächlich existierenden Shop-Daten stammen. 
-Wenn kein exakter Treffer vorhanden ist, wähle die technisch beste Alternative anhand der realen Produktspezifikationen aus dem jeweiligen Shop. 
-Berechne, falls nötig, die neue Menge basierend auf Extraktgehalt, Farbe oder Alpha-Säure.
-
-Erstelle für jeden Shop eine separate Einkaufsliste mit den jeweils bestmöglichen realen Produkten. Erstelle zusätzlich eine Empfehlung, 
-in welchem Shop der Gesamteinkauf am sinnvollsten ist, basierend auf realen Daten (Abdeckung, geringste Abweichung, technische Passung).
-
-
-Erfinde keine Alternativprodukte ,welche im Shop nicht existieren ,weder Preis,Menge noch URL.
-Die Wasserqualität muss vollständig berücksichtigt werden.
+Die Wasserqualität (übergebene Werte) ist verbindlich und gilt als exakt gemessenes Ist-Profil.
+Verändere niemals die Grundwerte – gehe immer davon aus, dass dieses Profil bereits im Brauwasser vorliegt.
 Falls zur Zielerreichung zusätzliche Salze notwendig sind,
-müssen diese fachlich korrekt berechnet, ergänzt
-und im späteren Rezept vollständig ausgewiesen werden.
+müssen ausschließlich die Differenzen zum optimalen Profil berechnet und ergänzt,
+damit nur die notwendigen Anpassungen ausgewiesen werden.
 Das Rezept muss ausschließlich auf Basis dieser Variablen aufgebaut sein.
 Erstelle einen optimalen,detailierten und konkreten Maische-,Koch- und Gärverlaufsplan mit dem zur verfügung gestellem equipment .
 Nutze für den Gärplan das Equipment , um die bestmögliche Gärführung zu gewährleisten. Insbesondere , wenn eine Kühlung oder Heizung integriert ist.
 Nutze die Gärphasen : Hauptgäerung, Diacetylrast, Nachgärung, Lagerung oder ColdCrash etc. passend zum Bierstil.
 Falls du eine Anweisung nicht in der Antwort JSON integrieren konntest, füge diese in der Anwort JSON im Feld Notizen hinzu.
 
+Spezielle Zugaben und Lagerungen:
+- Die Variable `special_additions` liefert eine JSON-Liste mit allen gewünschten Spezialzugaben. Jedes Element besitzt:  
+  `name` (Anweisungstitel), `antrunk_percent`, `abgang_percent` sowie `intensity_percent` (0–100).  
+- Summen aus `antrunk_percent` und `abgang_percent` ergeben immer 100 %. Diese Werte bestimmen exakt, wie stark der Geschmack in Antrunk bzw. Abgang betont wird.  
+- Die Intensität bestimmt die Stärke (z. B. Dosierung, Kontaktzeit, sensorische Auswirkung) und muss bei der Zutatenplanung berücksichtigt werden.  
+- Wenn `special_additions` Einträge enthält, müssen sie in den Spezialzutaten und im Prozessplan umgesetzt werden (inkl. Angaben zur Phase, Kontaktzeit und Begründung).  
+- Die optionale Variable `special_storage` enthält zusätzliche Lagerungs-/Reifevorgaben (z. B. Barrel Aging). Baue diese Schritte verbindlich in den Prozessplan oder die Notizen ein.
+
+Klär- und Schönungsmittel:
+- Die Variable `fining_agents` enthält eine JSON-Liste der bevorzugten Klär- und Schönungsmittel des Nutzers (`name`, `purpose`, optional `recommended_phase`).  
+- Evaluiere alle Mittel fachlich und verwende ausschließlich das bestgeeignete Mittel (bei Gleichstand maximal ein weiteres, aber nur wenn technisch zwingend).  
+- Für jedes eingesetzte Mittel MUSS die genaue Menge, Phase (z. B. „letzte 10 min Kochung“), Kontaktzeit und der Zweck genannt werden.  
+- Nicht eingesetzte Mittel werden in den Notizen mit kurzer Begründung aufgeführt.  
+- Alle verwendeten Mittel erscheinen im Abschnitt `Zutaten.Klaer_und_Schonungsmittel` und werden im Prozessplan berücksichtigt (Zeitpunkt, Kontaktzeit, Temperatur).
+
+Abfüllung & Lagerung:
+- Die Variable `packaging_profile` enthält die bevorzugte Abfüllstrategie (Name, Keg- und Flaschenangaben, Temperaturen, Keg-Volumen).  
+- Nutze dieses Profil verbindlich, plane die jeweiligen Konditionen (Karbonisierung, Lagerung) ein und leite daraus konkrete Zahlen ab.  
+- Berechne anhand des Zielvolumens, wie viele vollständige Kegs (Volumen aus dem Profil) und wie viele 1-Liter-Flaschen abgefüllt werden können. Flaschenvolumen ist immer 1,0 L.  
+- Für die Flaschenabfüllung muss die notwendige Zuckerzugabe zur Nachgärung berechnet werden (Gesamtmenge und Menge pro Flasche, basierend auf üblichen Referenzwerten zur Zielkarbonisierung) und im Rezept ausgewiesen werden.  
+- Alle Ergebnisse erscheinen im Abschnitt `Abfuellung_ins_Keg` bzw. `Abfuellung_in_Flaschen` sowie in den Prozessdaten (Abfüllschritt).
 
 Regeln:
 - Nur JSON ausgeben.Nutze die vorgegebene Antwort-Vorlage.
@@ -81,8 +92,9 @@ fermenter_heizung: {{fermenter_heating}}
 fermenter_kuehlung: {{fermenter_cooling}}
 target_volume_l: {{target_volume_l}}
 
-Variablen – Shops:
-shop_url: {{shop_url}}
+Variablen – Spezialzugaben:
+special_additions: {{special_additions}} (JSON-Liste aller Spezialzugaben mit Feldern `name`, `antrunk_percent`, `abgang_percent`, `intensity_percent`)
+special_storage: {{special_storage}} (JSON-Liste optionaler Lagerungen/Reifeschritte als Textvorgaben)
 
 Variablen – Wasserqualität in ppm:
 calcium: {{calcium}}
@@ -92,6 +104,8 @@ chloride: {{chloride}}
 sulfate: {{sulfate}}
 bicarbonate: {{bicarbonate}}
 ph: {{ph}}
+fining_agents: {{fining_agents}} (JSON-Liste bevorzugter Klär-/Schönungsmittel mit Feldern `name`, `purpose`, `recommended_phase`)
+packaging_profile: {{packaging_profile}} (JSON mit `name`, `bottle`, `keg` inkl. Temperaturen und Keg-Volumen)
 
 Ausgabespezifikation:
 - Ausgabe ist ein vollständiges JSON ohne Fließtext.
@@ -103,24 +117,10 @@ Ausgabespezifikation:
   • Menge in Gramm  
   • Sortiert nach Anteil (höchster → niedrigster)  
 
-1b. Zutaten – Im Shop erhältlich Malz  
-  • Shop Name
-  • Exakter Name gemäß Shop  
-  •	berechnete neue Menge
-	•	Begründung der Auswahl
-	•	URL des gefundenen Shop-Produkts.
-
 2. Zutaten – Original Hopfen  
   • Exakter Sortenname  
   • Alpha-Säure-Wert  
   • Menge in Gramm
-
-2b. Zutaten – Im Shop erhältlich Hopfen  
-  . Shop Name
-  • Exakter Name gemäß Shop  
-  •	berechnete neue Menge
-	•	Begründung der Auswahl
-	•	URL des gefundenen Shop-Produkts.
 
 3. Original Hefe  
   • Empfehlung  
@@ -131,25 +131,39 @@ Ausgabespezifikation:
   •	Begründung der Auswahl
   • Empfohlene Menge in Gramm oder Anzahl Pakete
 
-3b. Hefe – Im Shop erhältlich  
-  • Exakter Shop-Name  
-  • Hersteller 
-  • Produktname
-  • Form (Trocken/Flüssig)  
-  • Empfohlene Menge in Gramm oder Anzahl Pakete
-  • url zum Hefe Produkt des Shops
-    
+4. Spezialzutaten (Spezialzugaben zwingend aufnehmen, sonst leer lassen)  
+  • Exakter Name (entspricht `special_additions.name`)  
+  • Menge in Gramm oder ml (an Intensität angepasst)  
+  • Anteil_Antrunk_Prozent (muss exakt `antrunk_percent`)  
+  • Anteil_Abgang_Prozent (muss exakt `abgang_percent`)  
+  • Intensitaet_Prozent (muss exakt `intensity_percent`)  
+  • Einsatzphase / Begründung (konkreter Prozessschritt für die Umsetzung)
 
-4. Spezialzutaten (nur falls benötigt)  
-  • Exakter Name  
-  • Menge in Gramm
+4b. Klär- & Schönungsmittel  
+  • Name (entspricht `fining_agents.name`)  
+  • Menge (inkl. Einheit)  
+  • Phase / Schritt  
+  • Zweck  
+  • Hinweis (besondere Durchführung oder Dosierhinweis – wenn Mittel verworfen wurde, hier „nicht verwendet + Begründung“)
+
+4c. Abfüll- & Verpackungsberechnung  
+  • Anzahl_Kegs (volle Kegs, basierend auf Profil-Volumen)  
+  • Keg_Volumen_L (pro Keg)  
+  • Restvolumen_fuer_Flaschen_L (nach Keg-Abfüllung)  
+  • Anzahl_Flaschen (1 L pro Flasche)  
+  • Zuckerzugabe (Zucker_pro_Flasche_g und Gesamt_Zucker_g)  
+  • Temperaturen/Dauern entsprechend Packaging-Profil
 
 5. Wasseraufbereitung  
-  • Berechnete Salze  korrekter Name aus (Kalzium Ca²⁺, Magnesium Mg²⁺, Natrium Na⁺, Chlorid Cl⁻, Sulfat SO₄²⁻, Bicarbonat HCO₃⁻)
-  • Menge in Gramm  
+  • Nur Differenzmengen an Salzen (Kalzium Ca²⁺, Magnesium Mg²⁺, Natrium Na⁺, Chlorid Cl⁻, Sulfat SO₄²⁻, Bicarbonat HCO₃⁻) eintragen
+  • Menge in Gramm (positiv = hinzufügen, negativ = entnehmen/vermeiden)  
   • Phase: Maische / Nachguss / Split
 
-6. Prozessdaten – vollständig strukturierter Ablauf  
+ 6. Prozessdaten – vollständig strukturierter Ablauf  
+
+  • Spezialzugaben und Lagerungen müssen exakt entsprechend `special_additions` bzw. `special_storage` eingeplant werden. Lege Phase, Dauer, Temperatur und Kontaktzeit fest und verweise auf den jeweiligen Namen sowie die Prozentanteile.
+  • Klär- & Schönungsmittel aus `fining_agents` sind verbindlich mit Phase, Kontaktzeit und Zweck im Prozessplan auszuweisen (falls nicht genutzt → Begründung in Notizen).
+  • Berücksichtige die Vorgaben aus `packaging_profile`, inklusive Karbonisierungs- und Lagerbedingungen für Keg und/oder Flasche. Plane den Abfüllschritt mit konkreten Mengen und Zuckerberechnung.
 
   a) Maischeplan  
      • Liste aller Maischephasen  
@@ -172,12 +186,15 @@ Ausgabespezifikation:
      • Falls notwendig, auch spezielle Schritte wie Diacetylrast,Lagerung oder ColdCrash etc. passend zum Bierstil
     
 
-  d) Abfüllung ins Keg  
-     • Empfohlener CO₂-Druck in bar,Dauer in Tage und Temperatur für Zielkarbonisierung
+  d) Abfüllung & Verpackung  
+     • Nutze das Packaging-Profil, um Abfüllschritte, Temperaturen und Drücke festzulegen  
+     • Berechne Anzahl Kegs (Volumen aus Profil) und Anzahl 1-Liter-Flaschen (Restvolumen)  
+     • Berechne Zuckerzugabe für Flaschen (gesamt und pro Flasche) zur gewünschten Karbonisierung  
+     • Dokumentiere Lagerbedingungen (Temperatur & Dauer) je Verpackungsart
 
 7. Notizen  
   • Sammle bis zu drei kurze Hinweise (z.B. Besonderheiten beim Läutern, Fermentationshinweise, Servierempfehlungen)  
-  • Nutze diesen Bereich auch für Anforderungen, die nicht in den übrigen Feldern abbildbar sind.
+  • Nutze diesen Bereich auch für Anforderungen, die nicht in den übrigen Feldern abbildbar sind (insbesondere restliche Punkte aus `special_storage` oder Begründungen für nicht eingesetzte `fining_agents`).
 
 - Keine zusätzlichen Informationen.  
 - Nur valides JSON.
@@ -196,30 +213,11 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
         "Schrotgroesse_mm": 0.0
       }
     ],
-    "Im_Shop_erhaeltlich_Malz": [
-      {
-        "Name": "",
-        "Menge_g": 0,
-        "Preis": "",
-        "Packung": "",
-        "Ersatztyp": "",
-        "url": ""
-      }
-    ],
     "Original_Hopfen": [
       {
         "Sortenname": "",
         "Alpha_Saeure": 0.0,
         "Menge_g": 0
-      }
-    ],
-    "Im_Shop_erhaeltlich_Hopfen": [
-      {
-        "Shop_Name": "",
-        "Alpha_Saeure": 0.0,
-        "Menge_g": 0,
-        "Packung": "",
-        "url": ""
       }
     ],
     "Original_Hefe": {
@@ -230,18 +228,23 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
       "Form": "",
       "Menge": ""
     },
-    "Im_Shop_erhaeltlich_Hefe": {
-      "Shop_Name": "",
-      "Hersteller": "",
-      "Name": "",
-      "Form": "",
-      "Menge": "",
-      "url": ""
-    },
     "Spezialzutaten": [
       {
         "Name": "",
-        "Menge_g": 0
+        "Menge_g": 0,
+        "Anteil_Antrunk_Prozent": 0,
+        "Anteil_Abgang_Prozent": 0,
+        "Intensitaet_Prozent": 0,
+        "Einsatzphase": ""
+      }
+    ],
+    "Klaer_und_Schonungsmittel": [
+      {
+        "Name": "",
+        "Menge": "",
+        "Phase": "",
+        "Zweck": "",
+        "Hinweis": ""
       }
     ],
     "Wasseraufbereitung": [
@@ -294,7 +297,18 @@ Antwort-Vorlage (bitte exakt dieses Schema mit fachlich korrekten Werten befüll
     "Abfuellung_ins_Keg": {
       "CO2_Druck_bar": 0.0,
       "Temperatur_C": 0.0,
-      "Dauer_Tage": 0
+      "Dauer_Tage": 0,
+      "Anzahl_Kegs": 0,
+      "Keg_Volumen_L": 0.0,
+      "Restvolumen_fuer_Flaschen_L": 0.0
+    },
+    "Abfuellung_in_Flaschen": {
+      "Anzahl_Flaschen": 0,
+      "Zucker_pro_Flasche_g": 0.0,
+      "Gesamt_Zucker_g": 0.0,
+      "Karbonisierung_Temperatur_C": 0.0,
+      "Lager_Temperatur_C": 0.0,
+      "Hinweis": ""
     }
   },
   "Notizen": [

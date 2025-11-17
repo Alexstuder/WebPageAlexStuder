@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/user_profile.dart';
 
-class UserProfileService {
+abstract class UserProfileRepository {
+  Future<void> saveProfile(UserProfile profile);
+  Future<UserProfile?> fetchProfile(String id);
+  Future<UserProfile?> fetchDefaultProfile({bool refresh = false});
+}
+
+class UserProfileService implements UserProfileRepository {
   UserProfileService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class UserProfileService {
   static const String defaultProfileId = 'self_hosted_profile';
   static Future<UserProfile?>? _cachedDefaultProfile;
 
+  @override
   Future<void> saveProfile(UserProfile profile) async {
     await _table()
         .upsert(profile.toJson(), onConflict: 'id');
@@ -21,6 +28,7 @@ class UserProfileService {
     }
   }
 
+  @override
   Future<UserProfile?> fetchProfile(String id) async {
     final data =
         await _table().select().eq('id', id).maybeSingle();
@@ -32,6 +40,7 @@ class UserProfileService {
     return profile;
   }
 
+  @override
   Future<UserProfile?> fetchDefaultProfile({bool refresh = false}) {
     if (refresh || _cachedDefaultProfile == null) {
       _cachedDefaultProfile = fetchProfile(defaultProfileId);

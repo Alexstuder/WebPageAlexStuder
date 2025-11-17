@@ -8,6 +8,7 @@ class Fermenter {
     this.volumeLiters,
     this.hasHeating = false,
     this.hasCooling = false,
+    this.hasDryHoppingPort = false,
     this.notes,
     this.createdAt,
     this.updatedAt,
@@ -21,6 +22,7 @@ class Fermenter {
   final double? volumeLiters;
   final bool hasHeating;
   final bool hasCooling;
+  final bool hasDryHoppingPort;
   final String? notes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -34,6 +36,7 @@ class Fermenter {
     double? volumeLiters,
     bool? hasHeating,
     bool? hasCooling,
+    bool? hasDryHoppingPort,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -47,6 +50,7 @@ class Fermenter {
       volumeLiters: volumeLiters ?? this.volumeLiters,
       hasHeating: hasHeating ?? this.hasHeating,
       hasCooling: hasCooling ?? this.hasCooling,
+      hasDryHoppingPort: hasDryHoppingPort ?? this.hasDryHoppingPort,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -65,6 +69,7 @@ class Fermenter {
       volumeLiters: (json['volume_liters'] as num?)?.toDouble(),
       hasHeating: (json['has_heating'] as bool?) ?? false,
       hasCooling: (json['has_cooling'] as bool?) ?? false,
+      hasDryHoppingPort: (json['has_dry_hopping_port'] as bool?) ?? false,
       notes: json['notes'] as String?,
       createdAt: parseDate(json['created_at'] as String?),
       updatedAt: parseDate(json['updated_at'] as String?),
@@ -81,6 +86,7 @@ class Fermenter {
       'volume_liters': volumeLiters,
       'has_heating': hasHeating,
       'has_cooling': hasCooling,
+      'has_dry_hopping_port': hasDryHoppingPort,
       'notes': notes,
     };
   }

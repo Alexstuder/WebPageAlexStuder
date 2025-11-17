@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/water_profile.dart';
 
-class WaterProfileService {
+abstract class WaterProfileRepository {
+  Future<List<WaterProfile>> fetchProfiles(String userProfileId);
+  Future<WaterProfile> saveProfile(WaterProfile profile);
+  Future<void> deleteProfile(String id);
+}
+
+class WaterProfileService implements WaterProfileRepository {
   WaterProfileService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -14,6 +20,7 @@ class WaterProfileService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<WaterProfile>> fetchProfiles(String userProfileId) async {
     final data = await _table()
         .select()
@@ -26,6 +33,7 @@ class WaterProfileService {
         .toList();
   }
 
+  @override
   Future<WaterProfile> saveProfile(WaterProfile profile) async {
     if (profile.isDefault) {
       await _table()
@@ -37,6 +45,7 @@ class WaterProfileService {
     return WaterProfile.fromJson(data);
   }
 
+  @override
   Future<void> deleteProfile(String id) async {
     await _table().delete().eq('id', id);
   }

@@ -25,6 +25,7 @@ import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
 import 'models/packaging_profile.dart';
 import 'models/fining_agents.dart';
+import 'widgets/card_actions.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -163,6 +164,13 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
       _selectedBeer = value;
     });
 
+    final beerType = _beerGroups.entries
+        .firstWhere(
+          (entry) => entry.value.contains(value),
+          orElse: () => MapEntry('Unbekannt', <String>[]),
+        )
+        .key;
+
     final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -188,7 +196,7 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) =>
-              FineTuningGeneralPage(beerName: value),
+              FineTuningGeneralPage(beerName: value, beerType: beerType),
         ),
       );
       if (!mounted) return;
@@ -253,9 +261,15 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
 }
 
 class UserProfilePage extends StatefulWidget {
-  const UserProfilePage({super.key});
+  const UserProfilePage({
+    super.key,
+    this.profileRepository,
+    this.waterRepository,
+  });
 
   static const String routeName = '/user-profile';
+  final UserProfileRepository? profileRepository;
+  final WaterProfileRepository? waterRepository;
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -272,22 +286,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _fermenterTypeCtrl = TextEditingController();
   final TextEditingController _raptUserCtrl = TextEditingController();
   final TextEditingController _raptApiKeyCtrl = TextEditingController();
-  final TextEditingController _waterProfileNameCtrl = TextEditingController();
-  final TextEditingController _waterPhCtrl = TextEditingController();
-  final TextEditingController _calciumCtrl = TextEditingController();
-  final TextEditingController _magnesiumCtrl = TextEditingController();
-  final TextEditingController _sodiumCtrl = TextEditingController();
-  final TextEditingController _chlorideCtrl = TextEditingController();
-  final TextEditingController _sulfateCtrl = TextEditingController();
-  final TextEditingController _bicarbonateCtrl = TextEditingController();
-  final UserProfileService _profileService = UserProfileService();
-  final WaterProfileService _waterProfileService = WaterProfileService();
-  List<WaterProfile> _waterProfiles = [];
-  WaterProfile? _selectedWaterProfile;
-  bool _isLoadingWaterProfiles = true;
-  bool _isSavingWaterProfile = false;
-  String? _waterProfilesError;
-  bool _waterProfileIsDefault = false;
+  late final UserProfileRepository _profileRepository;
 
   static const List<String> _controllerOptions = [
     'Kein Controller',
@@ -300,15 +299,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoadingProfile = true;
   String? _loadError;
   static const String _profileId = UserProfileService.defaultProfileId;
-  bool _hasWaterStats = false;
-  double? _computedWaterPh;
-  double _cationCharge = 0;
-  double _anionCharge = 0;
-  double? _ionBalancePercent;
-  double? _so4ClRatio;
-  double? _waterHardness;
-  double? _waterAlkalinity;
-  double? _residualAlkalinity;
   String? _userNameError;
 
   bool get _isRaptSelected =>
@@ -317,9 +307,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void initState() {
     super.initState();
+    _profileRepository = widget.profileRepository ?? UserProfileService();
     _selectedController = _controllerOptions.first;
     _loadProfile();
-    _loadWaterProfiles();
   }
 
   @override
@@ -334,20 +324,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
     _fermenterTypeCtrl.dispose();
     _raptUserCtrl.dispose();
     _raptApiKeyCtrl.dispose();
-    _waterProfileNameCtrl.dispose();
-    _waterPhCtrl.dispose();
-    _calciumCtrl.dispose();
-    _magnesiumCtrl.dispose();
-    _sodiumCtrl.dispose();
-    _chlorideCtrl.dispose();
-    _sulfateCtrl.dispose();
-    _bicarbonateCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadProfile() async {
     try {
-      final profile = await _profileService.fetchProfile(_profileId);
+      final profile = await _profileRepository.fetchProfile(_profileId);
       if (profile != null) {
         _userNameCtrl.text = profile.name;
         _avatarUrlCtrl.text = profile.avatarUrl;
@@ -380,185 +362,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
-  Future<void> _loadWaterProfiles() async {
-    setState(() {
-      _isLoadingWaterProfiles = true;
-      _waterProfilesError = null;
-    });
-    try {
-      final profiles =
-          await _waterProfileService.fetchProfiles(_profileId);
-      if (!mounted) return;
-      setState(() {
-        _waterProfiles = profiles;
-        _sortWaterProfiles();
-      });
-      if (profiles.isNotEmpty) {
-        final initial = profiles.firstWhere(
-          (p) => p.isDefault,
-          orElse: () => profiles.first,
-        );
-        _applyWaterProfile(initial, recalc: true);
-      } else {
-        _startNewWaterProfile();
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _waterProfilesError = e.toString();
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingWaterProfiles = false;
-        });
-      }
-    }
-  }
-
-  void _applyWaterProfile(WaterProfile profile, {bool recalc = true}) {
-    setState(() {
-      _selectedWaterProfile = profile;
-      _waterProfileIsDefault = profile.isDefault;
-      _waterProfileNameCtrl.text = profile.name;
-      _waterPhCtrl.text = _doubleToText(profile.ph, emptyIfNull: true);
-      _calciumCtrl.text = _doubleToText(profile.calciumPpm, emptyIfNull: true);
-      _magnesiumCtrl.text =
-          _doubleToText(profile.magnesiumPpm, emptyIfNull: true);
-      _sodiumCtrl.text = _doubleToText(profile.sodiumPpm, emptyIfNull: true);
-      _chlorideCtrl.text =
-          _doubleToText(profile.chloridePpm, emptyIfNull: true);
-      _sulfateCtrl.text = _doubleToText(profile.sulfatePpm, emptyIfNull: true);
-      _bicarbonateCtrl.text =
-          _doubleToText(profile.bicarbonatePpm, emptyIfNull: true);
-    });
-    if (recalc) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _recalculateWaterStats();
-        }
-      });
-    }
-  }
-
-  void _startNewWaterProfile() {
-    setState(() {
-      _selectedWaterProfile = null;
-      _waterProfileIsDefault = false;
-      _waterProfileNameCtrl.clear();
-      _waterPhCtrl.clear();
-      _calciumCtrl.clear();
-      _magnesiumCtrl.clear();
-      _sodiumCtrl.clear();
-      _chlorideCtrl.clear();
-      _sulfateCtrl.clear();
-      _bicarbonateCtrl.clear();
-      _resetWaterStats();
-    });
-  }
-
-  void _resetWaterStats() {
-    _hasWaterStats = false;
-    _cationCharge = 0;
-    _anionCharge = 0;
-    _ionBalancePercent = null;
-    _so4ClRatio = null;
-    _waterHardness = null;
-    _waterAlkalinity = null;
-    _residualAlkalinity = null;
-    _computedWaterPh = null;
-  }
-
-  Future<void> _handleSaveWaterProfile() async {
-    final draft = _buildWaterProfileDraft();
-    setState(() {
-      _isSavingWaterProfile = true;
-    });
-    try {
-      final saved = await _waterProfileService.saveProfile(draft);
-      if (!mounted) return;
-      setState(() {
-        _upsertWaterProfile(saved);
-        _selectedWaterProfile = saved;
-        _waterProfileIsDefault = saved.isDefault;
-      });
-      _recalculateWaterStats();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wasserprofil gespeichert')),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Wasserprofil konnte nicht gespeichert werden: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSavingWaterProfile = false;
-        });
-      }
-    }
-  }
-
-  WaterProfile _buildWaterProfileDraft() {
-    final name = _waterProfileNameCtrl.text.trim().isEmpty
-        ? 'Unbenanntes Profil'
-        : _waterProfileNameCtrl.text.trim();
-    return WaterProfile(
-      id: _selectedWaterProfile?.id,
-      userProfileId: _profileId,
-      name: name,
-      isDefault: _waterProfileIsDefault,
-      ph: _parseOptionalDouble(_waterPhCtrl),
-      calciumPpm: _parseControllerValue(_calciumCtrl),
-      magnesiumPpm: _parseControllerValue(_magnesiumCtrl),
-      sodiumPpm: _parseControllerValue(_sodiumCtrl),
-      chloridePpm: _parseControllerValue(_chlorideCtrl),
-      sulfatePpm: _parseControllerValue(_sulfateCtrl),
-      bicarbonatePpm: _parseControllerValue(_bicarbonateCtrl),
-    );
-  }
-
-  void _upsertWaterProfile(WaterProfile profile) {
-    if (profile.isDefault) {
-      _waterProfiles = _waterProfiles
-          .map((p) => p.id == profile.id ? p : p.copyWith(isDefault: false))
-          .toList();
-    }
-    final index =
-        _waterProfiles.indexWhere((p) => p.id == profile.id);
-    if (index >= 0) {
-      _waterProfiles[index] = profile;
-    } else {
-      _waterProfiles.add(profile);
-    }
-    _sortWaterProfiles();
-  }
-
-  WaterProfile? _findWaterProfile(String? id) {
-    if (id == null) return null;
-    for (final profile in _waterProfiles) {
-      if (profile.id == id) return profile;
-    }
-    return null;
-  }
-
-  void _sortWaterProfiles() {
-    _waterProfiles.sort((a, b) {
-      if (a.isDefault != b.isDefault) {
-        return a.isDefault ? -1 : 1;
-      }
-      return a.name.compareTo(b.name);
-    });
-  }
-
-  String? get _selectedWaterProfileId {
-    final id = _selectedWaterProfile?.id;
-    if (id == null) return null;
-    return _waterProfiles.any((profile) => profile.id == id) ? id : null;
-  }
 
   Future<bool> _saveProfile({bool showFeedback = true}) async {
     FocusScope.of(context).unfocus();
@@ -591,7 +394,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
     var success = false;
     try {
-      await _profileService.saveProfile(profile);
+      await _profileRepository.saveProfile(profile);
       if (!mounted) return success;
       if (showFeedback) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -740,409 +543,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  void _openWaterDialog() {
-    if (_hasWaterInput) {
-      _recalculateWaterStats();
-    }
-    final theme = Theme.of(context);
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: const Color(0xFF020617),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 760,
-              minWidth: 620,
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_waterProfilesError != null) ...[
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.red.shade900.withValues(alpha: 0.35),
-                      ),
-                      child: Text(
-                        'Wasserprofile konnten nicht geladen werden: $_waterProfilesError',
-                      ),
-                    ),
-                  ],
-                  if (_isLoadingWaterProfiles)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: LinearProgressIndicator(),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownMenu<String>(
-                          initialSelection: _selectedWaterProfileId,
-                          label: const Text('Gespeichertes Profil'),
-                          enabled: _waterProfiles.isNotEmpty,
-                          onSelected: _waterProfiles.isEmpty
-                              ? null
-                              : (value) {
-                                  final profile = _findWaterProfile(value);
-                                  if (profile != null) {
-                                    _applyWaterProfile(profile, recalc: true);
-                                  }
-                                },
-                          dropdownMenuEntries: _waterProfiles
-                              .where((profile) => profile.id != null)
-                              .map(
-                                (profile) => DropdownMenuEntry<String>(
-                                  value: profile.id!,
-                                  label:
-                                      '${profile.name}${profile.isDefault ? ' ★' : ''}',
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed:
-                            _isSavingWaterProfile ? null : _startNewWaterProfile,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Neu'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _waterProfileNameCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Profilname',
-                            hintText: 'z. B. Glattfelden',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 120,
-                        child: TextField(
-                          controller: _waterPhCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            labelText: 'pH',
-                            hintText: '7.2',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  CheckboxListTile(
-                    value: _waterProfileIsDefault,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Als Standard verwenden (★)'),
-                    onChanged: (value) {
-                      setState(() {
-                        _waterProfileIsDefault = value ?? false;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.compass_calibration,
-                        color: Color(0xFFEAB308),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Wasserprofil',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: Colors.white60),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _WaterSectionHeader(
-                    title: 'Kationen',
-                    accent: const Color(0xFFEAB308),
-                    subtitle: 'Eingabe in ppm',
-                    trailing: _hasWaterStats
-                        ? '${_cationCharge.toStringAsFixed(2)} mEq/L'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Kalzium Ca²⁺',
-                          controller: _calciumCtrl,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Magnesium Mg²⁺',
-                          controller: _magnesiumCtrl,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Natrium Na⁺',
-                          controller: _sodiumCtrl,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _WaterSectionHeader(
-                    title: 'Anionen',
-                    accent: const Color(0xFF38BDF8),
-                    subtitle: 'Eingabe in ppm',
-                    trailing: _hasWaterStats
-                        ? '${_anionCharge.toStringAsFixed(2)} mEq/L'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Chlorid Cl⁻',
-                          controller: _chlorideCtrl,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Sulfat SO₄²⁻',
-                          controller: _sulfateCtrl,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _WaterIonTile(
-                          title: 'Bicarbonat HCO₃⁻',
-                          controller: _bicarbonateCtrl,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      color: const Color(0xFF0F172A),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.white54),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Gib deine Wasserwerte in ppm ein. '
-                            'Die endgültige Berechnung der Ionebilanz folgt '
-                            'im nächsten Schritt.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_hasWaterStats) ...[
-                    const SizedBox(height: 24),
-                    _WaterSectionHeader(
-                      title: 'Statistiken',
-                      accent: Colors.white24,
-                      subtitle: 'Berechnet aus den Eingaben',
-                      trailing: _ionBalancePercent != null
-                          ? 'Ionenbilanz ${_ionBalancePercent! >= 0 ? '+' : ''}${_ionBalancePercent!.toStringAsFixed(0)}%'
-                          : null,
-                      trailingColor: (_ionBalancePercent?.abs() ?? 0) > 10
-                          ? Colors.redAccent
-                          : Colors.greenAccent,
-                    ),
-                    const SizedBox(height: 12),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final double baseWidth = constraints.maxWidth >= 640
-                            ? (constraints.maxWidth - 48) / 5
-                            : (constraints.maxWidth - 36) / 3;
-                        final double tileWidth =
-                            baseWidth.clamp(140.0, constraints.maxWidth);
-                        return Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _WaterStatTile(
-                              width: tileWidth,
-                              label: 'SO₄²⁻/Cl⁻ Verhältnis',
-                              value: _formatNumber(_so4ClRatio),
-                            ),
-                            _WaterStatTile(
-                              width: tileWidth,
-                              label: 'Härte (ppm CaCO₃)',
-                              value: _formatNumber(_waterHardness, fractionDigits: 0),
-                            ),
-                            _WaterStatTile(
-                              width: tileWidth,
-                              label: 'Alkalinität',
-                              value: _formatNumber(_waterAlkalinity, fractionDigits: 0),
-                            ),
-                            _WaterStatTile(
-                              width: tileWidth,
-                              label: 'Restalkalinität',
-                              value: _formatNumber(_residualAlkalinity, fractionDigits: 0),
-                            ),
-                            _WaterStatTile(
-                              width: tileWidth,
-                              label: 'pH Eingabe',
-                              value: _computedWaterPh != null
-                                  ? _computedWaterPh!.toStringAsFixed(2)
-                                  : '–',
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      FilledButton.icon(
-                        onPressed: _isSavingWaterProfile
-                            ? null
-                            : _handleSaveWaterProfile,
-                        icon: _isSavingWaterProfile
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_outlined),
-                        label: Text(
-                          _isSavingWaterProfile ? 'Speichert …' : 'Speichern',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton.icon(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Zurück'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  void _openWaterProfileManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => WaterProfileManagerPage(
+          profileId: _profileId,
+          repository: widget.waterRepository,
+        ),
+      ),
     );
-  }
-
-  void _recalculateWaterStats() {
-    final double ca = _parseControllerValue(_calciumCtrl);
-    final double mg = _parseControllerValue(_magnesiumCtrl);
-    final double na = _parseControllerValue(_sodiumCtrl);
-    final double cl = _parseControllerValue(_chlorideCtrl);
-    final double so4 = _parseControllerValue(_sulfateCtrl);
-    final double hco3 = _parseControllerValue(_bicarbonateCtrl);
-    final double ph = _parseControllerValue(_waterPhCtrl);
-
-    final double cationMeq = (ca / 20.0) + (mg / 12.15) + (na / 23.0);
-    final double anionMeq = (cl / 35.45) + (so4 / 48.0) + (hco3 / 61.0);
-
-    final double? ionBalance = (cationMeq > 0 && anionMeq > 0)
-        ? ((cationMeq - anionMeq) / ((cationMeq + anionMeq) / 2)) * 100
-        : null;
-
-    final double? ratio = cl > 0 ? so4 / cl : null;
-    final double hardness = (2.5 * ca) + (4.1 * mg);
-    final double alkalinity = hco3 * (50 / 61);
-    final double residual = alkalinity -
-        ((2.5 * ca) / 3.5) -
-        ((4.1 * mg) / 7.0);
-
-    setState(() {
-      _hasWaterStats = true;
-      _cationCharge = cationMeq;
-      _anionCharge = anionMeq;
-      _ionBalancePercent = ionBalance;
-      _so4ClRatio = ratio;
-      _waterHardness = hardness;
-      _waterAlkalinity = alkalinity;
-      _residualAlkalinity = residual;
-      _computedWaterPh = ph > 0 ? ph : null;
-    });
-  }
-
-  double _parseControllerValue(TextEditingController controller) {
-    return double.tryParse(
-          controller.text.replaceAll(',', '.'),
-        ) ??
-        0.0;
-  }
-
-  double? _parseOptionalDouble(TextEditingController controller) {
-    final text = controller.text.trim();
-    if (text.isEmpty) return null;
-    return double.tryParse(text.replaceAll(',', '.'));
-  }
-
-  bool get _hasWaterInput {
-    final controllers = [
-      _waterProfileNameCtrl,
-      _waterPhCtrl,
-      _calciumCtrl,
-      _magnesiumCtrl,
-      _sodiumCtrl,
-      _chlorideCtrl,
-      _sulfateCtrl,
-      _bicarbonateCtrl,
-    ];
-    return controllers.any((c) => c.text.trim().isNotEmpty);
-  }
-
-  String _doubleToText(double? value, {bool emptyIfNull = false}) {
-    if (value == null) {
-      return emptyIfNull ? '' : '–';
-    }
-    if (value == 0) return '0';
-    final bool isInt = value.truncateToDouble() == value;
-    return isInt ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
-  }
-
-  String _formatNumber(double? value, {int fractionDigits = 2}) {
-    if (value == null || value.isNaN || value.isInfinite) return '–';
-    return value.toStringAsFixed(fractionDigits);
   }
 
   Widget _buildUserSection() {
@@ -1210,7 +619,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         _managerButton(
           icon: Icons.water_drop_outlined,
           label: 'Wasserprofile',
-          onPressed: _openWaterDialog,
+          onPressed: _openWaterProfileManager,
         ),
         _managerButton(
           icon: Icons.kitchen_outlined,
@@ -1372,10 +781,12 @@ class _WaterIonTile extends StatelessWidget {
   const _WaterIonTile({
     required this.title,
     required this.controller,
+    this.onChanged,
   });
 
   final String title;
   final TextEditingController controller;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1413,6 +824,7 @@ class _WaterIonTile extends StatelessWidget {
               labelText: 'Wert',
               hintText: 'z. B. 50',
             ),
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -1464,6 +876,669 @@ class _WaterStatTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class WaterProfileManagerPage extends StatefulWidget {
+  const WaterProfileManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
+
+  final String profileId;
+  final WaterProfileRepository? repository;
+
+  @override
+  State<WaterProfileManagerPage> createState() => _WaterProfileManagerPageState();
+}
+
+class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
+  bool _isLoading = true;
+  String? _error;
+  List<WaterProfile> _profiles = [];
+  late final WaterProfileRepository _repository;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? WaterProfileService();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final items = await _repository.fetchProfiles(widget.profileId);
+      if (!mounted) return;
+      items.sort((a, b) {
+        if (a.isDefault != b.isDefault) {
+          return a.isDefault ? -1 : 1;
+        }
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+      setState(() {
+        _profiles = items;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Wasserprofile'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openEditor(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: _buildBody(),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(
+          'Konnte Wasserprofile nicht laden:\n$_error',
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    if (_profiles.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Noch keine Wasserprofile vorhanden.'),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () => _openEditor(),
+              icon: const Icon(Icons.add),
+              label: const Text('Profil anlegen'),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.separated(
+      itemCount: _profiles.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final profile = _profiles[index];
+        final title = profile.name.isEmpty ? 'Unbenannt' : profile.name;
+        final stats = _buildQuickStats(profile);
+        return Card(
+          color: const Color(0xFF0F172A),
+          child: ListTile(
+            leading: Icon(
+              profile.isDefault ? Icons.star : Icons.star_border,
+              color: profile.isDefault ? Colors.amber : Colors.white54,
+            ),
+            title: Text(title),
+            subtitle: Text(stats),
+            trailing: CardActions(
+              onEdit: () => _openEditor(editing: profile),
+              onDelete: () => _confirmDelete(
+                title: 'Profil “${profile.name.isEmpty ? 'Unbenannt' : profile.name}” löschen?',
+                onDelete: () => _deleteProfile(profile),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _buildQuickStats(WaterProfile profile) {
+    final values = <String>[];
+    if (profile.ph != null) {
+      values.add('pH ${profile.ph!.toStringAsFixed(2)}');
+    }
+    values.add('Ca ${profile.calciumPpm.toStringAsFixed(0)} ppm');
+    values.add('Mg ${profile.magnesiumPpm.toStringAsFixed(0)} ppm');
+    values.add('SO₄ ${profile.sulfatePpm.toStringAsFixed(0)} ppm');
+    values.add('Cl ${profile.chloridePpm.toStringAsFixed(0)} ppm');
+    return values.join(' · ');
+  }
+
+  Future<void> _openEditor({WaterProfile? editing}) async {
+    final saved = await Navigator.of(context).push<WaterProfile?>(
+      MaterialPageRoute(
+        builder: (_) => WaterProfileEditorPage(
+          profileId: widget.profileId,
+          profile: editing,
+          repository: _repository,
+        ),
+      ),
+    );
+    if (saved != null) {
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            editing == null ? 'Wasserprofil erstellt' : 'Wasserprofil aktualisiert',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteProfile(WaterProfile profile) async {
+    try {
+      await _repository.deleteProfile(profile.id!);
+      setState(() {
+        _profiles.removeWhere((element) => element.id == profile.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profil "${profile.name}" gelöscht')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profil konnte nicht gelöscht werden: $e')),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete({
+    required String title,
+    required Future<void> Function() onDelete,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
+  }
+}
+
+class WaterProfileEditorPage extends StatefulWidget {
+  const WaterProfileEditorPage({
+    super.key,
+    required this.profileId,
+    this.profile,
+    this.repository,
+  });
+
+  final String profileId;
+  final WaterProfile? profile;
+  final WaterProfileRepository? repository;
+
+  @override
+  State<WaterProfileEditorPage> createState() => _WaterProfileEditorPageState();
+}
+
+class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
+  final TextEditingController _nameCtrl = TextEditingController();
+  final TextEditingController _phCtrl = TextEditingController();
+  final TextEditingController _calciumCtrl = TextEditingController();
+  final TextEditingController _magnesiumCtrl = TextEditingController();
+  final TextEditingController _sodiumCtrl = TextEditingController();
+  final TextEditingController _chlorideCtrl = TextEditingController();
+  final TextEditingController _sulfateCtrl = TextEditingController();
+  final TextEditingController _bicarbonateCtrl = TextEditingController();
+
+  bool _isDefault = false;
+  bool _isSaving = false;
+  bool _hasWaterStats = false;
+  double? _computedWaterPh;
+  double _cationCharge = 0;
+  double _anionCharge = 0;
+  double? _ionBalancePercent;
+  double? _so4ClRatio;
+  double? _waterHardness;
+  double? _waterAlkalinity;
+  double? _residualAlkalinity;
+  late final WaterProfileRepository _repository;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? WaterProfileService();
+    _loadFromProfile();
+  }
+
+  void _loadFromProfile() {
+    final profile = widget.profile;
+    if (profile != null) {
+      _nameCtrl.text = profile.name;
+      _phCtrl.text = _doubleToText(profile.ph, emptyIfNull: true);
+      _calciumCtrl.text = _doubleToText(profile.calciumPpm);
+      _magnesiumCtrl.text = _doubleToText(profile.magnesiumPpm);
+      _sodiumCtrl.text = _doubleToText(profile.sodiumPpm);
+      _chlorideCtrl.text = _doubleToText(profile.chloridePpm);
+      _sulfateCtrl.text = _doubleToText(profile.sulfatePpm);
+      _bicarbonateCtrl.text = _doubleToText(profile.bicarbonatePpm);
+      _isDefault = profile.isDefault;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateWaterStats();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phCtrl.dispose();
+    _calciumCtrl.dispose();
+    _magnesiumCtrl.dispose();
+    _sodiumCtrl.dispose();
+    _chlorideCtrl.dispose();
+    _sulfateCtrl.dispose();
+    _bicarbonateCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _hasWaterInput {
+    final controllers = [
+      _phCtrl,
+      _calciumCtrl,
+      _magnesiumCtrl,
+      _sodiumCtrl,
+      _chlorideCtrl,
+      _sulfateCtrl,
+      _bicarbonateCtrl,
+    ];
+    return controllers.any((ctrl) => ctrl.text.trim().isNotEmpty);
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final title =
+        widget.profile == null ? 'Wasserprofil anlegen' : 'Wasserprofil bearbeiten';
+
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Profilname',
+                      hintText: 'z. B. Glattfelden',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 120,
+                  child: TextField(
+                    controller: _phCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'pH',
+                      hintText: '7.2',
+                    ),
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+              ],
+            ),
+            CheckboxListTile(
+              value: _isDefault,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Als Standard verwenden (★)'),
+              onChanged: (value) {
+                setState(() {
+                  _isDefault = value ?? false;
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+            _WaterSectionHeader(
+              title: 'Kationen',
+              accent: const Color(0xFFEAB308),
+              subtitle: 'Eingabe in ppm',
+              trailing:
+                  _hasWaterStats ? '${_cationCharge.toStringAsFixed(2)} mEq/L' : null,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Kalzium Ca²⁺',
+                    controller: _calciumCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Magnesium Mg²⁺',
+                    controller: _magnesiumCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Natrium Na⁺',
+                    controller: _sodiumCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _WaterSectionHeader(
+              title: 'Anionen',
+              accent: const Color(0xFF38BDF8),
+              subtitle: 'Eingabe in ppm',
+              trailing:
+                  _hasWaterStats ? '${_anionCharge.toStringAsFixed(2)} mEq/L' : null,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Chlorid Cl⁻',
+                    controller: _chlorideCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Sulfat SO₄²⁻',
+                    controller: _sulfateCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _WaterIonTile(
+                    title: 'Bicarbonat HCO₃⁻',
+                    controller: _bicarbonateCtrl,
+                    onChanged: (_) => _updateWaterStats(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: const Color(0xFF0F172A),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white54),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Gib deine Wasserwerte in ppm ein. '
+                      'Die Berechnung erfolgt automatisch.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_hasWaterStats) ...[
+              const SizedBox(height: 24),
+              _WaterSectionHeader(
+                title: 'Statistiken',
+                accent: Colors.white24,
+                subtitle: 'Berechnet aus den Eingaben',
+                trailing: _ionBalancePercent != null
+                    ? 'Ionenbilanz ${_ionBalancePercent! >= 0 ? '+' : ''}${_ionBalancePercent!.toStringAsFixed(0)}%'
+                    : null,
+                trailingColor: (_ionBalancePercent?.abs() ?? 0) > 10
+                    ? Colors.redAccent
+                    : Colors.greenAccent,
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final double baseWidth = constraints.maxWidth >= 640
+                      ? (constraints.maxWidth - 48) / 5
+                      : (constraints.maxWidth - 36) / 3;
+                  final double tileWidth =
+                      baseWidth.clamp(140.0, constraints.maxWidth);
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _WaterStatTile(
+                        width: tileWidth,
+                        label: 'SO₄²⁻/Cl⁻ Verhältnis',
+                        value: _formatNumber(_so4ClRatio),
+                      ),
+                      _WaterStatTile(
+                        width: tileWidth,
+                        label: 'Härte (ppm CaCO₃)',
+                        value: _formatNumber(_waterHardness, fractionDigits: 0),
+                      ),
+                      _WaterStatTile(
+                        width: tileWidth,
+                        label: 'Alkalinität',
+                        value: _formatNumber(_waterAlkalinity, fractionDigits: 0),
+                      ),
+                      _WaterStatTile(
+                        width: tileWidth,
+                        label: 'Restalkalinität',
+                        value: _formatNumber(_residualAlkalinity, fractionDigits: 0),
+                      ),
+                      _WaterStatTile(
+                        width: tileWidth,
+                        label: 'pH Eingabe',
+                        value: _computedWaterPh != null
+                            ? _computedWaterPh!.toStringAsFixed(2)
+                            : '–',
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _handleSave,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(_isSaving ? 'Speichert …' : 'Speichern'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                  label: const Text('Abbrechen'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSave() async {
+    final draft = _buildDraft();
+    setState(() {
+      _isSaving = true;
+    });
+    try {
+      final saved = await _repository.saveProfile(draft);
+      if (!mounted) return;
+      Navigator.of(context).pop(saved);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Wasserprofil konnte nicht gespeichert werden: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  WaterProfile _buildDraft() {
+    final name = _nameCtrl.text.trim().isEmpty ? 'Unbenanntes Profil' : _nameCtrl.text.trim();
+    return WaterProfile(
+      id: widget.profile?.id,
+      userProfileId: widget.profileId,
+      name: name,
+      isDefault: _isDefault,
+      ph: _parseOptionalDouble(_phCtrl),
+      calciumPpm: _parseControllerValue(_calciumCtrl),
+      magnesiumPpm: _parseControllerValue(_magnesiumCtrl),
+      sodiumPpm: _parseControllerValue(_sodiumCtrl),
+      chloridePpm: _parseControllerValue(_chlorideCtrl),
+      sulfatePpm: _parseControllerValue(_sulfateCtrl),
+      bicarbonatePpm: _parseControllerValue(_bicarbonateCtrl),
+    );
+  }
+
+  double _parseControllerValue(TextEditingController controller) {
+    return double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0;
+  }
+
+  double? _parseOptionalDouble(TextEditingController controller) {
+    final text = controller.text.trim();
+    if (text.isEmpty) return null;
+    return double.tryParse(text.replaceAll(',', '.'));
+  }
+
+  void _updateWaterStats() {
+    if (!_hasWaterInput) {
+      setState(() {
+        _resetStats();
+      });
+      return;
+    }
+    final double ca = _parseControllerValue(_calciumCtrl);
+    final double mg = _parseControllerValue(_magnesiumCtrl);
+    final double na = _parseControllerValue(_sodiumCtrl);
+    final double cl = _parseControllerValue(_chlorideCtrl);
+    final double so4 = _parseControllerValue(_sulfateCtrl);
+    final double hco3 = _parseControllerValue(_bicarbonateCtrl);
+    final double ph = _parseControllerValue(_phCtrl);
+
+    final double cationMeq = (ca / 20.0) + (mg / 12.15) + (na / 23.0);
+    final double anionMeq = (cl / 35.45) + (so4 / 48.0) + (hco3 / 61.0);
+
+    final double? ionBalance = (cationMeq > 0 && anionMeq > 0)
+        ? ((cationMeq - anionMeq) / ((cationMeq + anionMeq) / 2)) * 100
+        : null;
+
+    final double? ratio = cl > 0 ? so4 / cl : null;
+    final double hardness = (2.5 * ca) + (4.1 * mg);
+    final double alkalinity = hco3 * (50 / 61);
+    final double residual = alkalinity - ((2.5 * ca) / 3.5) - ((4.1 * mg) / 7.0);
+
+    setState(() {
+      _hasWaterStats = true;
+      _cationCharge = cationMeq;
+      _anionCharge = anionMeq;
+      _ionBalancePercent = ionBalance;
+      _so4ClRatio = ratio;
+      _waterHardness = hardness;
+      _waterAlkalinity = alkalinity;
+      _residualAlkalinity = residual;
+      _computedWaterPh = ph > 0 ? ph : null;
+    });
+  }
+
+  void _resetStats() {
+    _hasWaterStats = false;
+    _cationCharge = 0;
+    _anionCharge = 0;
+    _ionBalancePercent = null;
+    _so4ClRatio = null;
+    _waterHardness = null;
+    _waterAlkalinity = null;
+    _residualAlkalinity = null;
+    _computedWaterPh = null;
+  }
+
+  String _doubleToText(double? value, {bool emptyIfNull = false}) {
+    if (value == null) {
+      return emptyIfNull ? '' : '–';
+    }
+    if (value == 0) return '0';
+    final bool isInt = value.truncateToDouble() == value;
+    return isInt ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
+  }
+
+  String _formatNumber(double? value, {int fractionDigits = 2}) {
+    if (value == null || value.isNaN || value.isInfinite) return '–';
+    return value.toStringAsFixed(fractionDigits);
   }
 }
 
@@ -1519,11 +1594,17 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Braukessel'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -1577,9 +1658,12 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: kettle),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: kettle),
+              onDelete: () => _confirmDelete(
+                'Braukessel “${titleText.trim()}” löschen?',
+                () => _deleteKettle(kettle),
+              ),
             ),
           ),
         );
@@ -1735,6 +1819,52 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned.replaceAll(',', '.'));
   }
+
+  Future<void> _deleteKettle(BrewKettle kettle) async {
+    if (kettle.id == null) return;
+    try {
+      await _service.deleteKettle(kettle.id!);
+      setState(() {
+        _kettles.removeWhere((item) => item.id == kettle.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Braukessel "${kettle.brand}" gelöscht')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
+  }
 }
 
 class FermenterManagerPage extends StatefulWidget {
@@ -1789,11 +1919,17 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fermentierer'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -1842,6 +1978,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                   Text('Volumen: ${fermenter.volumeLiters!.toStringAsFixed(1)} L'),
                 Text('Heizung: ${fermenter.hasHeating ? 'Ja' : 'Nein'}'),
                 Text('Kühlung: ${fermenter.hasCooling ? 'Ja' : 'Nein'}'),
+                Text('Dry-Hopping-Port: ${fermenter.hasDryHoppingPort ? 'Ja' : 'Nein'}'),
                 if ((fermenter.notes ?? '').isNotEmpty)
                   Text(
                     fermenter.notes!,
@@ -1849,9 +1986,12 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: fermenter),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: fermenter),
+              onDelete: () => _confirmDelete(
+                'Fermentierer “${titleText.trim()}” löschen?',
+                () => _deleteFermenter(fermenter),
+              ),
             ),
           ),
         );
@@ -1867,6 +2007,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool hasHeating = editing?.hasHeating ?? false;
     bool hasCooling = editing?.hasCooling ?? false;
+    bool hasDryHopPort = editing?.hasDryHoppingPort ?? false;
     bool isDefault = editing?.isDefault ?? false;
     String? brandError;
 
@@ -1929,6 +2070,14 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                       setState(() => hasCooling = value ?? false),
                 ),
                 CheckboxListTile(
+                  value: hasDryHopPort,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Dry-Hopping Port vorhanden'),
+                  onChanged: (value) =>
+                      setState(() => hasDryHopPort = value ?? false),
+                ),
+                CheckboxListTile(
                   value: isDefault,
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
@@ -1969,6 +2118,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       volumeLiters: _parseDouble(volumeCtrl.text),
       hasHeating: hasHeating,
       hasCooling: hasCooling,
+      hasDryHoppingPort: hasDryHopPort,
       isDefault: isDefault,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
@@ -2024,6 +2174,52 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       return a.brand.toLowerCase().compareTo(b.brand.toLowerCase());
     });
   }
+
+  Future<void> _deleteFermenter(Fermenter fermenter) async {
+    if (fermenter.id == null) return;
+    try {
+      await _service.deleteFermenter(fermenter.id!);
+      setState(() {
+        _fermenters.removeWhere((item) => item.id == fermenter.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fermentierer "${fermenter.brand}" gelöscht')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
+  }
 }
 
 class YeastBankManagerPage extends StatefulWidget {
@@ -2077,11 +2273,17 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hefedatenbank'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -2137,9 +2339,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: entry),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: entry),
+              onDelete: () => _confirmDelete(
+                'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
+                () => _deleteEntry(entry),
+              ),
             ),
           ),
         );
@@ -2352,6 +2557,54 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned.replaceAll(',', '.'));
   }
+
+  Future<void> _deleteEntry(YeastBankEntry entry) async {
+    if (entry.id == null) return;
+    try {
+      await _service.deleteEntry(entry.id!);
+      setState(() {
+        _entries.removeWhere((item) => item.id == entry.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hefe "${entry.brand} · ${entry.strain}" gelöscht'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
+  }
 }
 
 class _UserNameBanner extends StatefulWidget {
@@ -2560,6 +2813,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       ),
     );
   }
+
 }
 
 class _RecipeCard extends StatelessWidget {
@@ -2647,9 +2901,10 @@ class _EntryButton extends StatelessWidget {
 }
 
 class FineTuningProfile {
-  FineTuningProfile({required this.beerName});
+  FineTuningProfile({required this.beerName, required this.beerType});
 
   final String beerName;
+  final String beerType;
   double mouthfeel = 0.0;
   double antrunkMalt = 0.0;
   double antrunkRoast = 0.0;
@@ -3021,9 +3276,10 @@ class _BeerChoice extends StatelessWidget {
 }
 
 class FineTuningGeneralPage extends StatefulWidget {
-  const FineTuningGeneralPage({super.key, required this.beerName});
+  const FineTuningGeneralPage({super.key, required this.beerName, required this.beerType});
 
   final String beerName;
+  final String beerType;
 
   @override
   State<FineTuningGeneralPage> createState() => _FineTuningGeneralPageState();
@@ -3035,7 +3291,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
   @override
   void initState() {
     super.initState();
-    profile = FineTuningProfile(beerName: widget.beerName);
+    profile = FineTuningProfile(beerName: widget.beerName, beerType: widget.beerType);
     final preset = _beerPresets[widget.beerName];
     if (preset != null) {
       profile.applyPreset(preset);
@@ -4455,6 +4711,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
   final FermenterControllerService _controllerService =
       FermenterControllerService();
   final MaltDepotService _maltService = MaltDepotService();
+  final FiningAgentsService _finingService = FiningAgentsService();
+  final PackagingProfileService _packagingService = PackagingProfileService();
   final OpenAIService _openAIService = OpenAIService();
 
   bool _isLoading = true;
@@ -4466,6 +4724,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
   List<Fermenter> _fermenters = [];
   List<FermenterControllerModel> _controllers = [];
   List<MaltDepotEntryModel> _maltDepots = [];
+  FiningAgents? _finingSettings;
+  PackagingProfile? _selectedPackagingProfile;
 
   BrewKettle? _selectedKettle;
   WaterProfile? _selectedWaterProfile;
@@ -4476,6 +4736,53 @@ class _EquipmentPageState extends State<EquipmentPage> {
   final FocusNode _batchSizeFocusNode = FocusNode();
 
   static const String _profileId = UserProfileService.defaultProfileId;
+  static const Map<String, Map<String, String>> _finingMetadata = {
+    'irish_moss': {
+      'name': 'Irish Moss',
+      'purpose': 'Bindet Heißtrub für klare Würze.',
+      'phase': 'Letzte 10–15 min des Kochens',
+    },
+    'whirlfloc': {
+      'name': 'Whirlfloc-Tabletten',
+      'purpose': 'Schnellere Heißtrub-Flockung im Kochkessel.',
+      'phase': 'Letzte 10 min des Kochens',
+    },
+    'gelatin': {
+      'name': 'Gelatine',
+      'purpose': 'Schönung nach der Gärung für klares Bier.',
+      'phase': 'Nachgärung bzw. Kaltlagerung',
+    },
+    'biersol': {
+      'name': 'Biersol (Kieselsol)',
+      'purpose': 'Feinklärung vor Abfüllung.',
+      'phase': 'Nach der Gärung vor Abfüllung',
+    },
+    'polyclar': {
+      'name': 'Polyclar/PVPP',
+      'purpose': 'Polyphenolbindung für geschmackliche Stabilität.',
+      'phase': 'Kaltseite vor Abfüllung',
+    },
+    'isinglass': {
+      'name': 'Isinglass',
+      'purpose': 'Klassische Klärung für britische Ales.',
+      'phase': 'Nachgärung/Kaltlagerung',
+    },
+    'bentonite': {
+      'name': 'Bentonit',
+      'purpose': 'Proteinbindung für klare Spezialbiere.',
+      'phase': 'Nachguss oder Nachgärung je nach Stil',
+    },
+    'egg_whites': {
+      'name': 'Eiweiß',
+      'purpose': 'Traditionelle Schönung (selten genutzt).',
+      'phase': 'Nachgärung',
+    },
+    'activated_carbon': {
+      'name': 'Aktivkohle',
+      'purpose': 'Spezialreinigung/zur Entfernung Fehlgeschmack.',
+      'phase': 'Nachgärung oder Filtration',
+    },
+  };
 
   @override
   void initState() {
@@ -4502,6 +4809,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
         _fermenterService.fetchFermenters(_profileId),
         _controllerService.fetchControllers(_profileId),
         _maltService.fetchEntries(_profileId),
+        _finingService.fetchSettings(_profileId),
+        _packagingService.fetchProfiles(_profileId),
       ]);
       if (!mounted) return;
       setState(() {
@@ -4510,6 +4819,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
         _fermenters = results[2] as List<Fermenter>;
         _controllers = results[3] as List<FermenterControllerModel>;
         _maltDepots = results[4] as List<MaltDepotEntryModel>;
+        _finingSettings = results[5] as FiningAgents;
         _selectedKettle = _pickDefault(_kettles, (k) => k.isDefault);
         _selectedWaterProfile =
             _pickDefault(_waterProfiles, (p) => p.isDefault);
@@ -4519,6 +4829,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
             _pickDefault(_controllers, (c) => c.isDefault);
         _selectedMaltDepot =
             _maltDepots.isNotEmpty ? _maltDepots.first : null;
+        final packagingProfiles = results[6] as List<PackagingProfile>;
+        if (packagingProfiles.isNotEmpty) {
+          _selectedPackagingProfile =
+              _pickDefault(packagingProfiles, (p) => p.isDefault) ??
+                  packagingProfiles.first;
+        } else {
+          _selectedPackagingProfile = null;
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -4722,6 +5040,106 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return items.first;
   }
 
+  String _buildShopListJson() {
+    if (_maltDepots.isEmpty) return '[]';
+    final list = _maltDepots.map((entry) {
+      final url = (entry.url ?? '').trim();
+      final map = <String, String>{'shop_name': entry.name};
+      if (url.isNotEmpty) {
+        map['shop_url'] = url;
+      }
+      return map;
+    }).toList();
+    return jsonEncode(list);
+  }
+
+  String _buildSpecialAdditionsJson() {
+    if (widget.profile.specialAdditions.isEmpty) return '[]';
+    final list = widget.profile.specialAdditions.map((addition) {
+      final antrunkPercent = ((1 - addition.focus) * 100).round();
+      final abgangPercent = 100 - antrunkPercent;
+      final intensityPercent = (addition.intensity * 100).round();
+      return {
+        'name': addition.title,
+        'antrunk_percent': antrunkPercent,
+        'abgang_percent': abgangPercent,
+        'intensity_percent': intensityPercent,
+      };
+    }).toList();
+    return jsonEncode(list);
+  }
+
+  String _buildSpecialStorageJson() {
+    if (widget.profile.specialStorage.isEmpty) return '[]';
+    final list = widget.profile.specialStorage
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+    if (list.isEmpty) return '[]';
+    return jsonEncode(list);
+  }
+
+  String _buildFiningAgentsJson() {
+    final settings = _finingSettings;
+    if (settings == null) return '[]';
+    final selections = <Map<String, String>>[];
+
+    void addOption(String key, bool enabled) {
+      if (!enabled) return;
+      final meta = _finingMetadata[key];
+      selections.add({
+        'key': key,
+        'name': meta?['name'] ?? key,
+        'purpose': meta?['purpose'] ?? '',
+        'recommended_phase': meta?['phase'] ?? '',
+      });
+    }
+
+    addOption('irish_moss', settings.irishMoss);
+    addOption('whirlfloc', settings.whirlfloc);
+    addOption('gelatin', settings.gelatin);
+    addOption('biersol', settings.biersol);
+    addOption('polyclar', settings.polyclar);
+    addOption('isinglass', settings.isinglass);
+    addOption('bentonite', settings.bentonite);
+    addOption('egg_whites', settings.eggWhites);
+    addOption('activated_carbon', settings.activatedCarbon);
+
+    for (final extra in settings.extras) {
+      final trimmed = extra.trim();
+      if (trimmed.isEmpty) continue;
+      selections.add({
+        'key': 'custom',
+        'name': trimmed,
+        'purpose': 'Vom Nutzer hinterlegt',
+        'recommended_phase': '',
+      });
+    }
+
+    if (selections.isEmpty) return '[]';
+    return jsonEncode(selections);
+  }
+
+  String _buildPackagingProfileJson() {
+    final profile = _selectedPackagingProfile;
+    if (profile == null) return '{}';
+    final map = <String, dynamic>{
+      'name': profile.name,
+      'bottle': {
+        'enabled': profile.bottleEnabled,
+        'carbonation_temp_c': profile.bottleCarbonationTempC,
+        'storage_temp_c': profile.bottleStorageTempC,
+      },
+      'keg': {
+        'enabled': profile.kegEnabled,
+        'carbonation_temp_c': profile.kegCarbonationTempC,
+        'storage_temp_c': profile.kegStorageTempC,
+        'volume_l': profile.kegVolumeLiters,
+      },
+    };
+    return jsonEncode(map);
+  }
+
   String _buildPrompt(String template) {
     String formatScore(double value) => value.toStringAsFixed(2);
     String formatWater(double? value) => (value ?? 0).toStringAsFixed(2);
@@ -4731,7 +5149,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
 
     final water = _selectedWaterProfile;
     final replacements = <String, String>{
-      'bier_typ': widget.profile.beerName,
+      'bier_typ': widget.profile.beerType,
       'basis_bier': widget.profile.beerName,
       'hop_intensity': formatScore(widget.profile.hopIntensity),
       'hop_herbal': formatScore(widget.profile.hopHerbal),
@@ -4757,7 +5175,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
       'fermenter_type': formatText(_selectedFermenter?.type),
       'fermenter_heating': formatBool(_selectedFermenter?.hasHeating),
       'fermenter_cooling': formatBool(_selectedFermenter?.hasCooling),
-      'shop_url': formatText(_selectedMaltDepot?.url),
+      'special_additions': _buildSpecialAdditionsJson(),
+      'special_storage': _buildSpecialStorageJson(),
+      'fining_agents': _buildFiningAgentsJson(),
+      'packaging_profile': _buildPackagingProfileJson(),
+      'shop_list': _buildShopListJson(),
       'target_volume_l':
           _batchSizeCtrl.text.trim().isEmpty ? '0' : _batchSizeCtrl.text.trim(),
       'calcium': formatWater(water?.calciumPpm),
@@ -4974,82 +5396,73 @@ class RecipeDisplayPage extends StatelessWidget {
 List<Widget> _buildSections(Map<String, dynamic> parsed) {
   final zutaten = _asMap(parsed['Zutaten'] ?? parsed['zutaten']);
   final prozess = _asMap(parsed['Prozessdaten'] ?? parsed['prozessdaten']);
-  final malzdepot =
-      _asMap(parsed['Malzdepot_Einkauf'] ?? parsed['malzdepot_einkauf']);
+  final sections = <Widget>[];
 
-  final sections = <Widget>[
-    _RecipeSection(
-      title: 'Zutaten – Original Malz',
-      entries: _formatList(zutaten['Original_Malz'] ?? zutaten['original_malz']),
+  void addSection(String title, List<_RecipeEntry> entries) {
+    if (sections.isNotEmpty) {
+      sections.add(const Divider(height: 32, color: Colors.white24));
+    }
+    sections.add(_RecipeSection(title: title, entries: entries));
+  }
+
+  addSection(
+    'Zutaten – Malz',
+    _formatList(zutaten['Original_Malz'] ?? zutaten['original_malz']),
+  );
+  addSection(
+    'Zutaten – Hopfen',
+    _formatList(zutaten['Original_Hopfen'] ?? zutaten['original_hopfen']),
+  );
+  addSection(
+    'Zutaten – Hefe',
+    _formatList(zutaten['Original_Hefe'] ?? zutaten['original_hefe']),
+  );
+  addSection(
+    'Spezialzutaten',
+    _formatList(zutaten['Spezialzutaten'] ?? zutaten['spezialzutaten']),
+  );
+  addSection(
+    'Klär- & Schönungsmittel',
+    _formatList(
+      zutaten['Klaer_und_Schonungsmittel'] ??
+          zutaten['klaer_und_schonungsmittel'],
     ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Zutaten – Original Hopfen',
-      entries:
-          _formatList(zutaten['Original_Hopfen'] ?? zutaten['original_hopfen']),
+  );
+  addSection(
+    'Wasseraufbereitung',
+    _formatList(zutaten['Wasseraufbereitung'] ?? zutaten['wasseraufbereitung']),
+  );
+  addSection(
+    'Maischeplan',
+    _formatList(prozess['Maischeplan'] ?? prozess['maischeplan']),
+  );
+  addSection(
+    'Kochplan',
+    _formatKochplan(
+      prozess['Kochzeit_und_Kochphasen'] ?? prozess['kochzeit_und_kochphasen'],
     ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Zutaten – Original Hefe',
-      entries:
-          _formatList(zutaten['Original_Hefe'] ?? zutaten['original_hefe']),
+  );
+  addSection(
+    'Gärplan',
+    _formatGaerplan(
+      prozess['Gaerplan'] ?? prozess['Gärplan'] ?? prozess['gaerplan'],
     ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Spezialzutaten',
-      entries:
-          _formatList(zutaten['Spezialzutaten'] ?? zutaten['spezialzutaten']),
+  );
+  addSection(
+    'Abfüllung & Lagern',
+    _formatList(prozess['Abfuellung_ins_Keg'] ?? prozess['abfuellung_ins_keg']),
+  );
+  addSection(
+    'Abfüllung – Flaschen',
+    _formatList(
+      prozess['Abfuellung_in_Flaschen'] ?? prozess['abfuellung_in_flaschen'],
     ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Wasseraufbereitung',
-      entries: _formatList(
-        zutaten['Wasseraufbereitung'] ?? zutaten['wasseraufbereitung'],
-      ),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Malzdepot – Shops',
-      entries: _formatMalzdepotShops(malzdepot['Shops'] ?? malzdepot['shops']),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Malzdepot – Empfehlung',
-      entries:
-          _formatList(malzdepot['Empfehlung'] ?? malzdepot['empfehlung']),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Maischeplan',
-      entries: _formatList(prozess['Maischeplan'] ?? prozess['maischeplan']),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Kochplan',
-      entries: _formatKochplan(
-        prozess['Kochzeit_und_Kochphasen'] ?? prozess['kochzeit_und_kochphasen'],
-      ),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Gärplan',
-      entries: _formatGaerplan(
-        prozess['Gaerplan'] ?? prozess['Gärplan'] ?? prozess['gaerplan'],
-      ),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Abfüllung & Lagern',
-      entries: _formatList(
-        prozess['Abfuellung_ins_Keg'] ?? prozess['abfuellung_ins_keg'],
-      ),
-    ),
-    const Divider(height: 32, color: Colors.white24),
-    _RecipeSection(
-      title: 'Notizen',
-      entries: _formatList(parsed['Notizen'] ?? parsed['notizen']),
-    ),
-  ];
+  );
+  addSection(
+    'Notizen',
+    _formatList(parsed['Notizen'] ?? parsed['notizen']),
+  );
+
   return sections;
 }
 
@@ -5101,59 +5514,6 @@ class _LinkSegment {
 
   final String text;
   final bool isLink;
-}
-
-List<_RecipeEntry> _formatMalzdepotShops(dynamic input) {
-  if (input == null) return [const _RecipeEntry(text: 'Keine Angaben')];
-  final shops = input is List ? input : [input];
-  if (shops.isEmpty) return [const _RecipeEntry(text: 'Keine Angaben')];
-  final entries = <_RecipeEntry>[];
-
-  for (final shop in shops) {
-    if (shop is! Map) {
-      entries.add(_entry(shop.toString()));
-      continue;
-    }
-    final shopMap = shop.map((key, val) => MapEntry(key.toString(), val));
-    final shopName =
-        _stringField(shopMap['Shop_Name'] ?? shopMap['shop_name']) ??
-            'Shop';
-    final shopUrl =
-        _stringField(shopMap['Shop_URL'] ?? shopMap['shop_url']);
-
-    entries.add(
-      _RecipeEntry(
-        text: shopUrl != null ? '$shopName ($shopUrl)' : shopName,
-        link: shopUrl,
-      ),
-    );
-
-    void addCategory(String label, dynamic data) {
-      final formatted = _formatList(data);
-      entries.add(_entry('$label:'));
-      entries.addAll(_prefixEntries(formatted, '  - '));
-    }
-
-    addCategory('Malz', shopMap['Malz'] ?? shopMap['malz']);
-    addCategory('Hopfen', shopMap['Hopfen'] ?? shopMap['hopfen']);
-    addCategory('Hefe', shopMap['Hefe'] ?? shopMap['hefe']);
-
-    final abdeckung = shopMap['Abdeckung'] ?? shopMap['abdeckung'];
-    if (abdeckung != null) {
-      entries.add(_entry('Abdeckung:'));
-      entries.addAll(_prefixEntries(_formatList(abdeckung), '  - '));
-    }
-
-    final bewertung =
-        shopMap['Gesamtbewertung'] ?? shopMap['gesamtbewertung'];
-    if (bewertung != null) {
-      entries.add(_entry('Bewertung: ${_formatSimpleValue(bewertung)}'));
-    }
-
-    entries.add(const _RecipeEntry(text: ''));
-  }
-
-  return entries.isEmpty ? [const _RecipeEntry(text: 'Keine Angaben')] : entries;
 }
 
 List<_RecipeEntry> _formatList(dynamic input) {
@@ -5460,11 +5820,19 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Malzdepot')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+      appBar: AppBar(
+        title: const Text('Malzdepot'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -5508,9 +5876,12 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: entry),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: entry),
+              onDelete: () => _confirmDelete(
+                'Malzlieferant “${entry.name}” löschen?',
+                () => _deleteEntry(entry),
+              ),
             ),
           ),
         );
@@ -5614,6 +5985,51 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Speichern fehlgeschlagen: $e')),
       );
+    }
+  }
+
+  Future<void> _deleteEntry(MaltDepotEntryModel entry) async {
+    if (entry.id == null) return;
+    try {
+      await _service.deleteEntry(entry.id!);
+      setState(() {
+        _entries.removeWhere((item) => item.id == entry.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Malzlieferant "${entry.name}" gelöscht')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
     }
   }
 }
@@ -5987,11 +6403,19 @@ class _PackagingProfileManagerPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Abfüllen & Lagern')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+      appBar: AppBar(
+        title: const Text('Abfüllen & Lagern'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -6060,9 +6484,12 @@ class _PackagingProfileManagerPageState
                 : Text(
                     info.join(' · '),
                   ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: profile),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: profile),
+              onDelete: () => _confirmDelete(
+                'Profil “${profile.name}” löschen?',
+                () => _deleteProfile(profile),
+              ),
             ),
           ),
         );
@@ -6291,6 +6718,51 @@ class _PackagingProfileManagerPageState
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned.replaceAll(',', '.'));
   }
+
+  Future<void> _deleteProfile(PackagingProfile profile) async {
+    if (profile.id == null) return;
+    try {
+      await _service.deleteProfile(profile.id!);
+      setState(() {
+        _profiles.removeWhere((item) => item.id == profile.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Profil "${profile.name}" gelöscht')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
+  }
 }
 
 class _FermenterControllerManagerPageState
@@ -6335,11 +6807,19 @@ class _FermenterControllerManagerPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Fermentierer-Kontroller')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: const Text('Neu'),
+      appBar: AppBar(
+        title: const Text('Fermentierer-Kontroller'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Neu'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -6388,9 +6868,12 @@ class _FermenterControllerManagerPageState
                   ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _openForm(editing: controller),
+            trailing: CardActions(
+              onEdit: () => _openForm(editing: controller),
+              onDelete: () => _confirmDelete(
+                'Kontroller “${controller.name}” löschen?',
+                () => _deleteController(controller),
+              ),
             ),
           ),
         );
@@ -6528,5 +7011,51 @@ class _FermenterControllerManagerPageState
       }
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
+  }
+
+  Future<void> _deleteController(FermenterControllerModel controller) async {
+    if (controller.id == null) return;
+    try {
+      await _service.deleteController(controller.id!);
+      setState(() {
+        _controllers.removeWhere((item) => item.id == controller.id);
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Kontroller "${controller.name}" gelöscht')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Löschen fehlgeschlagen: $e')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    String title,
+    Future<void> Function() onDelete,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await onDelete();
+    }
   }
 }
