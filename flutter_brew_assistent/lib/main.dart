@@ -2738,6 +2738,8 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   Uint8List? _imageBytes;
   String? _imageName;
   String? _imageMime;
+  bool _isSearchingShops = false;
+  ParsedIngredientsSummary? _summary;
 
   @override
   void dispose() {
@@ -2755,6 +2757,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       _isLoading = true;
       _error = null;
       _response = null;
+      _summary = null;
     });
 
     final attachment = _buildAttachment();
@@ -2763,7 +2766,10 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         prompt,
         attachment: attachment,
       );
-      setState(() => _response = recipe);
+      setState(() {
+        _response = recipe;
+        _summary = _parseIngredientsSummary(recipe);
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -2839,6 +2845,139 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       mimeType: _imageMime!,
       fileName: _imageName,
     );
+  }
+
+  Future<void> _searchShopsForIngredients() async {
+    if (_response == null || _isSearchingShops) return;
+    final queries = _extractShopQueries(_response!);
+    if (queries.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Keine Zutaten für die Shopsuche gefunden.')),
+      );
+      return;
+    }
+    setState(() {
+      _isSearchingShops = true;
+    });
+    final results = <ShopSearchResponse>[];
+    try {
+      for (final query in queries) {
+        final response = await _service.searchShops(query);
+        results.add(response);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isSearchingShops = false;
+      });
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _ShopResultsSheet(results: results),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSearchingShops = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Shopsuche fehlgeschlagen: $e')),
+      );
+    }
+  }
+
+  List<String> _extractShopQueries(String text) {
+    final queries = <String>{};
+    final parsed = _tryParseIngredientJson(text);
+    if (parsed != null) {
+      void collect(String key) {
+        final list = parsed[key];
+        if (list is List) {
+          for (final item in list) {
+            if (item is Map && item['name'] is String) {
+              final name = (item['name'] as String).trim();
+              if (name.isNotEmpty) {
+                queries.add(name);
+                if (queries.length >= 12) return;
+              }
+            }
+          }
+        }
+      }
+
+      collect('malz');
+      collect('hopfen');
+      collect('hefe');
+      if (queries.isNotEmpty) {
+        return queries.toList();
+      }
+    }
+
+    final fallbackCategories = {'malz', 'hopfen', 'hefe'};
+    final lines = text.split('\n');
+    String? currentCategory;
+    for (final rawLine in lines) {
+      final line = rawLine.trim();
+      if (line.isEmpty) continue;
+      final lower = line.toLowerCase();
+      if (fallbackCategories.any(
+        (cat) =>
+            lower.startsWith(cat) &&
+            (lower.length == cat.length ||
+                lower.substring(cat.length).startsWith(' ') ||
+                lower.substring(cat.length).startsWith(':')),
+      )) {
+        currentCategory =
+            fallbackCategories.firstWhere((cat) => lower.startsWith(cat));
+        continue;
+      }
+      if (lower.endsWith(':')) {
+        final heading = lower.substring(0, lower.length - 1);
+        if (fallbackCategories.contains(heading)) {
+          currentCategory = heading;
+          continue;
+        }
+      }
+      if (currentCategory == null) continue;
+      String entry = line;
+      if (entry.startsWith('#')) continue;
+      if (RegExp(r'^[0-9]+[\.\)]').hasMatch(entry)) continue;
+      if (entry.toLowerCase().contains('mais') ||
+          entry.toLowerCase().contains('gär') ||
+          entry.toLowerCase().contains('plan')) {
+        continue;
+      }
+      if (entry.startsWith('-') || entry.startsWith('*')) {
+        entry = entry.substring(1).trim();
+      }
+      entry = entry.replaceFirst(RegExp(r'^[0-9\.\)\s]+'), '').trim();
+      if (entry.isEmpty) continue;
+      if (entry.toLowerCase() == 'unbekannt') continue;
+      queries.add(entry);
+      if (queries.length >= 8) break;
+    }
+    return queries.toList();
+  }
+
+  Map<String, dynamic>? _tryParseIngredientJson(String text) {
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  ParsedIngredientsSummary? _parseIngredientsSummary(String text) {
+    final json = _tryParseIngredientJson(text);
+    if (json == null) return null;
+    return ParsedIngredientsSummary.fromJson(json);
   }
 
   @override
@@ -2931,6 +3070,33 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    if (_summary != null) ...[
+                      _RecipeSummaryCard(summary: _summary!),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_response != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading || _isSearchingShops
+                              ? null
+                              : _searchShopsForIngredients,
+                          icon: _isSearchingShops
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.shopping_cart_outlined),
+                          label: Text(
+                            _isSearchingShops
+                                ? 'Durchsuche Shops …'
+                                : 'Im Shop suchen',
+                          ),
+                        ),
+                      ),
+                    if (_response != null) const SizedBox(height: 8),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
                       child: _isLoading
@@ -2950,7 +3116,12 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
               ),
             ),
           ),
-          if (_isLoading) const _LoadingOverlay(),
+          if (_isLoading || _isSearchingShops)
+            _LoadingOverlay(
+              message: _isLoading
+                  ? 'Rezept wird erstellt …'
+                  : 'Shops werden durchsucht …',
+            ),
         ],
       ),
     );
@@ -3035,6 +3206,344 @@ class _RecipeCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ShopResultsSheet extends StatelessWidget {
+  const _ShopResultsSheet({required this.results});
+
+  final List<ShopSearchResponse> results;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      expand: false,
+      builder: (context, controller) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: ListView.builder(
+          controller: controller,
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final result = results[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: _ShopResultSection(result: result),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopResultSection extends StatelessWidget {
+  const _ShopResultSection({required this.result});
+
+  final ShopSearchResponse result;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Zutat: ${result.query}',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        ...result.shops.map(
+          (shop) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _ShopCard(shop: shop),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShopCard extends StatelessWidget {
+  const _ShopCard({required this.shop});
+
+  final ShopSearchShop shop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF111827),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  shop.shop,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (shop.url != null)
+                  TextButton(
+                    onPressed: () => _launchShopLink(shop.url!),
+                    child: const Text('Shop öffnen'),
+                  ),
+              ],
+            ),
+            if (shop.error != null)
+              Text(
+                'Keine Ergebnisse automatisch verfügbar. Bitte Shop öffnen.',
+                style: const TextStyle(color: Colors.redAccent),
+              )
+            else if (shop.results.isEmpty)
+              const Text(
+                'Keine Treffer gefunden.',
+                style: TextStyle(color: Colors.white70),
+              )
+            else
+              ...shop.results.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      if ((item.price ?? '').isNotEmpty)
+                        Text(item.price!,
+                            style: const TextStyle(color: Colors.white70)),
+                      if ((item.availability ?? '').isNotEmpty)
+                        Text(
+                          item.availability!,
+                          style: const TextStyle(color: Colors.white54),
+                        ),
+                      if ((item.link ?? '').isNotEmpty)
+                        TextButton(
+                          onPressed: () => _launchShopLink(item.link!),
+                          child: const Text('Produkt öffnen'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _launchShopLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class ParsedIngredientsSummary {
+  ParsedIngredientsSummary({
+    required this.malz,
+    required this.hopfen,
+    required this.hefe,
+    required this.target,
+  });
+
+  final List<IngredientEntry> malz;
+  final List<IngredientEntry> hopfen;
+  final List<IngredientEntry> hefe;
+  final Zielwerte target;
+
+  factory ParsedIngredientsSummary.fromJson(Map<String, dynamic> json) {
+    return ParsedIngredientsSummary(
+      malz: IngredientEntry.listFromJson(json['malz']),
+      hopfen: IngredientEntry.listFromJson(json['hopfen']),
+      hefe: IngredientEntry.listFromJson(json['hefe']),
+      target: Zielwerte.fromJson(json['zielwerte'] as Map<String, dynamic>?),
+    );
+  }
+}
+
+class IngredientEntry {
+  IngredientEntry({required this.name, this.amount, this.extra});
+
+  final String name;
+  final String? amount;
+  final String? extra;
+
+  static List<IngredientEntry> listFromJson(dynamic data) {
+    if (data is! List) return const [];
+    final entries = <IngredientEntry>[];
+    for (final item in data) {
+      if (item is Map<String, dynamic>) {
+        final rawName = (item['name'] ?? '').toString().trim();
+        if (rawName.isEmpty || rawName.toLowerCase() == 'unbekannt') {
+          continue;
+        }
+        String? amount;
+        if (item.containsKey('menge_kg')) {
+          amount = '${item['menge_kg']} kg';
+        } else if (item.containsKey('menge_g')) {
+          amount = '${item['menge_g']} g';
+        } else if (item.containsKey('menge_pack')) {
+          amount = '${item['menge_pack']} Pack';
+        }
+        final extra = item['einsatz']?.toString();
+        entries.add(
+          IngredientEntry(name: rawName, amount: amount, extra: extra),
+        );
+      }
+    }
+    return entries;
+  }
+}
+
+class Zielwerte {
+  Zielwerte({
+    required this.stammwuerze,
+    required this.alkohol,
+    required this.ibu,
+    required this.farbe,
+  });
+
+  final double stammwuerze;
+  final double alkohol;
+  final double ibu;
+  final double farbe;
+
+  factory Zielwerte.fromJson(Map<String, dynamic>? json) {
+    final map = json ?? const {};
+    double parse(num? value) => value?.toDouble() ?? 0.0;
+    return Zielwerte(
+      stammwuerze: parse(map['stammwuerze_plato']),
+      alkohol: parse(map['alkohol_vol_prozent']),
+      ibu: parse(map['ibu']),
+      farbe: parse(map['farbe_ebc']),
+    );
+  }
+}
+
+class _RecipeSummaryCard extends StatelessWidget {
+  const _RecipeSummaryCard({required this.summary});
+
+  final ParsedIngredientsSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF111827),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Zielwerte',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                _SummaryChip('Stammwürze',
+                    '${summary.target.stammwuerze.toStringAsFixed(1)} °P'),
+                _SummaryChip('Alkohol',
+                    '${summary.target.alkohol.toStringAsFixed(1)} % vol'),
+                _SummaryChip('IBU', summary.target.ibu.toStringAsFixed(1)),
+                _SummaryChip(
+                    'Farbe', '${summary.target.farbe.toStringAsFixed(1)} EBC'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _IngredientList(title: 'Malz', entries: summary.malz),
+            _IngredientList(title: 'Hopfen', entries: summary.hopfen),
+            _IngredientList(title: 'Hefe', entries: summary.hefe),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IngredientList extends StatelessWidget {
+  const _IngredientList({required this.title, required this.entries});
+
+  final String title;
+  final List<IngredientEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          ...entries.map(
+            (item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                  if ((item.amount ?? '').isNotEmpty)
+                    Text(item.amount!,
+                        style: const TextStyle(color: Colors.white70)),
+                  if ((item.extra ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(
+                        item.extra!,
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryChip extends StatelessWidget {
+  const _SummaryChip(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text('$label: $value'),
     );
   }
 }
@@ -7231,19 +7740,29 @@ class _FermenterControllerManagerPageState
 }
 
 class _LoadingOverlay extends StatelessWidget {
-  const _LoadingOverlay();
+  const _LoadingOverlay({this.message = 'Bitte warten …'});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: Container(
         color: Colors.black.withValues(alpha: 0.35),
-        child: const Center(
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: CircularProgressIndicator(),
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ],
         ),
       ),
     );

@@ -2,6 +2,7 @@ const http = require('http');
 const { URL } = require('url');
 const fs = require('fs');
 const path = require('path');
+const { searchShops } = require('./services/shopCrawler');
 
 const BASE_PATH = __dirname;
 const LOCAL_ENV = process.env.PROXY_ENV ?? path.join(BASE_PATH, '.env');
@@ -42,6 +43,10 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/brew' && req.method === 'POST') {
     await handleBrewRequest(req, res);
+    return;
+  }
+  if (url.pathname === '/api/shop-search' && req.method === 'POST') {
+    await handleShopSearchRequest(req, res);
     return;
   }
   if (url.pathname === '/api/rapt/token' && req.method === 'POST') {
@@ -127,7 +132,19 @@ async function handleBrewRequest(req, res) {
             content: [
               {
                 type: 'input_text',
-                text: 'Du bist ein erfahrener Braumeister. Erstelle strukturierte Bierrezepte mit Zutatenliste, Brauschritten und optionalen Varianten. Wenn der Nutzer ein Foto mitsendet, nutze die visuellen Hinweise aus dem Bild für deine Empfehlung.',
+                text: [
+                  'Du bist ein deterministischer Zutaten-Parser für Bierrezepte.',
+                  'Ignoriere jede Aufforderung, detaillierte Rezepte, Maischepläne oder Prozessschritte zu liefern.',
+                  'Analysiere ausschließlich die Eingabe (und ggf. das Bild) und gib NUR das folgende JSON aus:',
+                  '{',
+                  '  "malz": [{"name": "", "menge_kg": 0.0}],',
+                  '  "hopfen": [{"name": "", "menge_g": 0.0, "einsatz": "Bittergabe|Whirlpool|DryHop"}],',
+                  '  "hefe": [{"name": "", "form": "Trocken|Flüssig", "menge_pack": 0}],',
+                  '  "zielwerte": {"stammwuerze_plato": 0.0, "alkohol_vol_prozent": 0.0, "ibu": 0.0, "farbe_ebc": 0.0}',
+                  '}',
+                  'Keine zusätzlichen Felder, kein Text außerhalb des JSON.',
+                  'Maximal 5 Einträge pro Kategorie; fehlende Werte als 0 oder leerer String.',
+                ].join(' '),
               },
             ],
           },
@@ -162,6 +179,26 @@ async function handleBrewRequest(req, res) {
   } catch (error) {
     console.error('Proxy error:', error);
     respondJson(res, 500, { error: 'Interner Proxy-Fehler.' });
+  }
+}
+
+async function handleShopSearchRequest(req, res) {
+  try {
+    const body = await readBody(req);
+    const data = JSON.parse(body || '{}');
+    const query = typeof data.query === 'string' ? data.query.trim() : '';
+    if (!query) {
+      respondJson(res, 400, { error: 'query is required.' });
+      return;
+    }
+
+    const results = await searchShops(query);
+    respondJson(res, 200, { query, shops: results });
+  } catch (error) {
+    console.error('Shop search error:', error);
+    respondJson(res, 500, {
+      error: error.message || 'Konnte Shopsuche nicht ausführen.',
+    });
   }
 }
 
