@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:mime/mime.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -89,6 +92,7 @@ class BrewMateApp extends StatelessWidget {
     );
   }
 }
+
 class BrewEntryPage extends StatelessWidget {
   const BrewEntryPage({super.key});
 
@@ -107,6 +111,7 @@ class BrewEntryPage extends StatelessWidget {
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -353,8 +358,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         _avatarUrlCtrl.text = profile.avatarUrl;
         _kettleBrandCtrl.text = profile.kettleBrand;
         _kettleTypeCtrl.text = profile.kettleType;
-        _defaultBatchCtrl.text =
-            profile.defaultBatchLiters?.toString() ?? '';
+        _defaultBatchCtrl.text = profile.defaultBatchLiters?.toString() ?? '';
         _fermenterBrandCtrl.text = profile.fermenterBrand;
         _fermenterTypeCtrl.text = profile.fermenterType;
         _selectedController = _controllerOptions.contains(profile.controller)
@@ -379,7 +383,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
       });
     }
   }
-
 
   Future<bool> _saveProfile({bool showFeedback = true}) async {
     FocusScope.of(context).unfocus();
@@ -445,63 +448,66 @@ class _UserProfilePageState extends State<UserProfilePage> {
       body: _isLoadingProfile
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
-        builder: (context, constraints) => Align(
-          alignment: Alignment.topCenter,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            physics: const BouncingScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_loadError != null) ...[
-                    Card(
-                      color: Colors.red.shade900.withValues(alpha: 0.35),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          'Laden fehlgeschlagen: $_loadError',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _buildUserSection(),
-                  const SizedBox(height: 20),
-                  _buildResourceButtons(),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _isSaving ? null : _saveProfile,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+              builder: (context, constraints) => Align(
+                alignment: Alignment.topCenter,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (_isSaving)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        else
-                          const Icon(Icons.save_rounded),
-                        const SizedBox(width: 12),
-                        Text(_isSaving ? 'Speichert …' : 'Profil speichern'),
+                        if (_loadError != null) ...[
+                          Card(
+                            color: Colors.red.shade900.withValues(alpha: 0.35),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                'Laden fehlgeschlagen: $_loadError',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        _buildUserSection(),
+                        const SizedBox(height: 20),
+                        _buildResourceButtons(),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _isSaving ? null : _saveProfile,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_isSaving)
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              else
+                                const Icon(Icons.save_rounded),
+                              const SizedBox(width: 12),
+                              Text(_isSaving
+                                  ? 'Speichert …'
+                                  : 'Profil speichern'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Zurück'),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Zurück'),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -731,7 +737,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final success = await _saveProfile(showFeedback: false);
     return success;
   }
-
 }
 
 class _WaterSectionHeader extends StatelessWidget {
@@ -826,18 +831,17 @@ class _WaterIonTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-            Text(
-              'ppm',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
+          Text(
+            'ppm',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 12,
             ),
+          ),
           const SizedBox(height: 12),
           TextField(
             controller: controller,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Wert',
               hintText: 'z. B. 50',
@@ -908,7 +912,8 @@ class WaterProfileManagerPage extends StatefulWidget {
   final WaterProfileRepository? repository;
 
   @override
-  State<WaterProfileManagerPage> createState() => _WaterProfileManagerPageState();
+  State<WaterProfileManagerPage> createState() =>
+      _WaterProfileManagerPageState();
 }
 
 class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
@@ -1026,7 +1031,8 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
             trailing: CardActions(
               onEdit: () => _openEditor(editing: profile),
               onDelete: () => _confirmDelete(
-                title: 'Profil “${profile.name.isEmpty ? 'Unbenannt' : profile.name}” löschen?',
+                title:
+                    'Profil “${profile.name.isEmpty ? 'Unbenannt' : profile.name}” löschen?',
                 onDelete: () => _deleteProfile(profile),
               ),
             ),
@@ -1064,7 +1070,9 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            editing == null ? 'Wasserprofil erstellt' : 'Wasserprofil aktualisiert',
+            editing == null
+                ? 'Wasserprofil erstellt'
+                : 'Wasserprofil aktualisiert',
           ),
         ),
       );
@@ -1097,7 +1105,8 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+        content:
+            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -1208,12 +1217,12 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
     return controllers.any((ctrl) => ctrl.text.trim().isNotEmpty);
   }
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title =
-        widget.profile == null ? 'Wasserprofil anlegen' : 'Wasserprofil bearbeiten';
+    final title = widget.profile == null
+        ? 'Wasserprofil anlegen'
+        : 'Wasserprofil bearbeiten';
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -1265,8 +1274,9 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
               title: 'Kationen',
               accent: const Color(0xFFEAB308),
               subtitle: 'Eingabe in ppm',
-              trailing:
-                  _hasWaterStats ? '${_cationCharge.toStringAsFixed(2)} mEq/L' : null,
+              trailing: _hasWaterStats
+                  ? '${_cationCharge.toStringAsFixed(2)} mEq/L'
+                  : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -1301,8 +1311,9 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
               title: 'Anionen',
               accent: const Color(0xFF38BDF8),
               subtitle: 'Eingabe in ppm',
-              trailing:
-                  _hasWaterStats ? '${_anionCharge.toStringAsFixed(2)} mEq/L' : null,
+              trailing: _hasWaterStats
+                  ? '${_anionCharge.toStringAsFixed(2)} mEq/L'
+                  : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -1395,12 +1406,14 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                       _WaterStatTile(
                         width: tileWidth,
                         label: 'Alkalinität',
-                        value: _formatNumber(_waterAlkalinity, fractionDigits: 0),
+                        value:
+                            _formatNumber(_waterAlkalinity, fractionDigits: 0),
                       ),
                       _WaterStatTile(
                         width: tileWidth,
                         label: 'Restalkalinität',
-                        value: _formatNumber(_residualAlkalinity, fractionDigits: 0),
+                        value: _formatNumber(_residualAlkalinity,
+                            fractionDigits: 0),
                       ),
                       _WaterStatTile(
                         width: tileWidth,
@@ -1455,7 +1468,8 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Wasserprofil konnte nicht gespeichert werden: $e')),
+        SnackBar(
+            content: Text('Wasserprofil konnte nicht gespeichert werden: $e')),
       );
     } finally {
       if (mounted) {
@@ -1467,7 +1481,9 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
   }
 
   WaterProfile _buildDraft() {
-    final name = _nameCtrl.text.trim().isEmpty ? 'Unbenanntes Profil' : _nameCtrl.text.trim();
+    final name = _nameCtrl.text.trim().isEmpty
+        ? 'Unbenanntes Profil'
+        : _nameCtrl.text.trim();
     return WaterProfile(
       id: widget.profile?.id,
       userProfileId: widget.profileId,
@@ -1518,7 +1534,8 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
     final double? ratio = cl > 0 ? so4 / cl : null;
     final double hardness = (2.5 * ca) + (4.1 * mg);
     final double alkalinity = hco3 * (50 / 61);
-    final double residual = alkalinity - ((2.5 * ca) / 3.5) - ((4.1 * mg) / 7.0);
+    final double residual =
+        alkalinity - ((2.5 * ca) / 3.5) - ((4.1 * mg) / 7.0);
 
     setState(() {
       _hasWaterStats = true;
@@ -1703,8 +1720,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title:
-              Text(editing == null ? 'Braukessel hinzufügen' : 'Braukessel bearbeiten'),
+          title: Text(editing == null
+              ? 'Braukessel hinzufügen'
+              : 'Braukessel bearbeiten'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1800,7 +1818,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              editing == null ? 'Braukessel erstellt' : 'Braukessel aktualisiert',
+              editing == null
+                  ? 'Braukessel erstellt'
+                  : 'Braukessel aktualisiert',
             ),
           ),
         );
@@ -1993,10 +2013,12 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (fermenter.volumeLiters != null)
-                  Text('Volumen: ${fermenter.volumeLiters!.toStringAsFixed(1)} L'),
+                  Text(
+                      'Volumen: ${fermenter.volumeLiters!.toStringAsFixed(1)} L'),
                 Text('Heizung: ${fermenter.hasHeating ? 'Ja' : 'Nein'}'),
                 Text('Kühlung: ${fermenter.hasCooling ? 'Ja' : 'Nein'}'),
-                Text('Dry-Hopping-Port: ${fermenter.hasDryHoppingPort ? 'Ja' : 'Nein'}'),
+                Text(
+                    'Dry-Hopping-Port: ${fermenter.hasDryHoppingPort ? 'Ja' : 'Nein'}'),
                 if ((fermenter.notes ?? '').isNotEmpty)
                   Text(
                     fermenter.notes!,
@@ -2033,8 +2055,9 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: Text(
-              editing == null ? 'Fermentierer hinzufügen' : 'Fermentierer bearbeiten'),
+          title: Text(editing == null
+              ? 'Fermentierer hinzufügen'
+              : 'Fermentierer bearbeiten'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2165,7 +2188,9 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              editing == null ? 'Fermentierer erstellt' : 'Fermentierer aktualisiert',
+              editing == null
+                  ? 'Fermentierer erstellt'
+                  : 'Fermentierer aktualisiert',
             ),
           ),
         );
@@ -2339,17 +2364,19 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if ((entry.style ?? '').isNotEmpty) Text('Stil: ${entry.style}'),
-                if (entry.attenuationMin != null || entry.attenuationMax != null)
+                if ((entry.style ?? '').isNotEmpty)
+                  Text('Stil: ${entry.style}'),
+                if (entry.attenuationMin != null ||
+                    entry.attenuationMax != null)
                   Text(
                     'EVG: ${_rangeString(entry.attenuationMin, entry.attenuationMax, suffix: '%')}',
                   ),
-                if (entry.temperatureMin != null || entry.temperatureMax != null)
+                if (entry.temperatureMin != null ||
+                    entry.temperatureMax != null)
                   Text(
                     'Temp: ${_rangeString(entry.temperatureMin, entry.temperatureMax, suffix: '°C')}',
                   ),
-                if ((entry.url ?? '').isNotEmpty)
-                  Text('URL: ${entry.url}'),
+                if ((entry.url ?? '').isNotEmpty) Text('URL: ${entry.url}'),
                 if ((entry.notes ?? '').isNotEmpty)
                   Text(
                     entry.notes!,
@@ -2400,8 +2427,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: Text(
-              editing == null ? 'Hefe hinzufügen' : 'Hefe bearbeiten'),
+          title: Text(editing == null ? 'Hefe hinzufügen' : 'Hefe bearbeiten'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2444,8 +2470,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         decoration: const InputDecoration(
                           labelText: 'EVG min %',
                         ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2455,8 +2481,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         decoration: const InputDecoration(
                           labelText: 'EVG max %',
                         ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                     ),
                   ],
@@ -2470,8 +2496,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         decoration: const InputDecoration(
                           labelText: 'Temp. min (°C)',
                         ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2481,8 +2507,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         decoration: const InputDecoration(
                           labelText: 'Temp. max (°C)',
                         ),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                       ),
                     ),
                   ],
@@ -2549,8 +2575,9 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
           _entries.add(saved);
         }
         _entries.sort(
-          (a, b) =>
-              '${a.brand} ${a.strain}'.toLowerCase().compareTo('${b.brand} ${b.strain}'.toLowerCase()),
+          (a, b) => '${a.brand} ${a.strain}'
+              .toLowerCase()
+              .compareTo('${b.brand} ${b.strain}'.toLowerCase()),
         );
       });
       if (mounted) {
@@ -2638,8 +2665,7 @@ class _UserNameBannerState extends State<_UserNameBanner> {
   @override
   void initState() {
     super.initState();
-    _profileFuture =
-        UserProfileService().fetchDefaultProfile();
+    _profileFuture = UserProfileService().fetchDefaultProfile();
   }
 
   @override
@@ -2672,8 +2698,7 @@ class _UserNameBannerState extends State<_UserNameBanner> {
         return Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
@@ -2710,6 +2735,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   String? _response;
   String? _error;
   bool _isLoading = false;
+  Uint8List? _imageBytes;
+  String? _imageName;
+  String? _imageMime;
 
   @override
   void dispose() {
@@ -2729,8 +2757,16 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       _response = null;
     });
 
+    final attachment = _buildAttachment();
+    final enrichedPrompt = attachment != null
+        ? '$prompt\n\n[Foto angehängt: Nutze die sichtbaren Details, Farben oder Zutaten aus dem Bild als zusätzliche Hinweise.]'
+        : prompt;
+
     try {
-      final recipe = await _service.brewRecipe(prompt);
+      final recipe = await _service.brewRecipe(
+        enrichedPrompt,
+        attachment: attachment,
+      );
       setState(() => _response = recipe);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -2747,6 +2783,66 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         const SnackBar(content: Text('Konnte Hauptseite nicht öffnen.')),
       );
     }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) {
+        return;
+      }
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Konnte Bilddaten nicht laden.')),
+        );
+        return;
+      }
+      final mime = lookupMimeType(
+        file.name,
+        headerBytes: bytes.length >= 16 ? bytes.sublist(0, 16) : bytes,
+      );
+      if (mime == null || !mime.startsWith('image/')) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nur Bilddateien werden unterstützt.')),
+        );
+        return;
+      }
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = file.name;
+        _imageMime = mime;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bild konnte nicht geladen werden: $e')),
+      );
+    }
+  }
+
+  void _clearImage() {
+    setState(() {
+      _imageBytes = null;
+      _imageName = null;
+      _imageMime = null;
+    });
+  }
+
+  RecipeImageAttachment? _buildAttachment() {
+    if (_imageBytes == null || _imageMime == null) return null;
+    return RecipeImageAttachment(
+      bytes: _imageBytes!,
+      mimeType: _imageMime!,
+      fileName: _imageName,
+    );
   }
 
   @override
@@ -2790,6 +2886,32 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _pickImage,
+                      icon: const Icon(Icons.add_a_photo_outlined),
+                      label: const Text('Foto anhängen'),
+                    ),
+                    if (_imageBytes != null) ...[
+                      const SizedBox(width: 12),
+                      TextButton.icon(
+                        onPressed: _isLoading ? null : _clearImage,
+                        icon: const Icon(Icons.close),
+                        label: const Text('Foto entfernen'),
+                      ),
+                    ],
+                  ],
+                ),
+                if (_imageBytes != null) ...[
+                  const SizedBox(height: 12),
+                  _ImagePreview(
+                    bytes: _imageBytes!,
+                    fileName: _imageName,
+                    isWide: isWide,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -2831,7 +2953,64 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       ),
     );
   }
+}
 
+class _ImagePreview extends StatelessWidget {
+  const _ImagePreview({
+    required this.bytes,
+    required this.isWide,
+    this.fileName,
+  });
+
+  final Uint8List bytes;
+  final bool isWide;
+  final String? fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF0F172A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : MediaQuery.of(context).size.width;
+                final ratio = isWide ? 16 / 9 : 4 / 3;
+                final double targetHeight =
+                    math.min(availableWidth / ratio, isWide ? 360 : 280);
+                return SizedBox(
+                  height: targetHeight,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              },
+            ),
+          ),
+          if ((fileName ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Text(
+                fileName!,
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RecipeCard extends StatelessWidget {
@@ -3275,9 +3454,7 @@ class _BeerChoice extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isSelected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_off,
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: isSelected ? const Color(0xFF2563EB) : Colors.white54,
             ),
             Expanded(
@@ -3294,7 +3471,8 @@ class _BeerChoice extends StatelessWidget {
 }
 
 class FineTuningGeneralPage extends StatefulWidget {
-  const FineTuningGeneralPage({super.key, required this.beerName, required this.beerType});
+  const FineTuningGeneralPage(
+      {super.key, required this.beerName, required this.beerType});
 
   final String beerName;
   final String beerType;
@@ -3309,7 +3487,8 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
   @override
   void initState() {
     super.initState();
-    profile = FineTuningProfile(beerName: widget.beerName, beerType: widget.beerType);
+    profile =
+        FineTuningProfile(beerName: widget.beerName, beerType: widget.beerType);
     final preset = _beerPresets[widget.beerName];
     if (preset != null) {
       profile.applyPreset(preset);
@@ -3379,8 +3558,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopHerbal,
-                      onChanged: (v) =>
-                          setState(() => profile.hopHerbal = v),
+                      onChanged: (v) => setState(() => profile.hopHerbal = v),
                       baselineKey: 'hopHerbal',
                     ),
                     const SizedBox(height: 12),
@@ -3393,8 +3571,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopFloral,
-                      onChanged: (v) =>
-                          setState(() => profile.hopFloral = v),
+                      onChanged: (v) => setState(() => profile.hopFloral = v),
                       baselineKey: 'hopFloral',
                     ),
                     const SizedBox(height: 12),
@@ -3407,8 +3584,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopFruity,
-                      onChanged: (v) =>
-                          setState(() => profile.hopFruity = v),
+                      onChanged: (v) => setState(() => profile.hopFruity = v),
                       baselineKey: 'hopFruity',
                     ),
                   ],
@@ -3432,8 +3608,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopNose,
-                      onChanged: (v) =>
-                          setState(() => profile.hopNose = v),
+                      onChanged: (v) => setState(() => profile.hopNose = v),
                       baselineKey: 'hopNose',
                     ),
                     const SizedBox(height: 12),
@@ -3446,8 +3621,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopPalate,
-                      onChanged: (v) =>
-                          setState(() => profile.hopPalate = v),
+                      onChanged: (v) => setState(() => profile.hopPalate = v),
                       baselineKey: 'hopPalate',
                     ),
                     const SizedBox(height: 12),
@@ -3460,8 +3634,7 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
                     ),
                     _FineSlider(
                       value: profile.hopFinish,
-                      onChanged: (v) =>
-                          setState(() => profile.hopFinish = v),
+                      onChanged: (v) => setState(() => profile.hopFinish = v),
                       baselineKey: 'hopFinish',
                     ),
                   ],
@@ -3625,88 +3798,94 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _UserNameBanner(),
-            const SizedBox(height: 20),
-            Text(
-              'Feintuning für ${widget.profile.beerName} · Haupttrunk',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-              ),
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _UserNameBanner(),
+                const SizedBox(height: 20),
+                Text(
+                  'Feintuning für ${widget.profile.beerName} · Haupttrunk',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _SliderBlock(
+                  label: 'süffig',
+                  minLabel: 'leicht',
+                  maxLabel: 'kräftig',
+                  value: widget.profile.smooth,
+                  baselineKey: 'smooth',
+                ),
+                _FineSlider(
+                  value: widget.profile.smooth,
+                  onChanged: (v) => setState(() => widget.profile.smooth = v),
+                  baselineKey: 'smooth',
+                ),
+                const SizedBox(height: 12),
+                _SliderBlock(
+                  label: 'vollmundig',
+                  minLabel: 'leicht',
+                  maxLabel: 'kräftig',
+                  value: widget.profile.fullBody,
+                  baselineKey: 'fullBody',
+                ),
+                _FineSlider(
+                  value: widget.profile.fullBody,
+                  onChanged: (v) => setState(() => widget.profile.fullBody = v),
+                  baselineKey: 'fullBody',
+                ),
+                const SizedBox(height: 12),
+                _SliderBlock(
+                  label: 'Malzaroma',
+                  minLabel: 'leicht',
+                  maxLabel: 'kräftig',
+                  value: widget.profile.mainMalt,
+                  baselineKey: 'mainMalt',
+                ),
+                _FineSlider(
+                  value: widget.profile.mainMalt,
+                  onChanged: (v) => setState(() => widget.profile.mainMalt = v),
+                  baselineKey: 'mainMalt',
+                ),
+                const SizedBox(height: 12),
+                _SliderBlock(
+                  label: 'Röstaroma',
+                  minLabel: 'leicht',
+                  maxLabel: 'kräftig',
+                  value: widget.profile.mainRoast,
+                  baselineKey: 'mainRoast',
+                ),
+                _FineSlider(
+                  value: widget.profile.mainRoast,
+                  onChanged: (v) =>
+                      setState(() => widget.profile.mainRoast = v),
+                  baselineKey: 'mainRoast',
+                ),
+                const SizedBox(height: 32),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              FineTuningAftertastePage(profile: widget.profile),
+                        ),
+                      );
+                    },
+                    child: const Text('Weiter zu Feintuning Nachtrunk'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            _SliderBlock(
-              label: 'süffig',
-              minLabel: 'leicht',
-              maxLabel: 'kräftig',
-              value: widget.profile.smooth,
-              baselineKey: 'smooth',
-            ),
-            _FineSlider(
-              value: widget.profile.smooth,
-              onChanged: (v) => setState(() => widget.profile.smooth = v),
-              baselineKey: 'smooth',
-            ),
-            const SizedBox(height: 12),
-            _SliderBlock(
-              label: 'vollmundig',
-              minLabel: 'leicht',
-              maxLabel: 'kräftig',
-              value: widget.profile.fullBody,
-              baselineKey: 'fullBody',
-            ),
-            _FineSlider(
-              value: widget.profile.fullBody,
-              onChanged: (v) => setState(() => widget.profile.fullBody = v),
-              baselineKey: 'fullBody',
-            ),
-            const SizedBox(height: 12),
-            _SliderBlock(
-              label: 'Malzaroma',
-              minLabel: 'leicht',
-              maxLabel: 'kräftig',
-              value: widget.profile.mainMalt,
-              baselineKey: 'mainMalt',
-            ),
-            _FineSlider(
-              value: widget.profile.mainMalt,
-              onChanged: (v) => setState(() => widget.profile.mainMalt = v),
-              baselineKey: 'mainMalt',
-            ),
-            const SizedBox(height: 12),
-            _SliderBlock(
-              label: 'Röstaroma',
-              minLabel: 'leicht',
-              maxLabel: 'kräftig',
-              value: widget.profile.mainRoast,
-              baselineKey: 'mainRoast',
-            ),
-            _FineSlider(
-              value: widget.profile.mainRoast,
-              onChanged: (v) => setState(() => widget.profile.mainRoast = v),
-              baselineKey: 'mainRoast',
-            ),
-            const Spacer(),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          FineTuningAftertastePage(profile: widget.profile),
-                    ),
-                  );
-                },
-                child: const Text('Weiter zu Feintuning Nachtrunk'),
-              ),
-            )
-          ],
+          ),
         ),
       ),
     );
@@ -3911,33 +4090,29 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                   else
                     Column(
                       children: [
-                        ...widget.profile.specialAdditions
-                            .asMap()
-                            .entries
-                            .map(
-                              (entry) {
-                                final addition = entry.value;
-                                final antrunkPercent =
-                                    ((1 - addition.focus) * 100).round();
-                                final abgangPercent = 100 - antrunkPercent;
-                                final intensityPercent =
-                                    (addition.intensity * 100).round();
-                                return Card(
-                                  color: const Color(0xFF0F172A),
-                                  child: ListTile(
-                                    title: Text(addition.title),
-                                    subtitle: Text(
-                                      'Antrunk $antrunkPercent% · Abgang $abgangPercent% · Intensität $intensityPercent%',
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () =>
-                                          removeAddition(entry.key),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                        ...widget.profile.specialAdditions.asMap().entries.map(
+                          (entry) {
+                            final addition = entry.value;
+                            final antrunkPercent =
+                                ((1 - addition.focus) * 100).round();
+                            final abgangPercent = 100 - antrunkPercent;
+                            final intensityPercent =
+                                (addition.intensity * 100).round();
+                            return Card(
+                              color: const Color(0xFF0F172A),
+                              child: ListTile(
+                                title: Text(addition.title),
+                                subtitle: Text(
+                                  'Antrunk $antrunkPercent% · Abgang $abgangPercent% · Intensität $intensityPercent%',
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () => removeAddition(entry.key),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   const SizedBox(height: 24),
@@ -4010,18 +4185,14 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                   else
                     Column(
                       children: [
-                        ...widget.profile.specialStorage
-                            .asMap()
-                            .entries
-                            .map(
+                        ...widget.profile.specialStorage.asMap().entries.map(
                               (entry) => Card(
                                 color: const Color(0xFF0F172A),
                                 child: ListTile(
                                   title: Text(entry.value),
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline),
-                                    onPressed: () =>
-                                        removeStorage(entry.key),
+                                    onPressed: () => removeStorage(entry.key),
                                   ),
                                 ),
                               ),
@@ -4285,8 +4456,7 @@ class RecipeSummaryPage extends StatelessWidget {
 }
 
 class _SummarySection {
-  const _SummarySection(this.title, this.entries,
-      {this.dividerBefore = false});
+  const _SummarySection(this.title, this.entries, {this.dividerBefore = false});
 
   final String title;
   final List<_SummaryEntry> entries;
@@ -4306,48 +4476,37 @@ List<Widget> buildRecipeSummarySections(FineTuningProfile profile) {
     _SummarySection('Hopfen', [
       _SummaryEntry('Aromaintensität', profile.hopIntensity,
           baselineKey: 'hopIntensity'),
-      _SummaryEntry('Kräuterig', profile.hopHerbal,
-          baselineKey: 'hopHerbal'),
-      _SummaryEntry('Blumig', profile.hopFloral,
-          baselineKey: 'hopFloral'),
-      _SummaryEntry('Fruchtig', profile.hopFruity,
-          baselineKey: 'hopFruity'),
+      _SummaryEntry('Kräuterig', profile.hopHerbal, baselineKey: 'hopHerbal'),
+      _SummaryEntry('Blumig', profile.hopFloral, baselineKey: 'hopFloral'),
+      _SummaryEntry('Fruchtig', profile.hopFruity, baselineKey: 'hopFruity'),
     ]),
     _SummarySection('Verteilung', [
-      _SummaryEntry('Nase', profile.hopNose,
-          baselineKey: 'hopNose'),
-      _SummaryEntry('Gaumen', profile.hopPalate,
-          baselineKey: 'hopPalate'),
-      _SummaryEntry('Abgang', profile.hopFinish,
-          baselineKey: 'hopFinish'),
+      _SummaryEntry('Nase', profile.hopNose, baselineKey: 'hopNose'),
+      _SummaryEntry('Gaumen', profile.hopPalate, baselineKey: 'hopPalate'),
+      _SummaryEntry('Abgang', profile.hopFinish, baselineKey: 'hopFinish'),
     ]),
-    _SummarySection('Antrunk', [
-      _SummaryEntry('Mundgefühl', profile.mouthfeel,
-          baselineKey: 'mouthfeel'),
-      _SummaryEntry('Malzaroma', profile.antrunkMalt,
-          baselineKey: 'antrunkMalt'),
-      _SummaryEntry('Röstmalzaroma', profile.antrunkRoast,
-          baselineKey: 'antrunkRoast'),
-    ], dividerBefore: true),
+    _SummarySection(
+        'Antrunk',
+        [
+          _SummaryEntry('Mundgefühl', profile.mouthfeel,
+              baselineKey: 'mouthfeel'),
+          _SummaryEntry('Malzaroma', profile.antrunkMalt,
+              baselineKey: 'antrunkMalt'),
+          _SummaryEntry('Röstmalzaroma', profile.antrunkRoast,
+              baselineKey: 'antrunkRoast'),
+        ],
+        dividerBefore: true),
     _SummarySection('Haupttrunk', [
-      _SummaryEntry('süffig', profile.smooth,
-          baselineKey: 'smooth'),
-      _SummaryEntry('vollmundig', profile.fullBody,
-          baselineKey: 'fullBody'),
-      _SummaryEntry('Malzaroma', profile.mainMalt,
-          baselineKey: 'mainMalt'),
-      _SummaryEntry('Röstaroma', profile.mainRoast,
-          baselineKey: 'mainRoast'),
+      _SummaryEntry('süffig', profile.smooth, baselineKey: 'smooth'),
+      _SummaryEntry('vollmundig', profile.fullBody, baselineKey: 'fullBody'),
+      _SummaryEntry('Malzaroma', profile.mainMalt, baselineKey: 'mainMalt'),
+      _SummaryEntry('Röstaroma', profile.mainRoast, baselineKey: 'mainRoast'),
     ]),
     _SummarySection('Nachtrunk', [
-      _SummaryEntry('abklingen', profile.fade,
-          baselineKey: 'fade'),
-      _SummaryEntry('erfrischend', profile.fresh,
-          baselineKey: 'fresh'),
-      _SummaryEntry('trocken', profile.dry,
-          baselineKey: 'dry'),
-      _SummaryEntry('langanhaltend', profile.lasting,
-          baselineKey: 'lasting'),
+      _SummaryEntry('abklingen', profile.fade, baselineKey: 'fade'),
+      _SummaryEntry('erfrischend', profile.fresh, baselineKey: 'fresh'),
+      _SummaryEntry('trocken', profile.dry, baselineKey: 'dry'),
+      _SummaryEntry('langanhaltend', profile.lasting, baselineKey: 'lasting'),
     ]),
   ];
 
@@ -4390,8 +4549,8 @@ List<Widget> buildRecipeSummarySections(FineTuningProfile profile) {
                       style: const TextStyle(fontSize: 14),
                     ),
                     const SizedBox(width: 20),
-                      Text(
-                        _formatSummaryDiff(profile, entry),
+                    Text(
+                      _formatSummaryDiff(profile, entry),
                       style: const TextStyle(
                         fontSize: 13,
                         color: Colors.white70,
@@ -4428,11 +4587,9 @@ List<Widget> buildRecipeSummarySections(FineTuningProfile profile) {
             const SizedBox(height: 6),
             ...profile.specialAdditions.map(
               (addition) {
-                final antrunkPercent =
-                    ((1 - addition.focus) * 100).round();
+                final antrunkPercent = ((1 - addition.focus) * 100).round();
                 final abgangPercent = 100 - antrunkPercent;
-                final intensityPercent =
-                    (addition.intensity * 100).round();
+                final intensityPercent = (addition.intensity * 100).round();
                 return Padding(
                   padding: const EdgeInsets.only(left: 20, bottom: 8),
                   child: Text(
@@ -4479,13 +4636,13 @@ List<Widget> buildRecipeSummarySections(FineTuningProfile profile) {
   return widgets;
 }
 
-String _formatSummaryDiff(
-    FineTuningProfile profile, _SummaryEntry entry) {
+String _formatSummaryDiff(FineTuningProfile profile, _SummaryEntry entry) {
   final delta = profile.diff(entry.baselineKey, entry.value);
   if (delta.abs() < 0.005) return '0%';
   final sign = delta > 0 ? '+' : '-';
   return '$sign${(delta.abs() * 100).round()}%';
 }
+
 class _SliderBlock extends StatelessWidget {
   const _SliderBlock({
     required this.label,
@@ -4648,8 +4805,7 @@ class _Marker extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(fontSize: 10, color: Colors.white54),
+                    style: const TextStyle(fontSize: 10, color: Colors.white54),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -4678,8 +4834,7 @@ class _Marker extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(fontSize: 10, color: Colors.white54),
+                    style: const TextStyle(fontSize: 10, color: Colors.white54),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -4839,14 +4994,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
         maltDepots = results[4] as List<MaltDepotEntryModel>;
         finingSettings = results[5] as FiningAgents;
         selectedKettle = pickDefault(kettles, (k) => k.isDefault);
-        selectedWaterProfile =
-            pickDefault(waterProfiles, (p) => p.isDefault);
-        selectedFermenter =
-            pickDefault(fermenters, (f) => f.isDefault);
-        selectedController =
-            pickDefault(controllers, (c) => c.isDefault);
-        selectedMaltDepot =
-            maltDepots.isNotEmpty ? maltDepots.first : null;
+        selectedWaterProfile = pickDefault(waterProfiles, (p) => p.isDefault);
+        selectedFermenter = pickDefault(fermenters, (f) => f.isDefault);
+        selectedController = pickDefault(controllers, (c) => c.isDefault);
+        selectedMaltDepot = maltDepots.isNotEmpty ? maltDepots.first : null;
         final packagingProfiles = results[6] as List<PackagingProfile>;
         if (packagingProfiles.isNotEmpty) {
           selectedPackagingProfile =
@@ -4943,9 +5094,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
                           setState(() => selectedFermenter = fermenter);
                         },
                         isDefaultBuilder: (fermenter) => fermenter.isDefault,
-                        labelBuilder: (fermenter) => fermenter.type?.isNotEmpty == true
-                            ? '${fermenter.brand} ${fermenter.type}'
-                            : fermenter.brand,
+                        labelBuilder: (fermenter) =>
+                            fermenter.type?.isNotEmpty == true
+                                ? '${fermenter.brand} ${fermenter.type}'
+                                : fermenter.brand,
                       ),
                       const SizedBox(height: 18),
                       _EquipmentSection<FermenterControllerModel>(
@@ -4983,7 +5135,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       const SizedBox(height: 12),
                       ...buildRecipeSummarySections(widget.profile),
                     ],
-                ),
+                  ),
                 ),
     );
   }
@@ -5215,7 +5367,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
     });
     return prompt;
   }
-
 }
 
 class _EquipmentSection<T> extends StatelessWidget {
@@ -5301,7 +5452,8 @@ class _EquipmentSection<T> extends StatelessWidget {
 }
 
 class RecipeResultPage extends StatelessWidget {
-  const RecipeResultPage({super.key, required this.prompt, required this.response});
+  const RecipeResultPage(
+      {super.key, required this.prompt, required this.response});
 
   final String prompt;
   final String response;
@@ -5549,8 +5701,7 @@ List<_RecipeEntry> _formatKochplan(dynamic input) {
   if (input is Map<String, dynamic>) {
     final lines = <_RecipeEntry>[];
     if (input['Gesamte_Kochdauer'] != null) {
-      lines.add(_entry(
-          'Gesamte Kochdauer: ${input['Gesamte_Kochdauer']} min'));
+      lines.add(_entry('Gesamte Kochdauer: ${input['Gesamte_Kochdauer']} min'));
     }
     if (input['Kochphasen'] != null) {
       lines.add(_entry('Kochphasen:'));
@@ -5619,8 +5770,7 @@ _RecipeEntry _formatEntry(dynamic value) {
       if (_isUrlKey(key)) return;
       parts.add('${_beautifyKey(key)}: ${_formatSimpleValue(val)}');
     });
-    final text =
-        parts.isEmpty ? (url ?? 'Keine Angaben') : parts.join(', ');
+    final text = parts.isEmpty ? (url ?? 'Keine Angaben') : parts.join(', ');
     return _RecipeEntry(text: text, link: url);
   }
   return _RecipeEntry(text: value.toString());
@@ -5799,6 +5949,7 @@ class _RecipeEntry {
     );
   }
 }
+
 class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
   final MaltDepotService service = MaltDepotService();
   bool isLoading = true;
@@ -6015,8 +6166,8 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
         entries.removeWhere((item) => item.id == entry.id);
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Malzlieferant "${entry.name}" gelöscht')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Malzlieferant "${entry.name}" gelöscht')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -6052,7 +6203,6 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     }
   }
 }
-
 
 class FermenterControllerManagerPage extends StatefulWidget {
   const FermenterControllerManagerPage({super.key, required this.profileId});
@@ -6171,8 +6321,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
         extraCtrls
           ..clear()
           ..addAll(
-            data.extras
-                .map((extra) => TextEditingController(text: extra)),
+            data.extras.map((extra) => TextEditingController(text: extra)),
           );
       });
     } catch (e) {
@@ -6239,26 +6388,26 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                         ),
                         const SizedBox(height: 8),
                         ...extraCtrls.asMap().entries.map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: entry.value,
-                                    decoration: InputDecoration(
-                                      labelText: 'Zusatz ${entry.key + 1}',
+                              (entry) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: entry.value,
+                                        decoration: InputDecoration(
+                                          labelText: 'Zusatz ${entry.key + 1}',
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    IconButton(
+                                      onPressed: () => removeExtra(entry.key),
+                                      icon: const Icon(Icons.delete_outline),
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  onPressed: () => removeExtra(entry.key),
-                                  icon: const Icon(Icons.delete_outline),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
                         TextField(
                           controller: newExtraCtrl,
                           decoration: const InputDecoration(
@@ -6543,9 +6692,8 @@ class _PackagingProfileManagerPageState
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: Text(editing == null
-              ? 'Profil hinzufügen'
-              : 'Profil bearbeiten'),
+          title:
+              Text(editing == null ? 'Profil hinzufügen' : 'Profil bearbeiten'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -6570,8 +6718,7 @@ class _PackagingProfileManagerPageState
                   value: bottleEnabled,
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Flaschen abfüllen'),
-                  onChanged: (value) =>
-                      setState(() => bottleEnabled = value),
+                  onChanged: (value) => setState(() => bottleEnabled = value),
                 ),
                 if (bottleEnabled) ...[
                   const SizedBox(height: 8),
@@ -6598,8 +6745,7 @@ class _PackagingProfileManagerPageState
                   value: kegEnabled,
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Kegs abfüllen'),
-                  onChanged: (value) =>
-                      setState(() => kegEnabled = value),
+                  onChanged: (value) => setState(() => kegEnabled = value),
                 ),
                 if (kegEnabled) ...[
                   const SizedBox(height: 8),
@@ -6679,12 +6825,9 @@ class _PackagingProfileManagerPageState
       bottleStorageTempC:
           bottleEnabled ? parseDouble(bottleStorageCtrl.text) : null,
       kegEnabled: kegEnabled,
-      kegCarbonationTempC:
-          kegEnabled ? parseDouble(kegCarbCtrl.text) : null,
-      kegStorageTempC:
-          kegEnabled ? parseDouble(kegStorageCtrl.text) : null,
-      kegVolumeLiters:
-          kegEnabled ? parseDouble(volumeCtrl.text) : null,
+      kegCarbonationTempC: kegEnabled ? parseDouble(kegCarbCtrl.text) : null,
+      kegStorageTempC: kegEnabled ? parseDouble(kegStorageCtrl.text) : null,
+      kegVolumeLiters: kegEnabled ? parseDouble(volumeCtrl.text) : null,
       isDefault: isDefault,
     );
 
@@ -6699,8 +6842,7 @@ class _PackagingProfileManagerPageState
                   : existing.copyWith(isDefault: false))
               .toList();
         }
-        final index =
-            profiles.indexWhere((element) => element.id == saved.id);
+        final index = profiles.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
           profiles[index] = saved;
         } else {
@@ -6746,8 +6888,8 @@ class _PackagingProfileManagerPageState
         profiles.removeWhere((item) => item.id == profile.id);
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Profil "${profile.name}" gelöscht')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Profil "${profile.name}" gelöscht')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -7010,7 +7152,9 @@ class _FermenterControllerManagerPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              editing == null ? 'Kontroller erstellt' : 'Kontroller aktualisiert',
+              editing == null
+                  ? 'Kontroller erstellt'
+                  : 'Kontroller aktualisiert',
             ),
           ),
         );

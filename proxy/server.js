@@ -84,10 +84,34 @@ async function handleBrewRequest(req, res) {
     const body = await readBody(req);
     const data = JSON.parse(body || '{}');
     const prompt = typeof data.prompt === 'string' ? data.prompt.trim() : '';
+    const rawImage = data && typeof data === 'object' ? data.image : null;
+    const imageBase64 =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.data === 'string'
+        ? rawImage.data
+        : null;
+    const imageMime =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.mime_type === 'string'
+        ? rawImage.mime_type
+        : null;
 
     if (!prompt) {
       respondJson(res, 400, { error: 'Prompt is required.' });
       return;
+    }
+
+    const userContent = [
+      {
+        type: 'input_text',
+        text: prompt,
+      },
+    ];
+
+    if (imageBase64 && imageMime) {
+      userContent.push({
+        type: 'input_image',
+        image_base64: imageBase64,
+        mime_type: imageMime,
+      });
     }
 
     const openAiResponse = await fetch('https://api.openai.com/v1/responses', {
@@ -104,18 +128,13 @@ async function handleBrewRequest(req, res) {
             content: [
               {
                 type: 'input_text',
-                text: 'Du bist ein erfahrener Braumeister. Erstelle strukturierte Bierrezepte mit Zutatenliste, Brauschritten und optionalen Varianten.',
+                text: 'Du bist ein erfahrener Braumeister. Erstelle strukturierte Bierrezepte mit Zutatenliste, Brauschritten und optionalen Varianten. Wenn der Nutzer ein Foto mitsendet, nutze die visuellen Hinweise aus dem Bild für deine Empfehlung.',
               },
             ],
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: prompt,
-              },
-            ],
+            content: userContent,
           },
         ],
         temperature: 0.7,
