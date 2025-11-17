@@ -109,8 +109,7 @@ async function handleBrewRequest(req, res) {
     if (imageBase64 && imageMime) {
       userContent.push({
         type: 'input_image',
-        image_base64: imageBase64,
-        mime_type: imageMime,
+        image_url: `data:${imageMime};base64,${imageBase64}`,
       });
     }
 
@@ -285,15 +284,11 @@ async function requestRaptToken() {
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let data = '';
+    const chunks = [];
     req.on('data', chunk => {
-      data += chunk;
-      if (data.length > 1e6) {
-        req.socket.destroy();
-        reject(new Error('Request body too large'));
-      }
+      chunks.push(chunk);
     });
-    req.on('end', () => resolve(data));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString()));
     req.on('error', reject);
   });
 }

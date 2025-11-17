@@ -2758,13 +2758,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     });
 
     final attachment = _buildAttachment();
-    final enrichedPrompt = attachment != null
-        ? '$prompt\n\n[Foto angehängt: Nutze die sichtbaren Details, Farben oder Zutaten aus dem Bild als zusätzliche Hinweise.]'
-        : prompt;
-
     try {
       final recipe = await _service.brewRecipe(
-        enrichedPrompt,
+        prompt,
         attachment: attachment,
       );
       setState(() => _response = recipe);
@@ -2855,101 +2851,107 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         title: const Text('AiBrewGenius'),
         centerTitle: true,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: _UserNameBanner(),
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Image.asset(
-                    'assets/icon.png',
-                    height: 96,
-                    semanticLabel: 'AiBrewGenius',
-                  ),
-                ),
-                TextField(
-                  controller: _promptController,
-                  maxLines: 5,
-                  minLines: 3,
-                  textInputAction: TextInputAction.newline,
-                  decoration: const InputDecoration(
-                    hintText:
-                        'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+      body: Stack(
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 820),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed: _isLoading ? null : _pickImage,
-                      icon: const Icon(Icons.add_a_photo_outlined),
-                      label: const Text('Foto anhängen'),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: _UserNameBanner(),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Image.asset(
+                        'assets/icon.png',
+                        height: 96,
+                        semanticLabel: 'AiBrewGenius',
+                      ),
+                    ),
+                    TextField(
+                      controller: _promptController,
+                      maxLines: 5,
+                      minLines: 3,
+                      textInputAction: TextInputAction.newline,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _pickImage,
+                          icon: const Icon(Icons.add_a_photo_outlined),
+                          label: const Text('Foto anhängen'),
+                        ),
+                        if (_imageBytes != null) ...[
+                          const SizedBox(width: 12),
+                          TextButton.icon(
+                            onPressed: _isLoading ? null : _clearImage,
+                            icon: const Icon(Icons.close),
+                            label: const Text('Foto entfernen'),
+                          ),
+                        ],
+                      ],
                     ),
                     if (_imageBytes != null) ...[
-                      const SizedBox(width: 12),
-                      TextButton.icon(
-                        onPressed: _isLoading ? null : _clearImage,
-                        icon: const Icon(Icons.close),
-                        label: const Text('Foto entfernen'),
+                      const SizedBox(height: 12),
+                      _ImagePreview(
+                        bytes: _imageBytes!,
+                        fileName: _imageName,
+                        isWide: isWide,
                       ),
+                      const SizedBox(height: 12),
                     ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isLoading ? null : _requestRecipe,
+                        icon: const Icon(Icons.local_drink),
+                        label: Text(
+                          _isLoading ? 'Braut Rezept …' : 'Rezept erstellen',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openHomepage,
+                        icon: const Icon(Icons.home),
+                        label: const Text('Zur Hauptseite'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _error != null
+                              ? _ErrorNotice(
+                                  message: _error!,
+                                  onRetry: _requestRecipe,
+                                )
+                              : _response != null
+                                  ? _RecipeCard(
+                                      text: _response!, isWide: isWide)
+                                  : const _Placeholder(),
+                    ),
                   ],
                 ),
-                if (_imageBytes != null) ...[
-                  const SizedBox(height: 12),
-                  _ImagePreview(
-                    bytes: _imageBytes!,
-                    fileName: _imageName,
-                    isWide: isWide,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _requestRecipe,
-                    icon: const Icon(Icons.local_drink),
-                    label: Text(
-                        _isLoading ? 'Braut Rezept …' : 'Rezept erstellen'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _openHomepage,
-                    icon: const Icon(Icons.home),
-                    label: const Text('Zur Hauptseite'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _error != null
-                            ? _ErrorNotice(
-                                message: _error!,
-                                onRetry: _requestRecipe,
-                              )
-                            : _response != null
-                                ? _RecipeCard(text: _response!, isWide: isWide)
-                                : const _Placeholder(),
-                  ),
-                )
-              ],
+              ),
             ),
           ),
-        ),
+          if (_isLoading) const _LoadingOverlay(),
+        ],
       ),
     );
   }
@@ -7220,5 +7222,25 @@ class _FermenterControllerManagerPageState
     if (confirmed == true) {
       await onDelete();
     }
+  }
+}
+
+class _LoadingOverlay extends StatelessWidget {
+  const _LoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.35),
+        child: const Center(
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
+    );
   }
 }
