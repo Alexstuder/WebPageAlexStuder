@@ -3821,17 +3821,17 @@ class SpecialAdditionsPage extends StatefulWidget {
 }
 
 class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
-  final TextEditingController _titleCtrl = TextEditingController();
-  final TextEditingController _storageCtrl = TextEditingController();
-  double _focusValue = 0.5;
-  double _intensityValue = 0.5;
-  String? _titleError;
-  String? _storageError;
+  final TextEditingController titleCtrl = TextEditingController();
+  final TextEditingController storageCtrl = TextEditingController();
+  double focusValue = 0.5;
+  double intensityValue = 0.5;
+  String? titleError;
+  String? storageError;
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
-    _storageCtrl.dispose();
+    titleCtrl.dispose();
+    storageCtrl.dispose();
     super.dispose();
   }
 
@@ -3914,7 +3914,7 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete_outline),
                                       onPressed: () =>
-                                          _removeAddition(entry.key),
+                                          removeAddition(entry.key),
                                     ),
                                   ),
                                 );
@@ -3932,29 +3932,29 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
-                    controller: _titleCtrl,
+                    controller: titleCtrl,
                     decoration: InputDecoration(
                       labelText: 'Bezeichnung',
                       hintText: 'z. B. Rumfass Lagerung',
-                      errorText: _titleError,
+                      errorText: titleError,
                     ),
                   ),
                   const SizedBox(height: 12),
                   const SizedBox(height: 12),
                   _FocusSlider(
-                    value: _focusValue,
-                    onChanged: (v) => setState(() => _focusValue = v),
+                    value: focusValue,
+                    onChanged: (v) => setState(() => focusValue = v),
                   ),
                   const SizedBox(height: 12),
                   _IntensitySlider(
-                    value: _intensityValue,
-                    onChanged: (v) => setState(() => _intensityValue = v),
+                    value: intensityValue,
+                    onChanged: (v) => setState(() => intensityValue = v),
                   ),
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
                     child: FilledButton.icon(
-                      onPressed: _addAddition,
+                      onPressed: addAddition,
                       icon: const Icon(Icons.add),
                       label: const Text('Hinzufügen'),
                     ),
@@ -4003,7 +4003,7 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                                   trailing: IconButton(
                                     icon: const Icon(Icons.delete_outline),
                                     onPressed: () =>
-                                        _removeStorage(entry.key),
+                                        removeStorage(entry.key),
                                   ),
                                 ),
                               ),
@@ -4011,17 +4011,17 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
                       ],
                     ),
                   TextField(
-                    controller: _storageCtrl,
+                    controller: storageCtrl,
                     decoration: InputDecoration(
                       labelText: 'z. B. Barrel Aged',
-                      errorText: _storageError,
+                      errorText: storageError,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
                     child: FilledButton.icon(
-                      onPressed: _addStorage,
+                      onPressed: addStorage,
                       icon: const Icon(Icons.add),
                       label: const Text('Lagerung hinzufügen'),
                     ),
@@ -4033,12 +4033,12 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
             Row(
               children: [
                 TextButton(
-                  onPressed: _goToSummary,
+                  onPressed: goToSummary,
                   child: const Text('Überspringen'),
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: _goToSummary,
+                  onPressed: goToSummary,
                   child: const Text('Weiter zum Rezept'),
                 ),
               ],
@@ -4049,53 +4049,53 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
     );
   }
 
-  void _addAddition() {
-    final title = _titleCtrl.text.trim();
+  void addAddition() {
+    final title = titleCtrl.text.trim();
     if (title.isEmpty) {
-      setState(() => _titleError = 'Bezeichnung erforderlich');
+      setState(() => titleError = 'Bezeichnung erforderlich');
       return;
     }
     setState(() {
-      _titleError = null;
+      titleError = null;
       widget.profile.specialAdditions.add(
         SpecialAddition(
           title: title,
-          focus: _focusValue,
-          intensity: _intensityValue,
+          focus: focusValue,
+          intensity: intensityValue,
         ),
       );
-      _titleCtrl.clear();
-      _focusValue = 0.5;
-      _intensityValue = 0.5;
+      titleCtrl.clear();
+      focusValue = 0.5;
+      intensityValue = 0.5;
     });
   }
 
-  void _removeAddition(int index) {
+  void removeAddition(int index) {
     setState(() {
       widget.profile.specialAdditions.removeAt(index);
     });
   }
 
-  void _addStorage() {
-    final entry = _storageCtrl.text.trim();
+  void addStorage() {
+    final entry = storageCtrl.text.trim();
     if (entry.isEmpty) {
-      setState(() => _storageError = 'Bitte eine Lagerung eingeben');
+      setState(() => storageError = 'Bitte eine Lagerung eingeben');
       return;
     }
     setState(() {
-      _storageError = null;
+      storageError = null;
       widget.profile.specialStorage.add(entry);
-      _storageCtrl.clear();
+      storageCtrl.clear();
     });
   }
 
-  void _removeStorage(int index) {
+  void removeStorage(int index) {
     setState(() {
       widget.profile.specialStorage.removeAt(index);
     });
   }
 
-  void _goToSummary() {
+  void goToSummary() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RecipeSummaryPage(profile: widget.profile),
@@ -4556,7 +4556,7 @@ class _FineSlider extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.maxWidth;
-          final points = _markerPoints(baselineKey, width);
+          final points = markerPoints(baselineKey, width);
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -4580,7 +4580,7 @@ class _FineSlider extends StatelessWidget {
     );
   }
 
-  List<Widget> _markerPoints(String key, double width) {
+  List<Widget> markerPoints(String key, double width) {
     final entries = _beerPresets.entries
         .map((e) => MapEntry(e.key, e.value[key]))
         .where((e) => e.value != null)
@@ -4705,38 +4705,38 @@ class EquipmentPage extends StatefulWidget {
 }
 
 class _EquipmentPageState extends State<EquipmentPage> {
-  final BrewKettleService _kettleService = BrewKettleService();
-  final WaterProfileService _waterService = WaterProfileService();
-  final FermenterService _fermenterService = FermenterService();
-  final FermenterControllerService _controllerService =
+  final BrewKettleService kettleService = BrewKettleService();
+  final WaterProfileService waterService = WaterProfileService();
+  final FermenterService fermenterService = FermenterService();
+  final FermenterControllerService controllerService =
       FermenterControllerService();
-  final MaltDepotService _maltService = MaltDepotService();
-  final FiningAgentsService _finingService = FiningAgentsService();
-  final PackagingProfileService _packagingService = PackagingProfileService();
-  final OpenAIService _openAIService = OpenAIService();
+  final MaltDepotService maltService = MaltDepotService();
+  final FiningAgentsService finingService = FiningAgentsService();
+  final PackagingProfileService packagingService = PackagingProfileService();
+  final OpenAIService openAIService = OpenAIService();
 
-  bool _isLoading = true;
-  bool _isCalculating = false;
-  String? _error;
+  bool isLoading = true;
+  bool isCalculating = false;
+  String? error;
 
-  List<BrewKettle> _kettles = [];
-  List<WaterProfile> _waterProfiles = [];
-  List<Fermenter> _fermenters = [];
-  List<FermenterControllerModel> _controllers = [];
-  List<MaltDepotEntryModel> _maltDepots = [];
-  FiningAgents? _finingSettings;
-  PackagingProfile? _selectedPackagingProfile;
+  List<BrewKettle> kettles = [];
+  List<WaterProfile> waterProfiles = [];
+  List<Fermenter> fermenters = [];
+  List<FermenterControllerModel> controllers = [];
+  List<MaltDepotEntryModel> maltDepots = [];
+  FiningAgents? finingSettings;
+  PackagingProfile? selectedPackagingProfile;
 
-  BrewKettle? _selectedKettle;
-  WaterProfile? _selectedWaterProfile;
-  Fermenter? _selectedFermenter;
-  FermenterControllerModel? _selectedController;
-  MaltDepotEntryModel? _selectedMaltDepot;
-  final TextEditingController _batchSizeCtrl = TextEditingController();
-  final FocusNode _batchSizeFocusNode = FocusNode();
+  BrewKettle? selectedKettle;
+  WaterProfile? selectedWaterProfile;
+  Fermenter? selectedFermenter;
+  FermenterControllerModel? selectedController;
+  MaltDepotEntryModel? selectedMaltDepot;
+  final TextEditingController batchSizeCtrl = TextEditingController();
+  final FocusNode batchSizeFocusNode = FocusNode();
 
-  static const String _profileId = UserProfileService.defaultProfileId;
-  static const Map<String, Map<String, String>> _finingMetadata = {
+  static const String profileId = UserProfileService.defaultProfileId;
+  static const Map<String, Map<String, String>> finingMetadata = {
     'irish_moss': {
       'name': 'Irish Moss',
       'purpose': 'Bindet Heißtrub für klare Würze.',
@@ -4787,66 +4787,66 @@ class _EquipmentPageState extends State<EquipmentPage> {
   @override
   void initState() {
     super.initState();
-    _loadEquipment();
+    loadEquipment();
   }
 
   @override
   void dispose() {
-    _batchSizeCtrl.dispose();
-    _batchSizeFocusNode.dispose();
+    batchSizeCtrl.dispose();
+    batchSizeFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _loadEquipment() async {
+  Future<void> loadEquipment() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      isLoading = true;
+      error = null;
     });
     try {
       final results = await Future.wait([
-        _kettleService.fetchKettles(_profileId),
-        _waterService.fetchProfiles(_profileId),
-        _fermenterService.fetchFermenters(_profileId),
-        _controllerService.fetchControllers(_profileId),
-        _maltService.fetchEntries(_profileId),
-        _finingService.fetchSettings(_profileId),
-        _packagingService.fetchProfiles(_profileId),
+        kettleService.fetchKettles(profileId),
+        waterService.fetchProfiles(profileId),
+        fermenterService.fetchFermenters(profileId),
+        controllerService.fetchControllers(profileId),
+        maltService.fetchEntries(profileId),
+        finingService.fetchSettings(profileId),
+        packagingService.fetchProfiles(profileId),
       ]);
       if (!mounted) return;
       setState(() {
-        _kettles = results[0] as List<BrewKettle>;
-        _waterProfiles = results[1] as List<WaterProfile>;
-        _fermenters = results[2] as List<Fermenter>;
-        _controllers = results[3] as List<FermenterControllerModel>;
-        _maltDepots = results[4] as List<MaltDepotEntryModel>;
-        _finingSettings = results[5] as FiningAgents;
-        _selectedKettle = _pickDefault(_kettles, (k) => k.isDefault);
-        _selectedWaterProfile =
-            _pickDefault(_waterProfiles, (p) => p.isDefault);
-        _selectedFermenter =
-            _pickDefault(_fermenters, (f) => f.isDefault);
-        _selectedController =
-            _pickDefault(_controllers, (c) => c.isDefault);
-        _selectedMaltDepot =
-            _maltDepots.isNotEmpty ? _maltDepots.first : null;
+        kettles = results[0] as List<BrewKettle>;
+        waterProfiles = results[1] as List<WaterProfile>;
+        fermenters = results[2] as List<Fermenter>;
+        controllers = results[3] as List<FermenterControllerModel>;
+        maltDepots = results[4] as List<MaltDepotEntryModel>;
+        finingSettings = results[5] as FiningAgents;
+        selectedKettle = pickDefault(kettles, (k) => k.isDefault);
+        selectedWaterProfile =
+            pickDefault(waterProfiles, (p) => p.isDefault);
+        selectedFermenter =
+            pickDefault(fermenters, (f) => f.isDefault);
+        selectedController =
+            pickDefault(controllers, (c) => c.isDefault);
+        selectedMaltDepot =
+            maltDepots.isNotEmpty ? maltDepots.first : null;
         final packagingProfiles = results[6] as List<PackagingProfile>;
         if (packagingProfiles.isNotEmpty) {
-          _selectedPackagingProfile =
-              _pickDefault(packagingProfiles, (p) => p.isDefault) ??
+          selectedPackagingProfile =
+              pickDefault(packagingProfiles, (p) => p.isDefault) ??
                   packagingProfiles.first;
         } else {
-          _selectedPackagingProfile = null;
+          selectedPackagingProfile = null;
         }
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        error = e.toString();
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -4858,26 +4858,26 @@ class _EquipmentPageState extends State<EquipmentPage> {
       appBar: AppBar(
         title: const Text('Equipment'),
       ),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : error != null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      'Equipment konnte nicht geladen werden:\n$_error',
+                      'Equipment konnte nicht geladen werden:\n$error',
                       textAlign: TextAlign.center,
                     ),
                   ),
                 )
               : RefreshIndicator(
-                  onRefresh: _loadEquipment,
+                  onRefresh: loadEquipment,
                   child: ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
                       TextField(
-                        controller: _batchSizeCtrl,
-                        focusNode: _batchSizeFocusNode,
+                        controller: batchSizeCtrl,
+                        focusNode: batchSizeFocusNode,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
@@ -4887,15 +4887,15 @@ class _EquipmentPageState extends State<EquipmentPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildRecipeButton(),
+                      buildRecipeButton(),
                       const SizedBox(height: 24),
                       _EquipmentSection<BrewKettle>(
                         title: 'Braukessel',
-                        items: _kettles,
-                        selected: _selectedKettle,
+                        items: kettles,
+                        selected: selectedKettle,
                         onSelected: (kettle) {
                           if (kettle == null) return;
-                          setState(() => _selectedKettle = kettle);
+                          setState(() => selectedKettle = kettle);
                         },
                         isDefaultBuilder: (kettle) => kettle.isDefault,
                         labelBuilder: (kettle) =>
@@ -4906,11 +4906,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       const SizedBox(height: 18),
                       _EquipmentSection<WaterProfile>(
                         title: 'Wasserprofil',
-                        items: _waterProfiles,
-                        selected: _selectedWaterProfile,
+                        items: waterProfiles,
+                        selected: selectedWaterProfile,
                         onSelected: (profile) {
                           if (profile == null) return;
-                          setState(() => _selectedWaterProfile = profile);
+                          setState(() => selectedWaterProfile = profile);
                         },
                         isDefaultBuilder: (profile) => profile.isDefault,
                         labelBuilder: (profile) => profile.name,
@@ -4918,11 +4918,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       const SizedBox(height: 18),
                       _EquipmentSection<Fermenter>(
                         title: 'Fermentierer',
-                        items: _fermenters,
-                        selected: _selectedFermenter,
+                        items: fermenters,
+                        selected: selectedFermenter,
                         onSelected: (fermenter) {
                           if (fermenter == null) return;
-                          setState(() => _selectedFermenter = fermenter);
+                          setState(() => selectedFermenter = fermenter);
                         },
                         isDefaultBuilder: (fermenter) => fermenter.isDefault,
                         labelBuilder: (fermenter) => fermenter.type?.isNotEmpty == true
@@ -4932,11 +4932,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       const SizedBox(height: 18),
                       _EquipmentSection<FermenterControllerModel>(
                         title: 'Kontroller',
-                        items: _controllers,
-                        selected: _selectedController,
+                        items: controllers,
+                        selected: selectedController,
                         onSelected: (controller) {
                           if (controller == null) return;
-                          setState(() => _selectedController = controller);
+                          setState(() => selectedController = controller);
                         },
                         isDefaultBuilder: (controller) => controller.isDefault,
                         labelBuilder: (controller) => controller.name,
@@ -4944,11 +4944,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       const SizedBox(height: 18),
                       _EquipmentSection<MaltDepotEntryModel>(
                         title: 'Malzdepot',
-                        items: _maltDepots,
-                        selected: _selectedMaltDepot,
+                        items: maltDepots,
+                        selected: selectedMaltDepot,
                         onSelected: (entry) {
                           if (entry == null) return;
-                          setState(() => _selectedMaltDepot = entry);
+                          setState(() => selectedMaltDepot = entry);
                         },
                         labelBuilder: (entry) => entry.name,
                       ),
@@ -4970,33 +4970,33 @@ class _EquipmentPageState extends State<EquipmentPage> {
     );
   }
 
-  Widget _buildRecipeButton() {
+  Widget buildRecipeButton() {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _isCalculating ? null : _generateRecipe,
+        onPressed: isCalculating ? null : generateRecipe,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
           side: const BorderSide(color: Colors.purple),
           foregroundColor: Colors.white,
           backgroundColor: Colors.purple.withValues(alpha: 0.15),
         ),
-        icon: _isCalculating
+        icon: isCalculating
             ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.science_rounded),
-        label: Text(_isCalculating ? 'Berechne …' : 'Rezept erstellen'),
+        label: Text(isCalculating ? 'Berechne …' : 'Rezept erstellen'),
       ),
     );
   }
 
-  Future<void> _generateRecipe() async {
-    final batchSize = _batchSizeCtrl.text.trim();
+  Future<void> generateRecipe() async {
+    final batchSize = batchSizeCtrl.text.trim();
     if (batchSize.isEmpty) {
-      _batchSizeFocusNode.requestFocus();
+      batchSizeFocusNode.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Bitte Ziel Menge eingeben')),
       );
@@ -5004,11 +5004,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
     }
     try {
       setState(() {
-        _isCalculating = true;
+        isCalculating = true;
       });
       final template = await rootBundle.loadString('prompt/rezept_basis');
-      final prompt = _buildPrompt(template);
-      final response = await _openAIService.brewRecipe(prompt);
+      final prompt = buildPrompt(template);
+      final response = await openAIService.brewRecipe(prompt);
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -5026,13 +5026,13 @@ class _EquipmentPageState extends State<EquipmentPage> {
     } finally {
       if (mounted) {
         setState(() {
-          _isCalculating = false;
+          isCalculating = false;
         });
       }
     }
   }
 
-  T? _pickDefault<T>(List<T> items, bool Function(T item) isDefault) {
+  T? pickDefault<T>(List<T> items, bool Function(T item) isDefault) {
     if (items.isEmpty) return null;
     for (final item in items) {
       if (isDefault(item)) return item;
@@ -5040,9 +5040,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return items.first;
   }
 
-  String _buildShopListJson() {
-    if (_maltDepots.isEmpty) return '[]';
-    final list = _maltDepots.map((entry) {
+  String buildShopListJson() {
+    if (maltDepots.isEmpty) return '[]';
+    final list = maltDepots.map((entry) {
       final url = (entry.url ?? '').trim();
       final map = <String, String>{'shop_name': entry.name};
       if (url.isNotEmpty) {
@@ -5053,7 +5053,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return jsonEncode(list);
   }
 
-  String _buildSpecialAdditionsJson() {
+  String buildSpecialAdditionsJson() {
     if (widget.profile.specialAdditions.isEmpty) return '[]';
     final list = widget.profile.specialAdditions.map((addition) {
       final antrunkPercent = ((1 - addition.focus) * 100).round();
@@ -5069,7 +5069,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return jsonEncode(list);
   }
 
-  String _buildSpecialStorageJson() {
+  String buildSpecialStorageJson() {
     if (widget.profile.specialStorage.isEmpty) return '[]';
     final list = widget.profile.specialStorage
         .map((entry) => entry.trim())
@@ -5079,14 +5079,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return jsonEncode(list);
   }
 
-  String _buildFiningAgentsJson() {
-    final settings = _finingSettings;
+  String buildFiningAgentsJson() {
+    final settings = finingSettings;
     if (settings == null) return '[]';
     final selections = <Map<String, String>>[];
 
     void addOption(String key, bool enabled) {
       if (!enabled) return;
-      final meta = _finingMetadata[key];
+      final meta = finingMetadata[key];
       selections.add({
         'key': key,
         'name': meta?['name'] ?? key,
@@ -5120,8 +5120,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return jsonEncode(selections);
   }
 
-  String _buildPackagingProfileJson() {
-    final profile = _selectedPackagingProfile;
+  String buildPackagingProfileJson() {
+    final profile = selectedPackagingProfile;
     if (profile == null) return '{}';
     final map = <String, dynamic>{
       'name': profile.name,
@@ -5140,14 +5140,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
     return jsonEncode(map);
   }
 
-  String _buildPrompt(String template) {
+  String buildPrompt(String template) {
     String formatScore(double value) => value.toStringAsFixed(2);
     String formatWater(double? value) => (value ?? 0).toStringAsFixed(2);
     String formatText(String? value) =>
         (value == null || value.trim().isEmpty) ? 'unbekannt' : value.trim();
     String formatBool(bool? value) => (value ?? false) ? 'true' : 'false';
 
-    final water = _selectedWaterProfile;
+    final water = selectedWaterProfile;
     final replacements = <String, String>{
       'bier_typ': widget.profile.beerType,
       'basis_bier': widget.profile.beerName,
@@ -5169,19 +5169,19 @@ class _EquipmentPageState extends State<EquipmentPage> {
       'fresh': formatScore(widget.profile.fresh),
       'dry': formatScore(widget.profile.dry),
       'lasting': formatScore(widget.profile.lasting),
-      'kettle_brand': formatText(_selectedKettle?.brand),
-      'kettle_type': formatText(_selectedKettle?.model),
-      'fermenter_brand': formatText(_selectedFermenter?.brand),
-      'fermenter_type': formatText(_selectedFermenter?.type),
-      'fermenter_heating': formatBool(_selectedFermenter?.hasHeating),
-      'fermenter_cooling': formatBool(_selectedFermenter?.hasCooling),
-      'special_additions': _buildSpecialAdditionsJson(),
-      'special_storage': _buildSpecialStorageJson(),
-      'fining_agents': _buildFiningAgentsJson(),
-      'packaging_profile': _buildPackagingProfileJson(),
-      'shop_list': _buildShopListJson(),
+      'kettle_brand': formatText(selectedKettle?.brand),
+      'kettle_type': formatText(selectedKettle?.model),
+      'fermenter_brand': formatText(selectedFermenter?.brand),
+      'fermenter_type': formatText(selectedFermenter?.type),
+      'fermenter_heating': formatBool(selectedFermenter?.hasHeating),
+      'fermenter_cooling': formatBool(selectedFermenter?.hasCooling),
+      'special_additions': buildSpecialAdditionsJson(),
+      'special_storage': buildSpecialStorageJson(),
+      'fining_agents': buildFiningAgentsJson(),
+      'packaging_profile': buildPackagingProfileJson(),
+      'shop_list': buildShopListJson(),
       'target_volume_l':
-          _batchSizeCtrl.text.trim().isEmpty ? '0' : _batchSizeCtrl.text.trim(),
+          batchSizeCtrl.text.trim().isEmpty ? '0' : batchSizeCtrl.text.trim(),
       'calcium': formatWater(water?.calciumPpm),
       'magnesium': formatWater(water?.magnesiumPpm),
       'sodium': formatWater(water?.sodiumPpm),
@@ -5229,7 +5229,7 @@ class _EquipmentSection<T> extends StatelessWidget {
         ),
       );
     }
-    final T current = selected ?? _defaultItem() ?? items.first;
+    final T current = selected ?? defaultItem() ?? items.first;
     return Card(
       color: const Color(0xFF0F172A),
       child: Padding(
@@ -5253,29 +5253,30 @@ class _EquipmentSection<T> extends StatelessWidget {
                     .map(
                       (item) => DropdownMenuEntry<T>(
                         value: item,
-                        label: _decorateLabel(item),
+                        label: decorateLabel(item),
                       ),
                     )
                     .toList(),
               )
             else
-              Text(_decorateLabel(current)),
+              Text(decorateLabel(current)),
           ],
         ),
       ),
     );
   }
 
-  String _decorateLabel(T item) {
+  String decorateLabel(T item) {
     final label = labelBuilder(item);
     final isDefault = isDefaultBuilder?.call(item) ?? false;
     return isDefault ? '$label ★' : label;
   }
 
-  T? _defaultItem() {
-    if (isDefaultBuilder == null) return null;
+  T? defaultItem() {
+    final checker = isDefaultBuilder;
+    if (checker == null) return null;
     for (final item in items) {
-      if (isDefaultBuilder!(item)) return item;
+      if (checker(item)) return item;
     }
     return null;
   }
@@ -5781,37 +5782,37 @@ class _RecipeEntry {
   }
 }
 class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
-  final MaltDepotService _service = MaltDepotService();
-  bool _isLoading = true;
-  List<MaltDepotEntryModel> _entries = [];
-  String? _error;
+  final MaltDepotService service = MaltDepotService();
+  bool isLoading = true;
+  List<MaltDepotEntryModel> entries = [];
+  String? error;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      isLoading = true;
+      error = null;
     });
     try {
-      final items = await _service.fetchEntries(widget.profileId);
+      final items = await service.fetchEntries(widget.profileId);
       if (!mounted) return;
       setState(() {
-        _entries = items;
+        entries = items;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        error = e.toString();
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -5826,7 +5827,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
-              onPressed: () => _openForm(),
+              onPressed: () => openForm(),
               icon: const Icon(Icons.add),
               label: const Text('Neu'),
               style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -5836,31 +5837,31 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: _buildBody(),
+        child: buildBody(),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  Widget buildBody() {
+    if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_error != null) {
+    if (error != null) {
       return Center(
         child: Text(
-          'Konnte Malzdepot nicht laden:\n$_error',
+          'Konnte Malzdepot nicht laden:\n$error',
           textAlign: TextAlign.center,
         ),
       );
     }
-    if (_entries.isEmpty) {
+    if (entries.isEmpty) {
       return const Center(child: Text('Noch keine Einträge.'));
     }
     return ListView.separated(
-      itemCount: _entries.length,
+      itemCount: entries.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final entry = _entries[index];
+        final entry = entries[index];
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
@@ -5877,10 +5878,10 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
               ],
             ),
             trailing: CardActions(
-              onEdit: () => _openForm(editing: entry),
-              onDelete: () => _confirmDelete(
+              onEdit: () => openForm(editing: entry),
+              onDelete: () => confirmDelete(
                 'Malzlieferant “${entry.name}” löschen?',
-                () => _deleteEntry(entry),
+                () => deleteEntry(entry),
               ),
             ),
           ),
@@ -5889,7 +5890,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     );
   }
 
-  Future<void> _openForm({MaltDepotEntryModel? editing}) async {
+  Future<void> openForm({MaltDepotEntryModel? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
     final urlCtrl = TextEditingController(text: editing?.url ?? '');
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
@@ -5958,16 +5959,16 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     );
 
     try {
-      final saved = await _service.saveEntry(entry);
+      final saved = await service.saveEntry(entry);
       if (!mounted) return;
       setState(() {
-        final index = _entries.indexWhere((element) => element.id == saved.id);
+        final index = entries.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
-          _entries[index] = saved;
+          entries[index] = saved;
         } else {
-          _entries.add(saved);
+          entries.add(saved);
         }
-        _entries.sort(
+        entries.sort(
           (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
         );
       });
@@ -5988,12 +5989,12 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     }
   }
 
-  Future<void> _deleteEntry(MaltDepotEntryModel entry) async {
+  Future<void> deleteEntry(MaltDepotEntryModel entry) async {
     if (entry.id == null) return;
     try {
-      await _service.deleteEntry(entry.id!);
+      await service.deleteEntry(entry.id!);
       setState(() {
-        _entries.removeWhere((item) => item.id == entry.id);
+        entries.removeWhere((item) => item.id == entry.id);
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -6005,7 +6006,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     }
   }
 
-  Future<void> _confirmDelete(
+  Future<void> confirmDelete(
     String title,
     Future<void> Function() onDelete,
   ) async {
@@ -6055,16 +6056,16 @@ class FiningAgentsPage extends StatefulWidget {
 }
 
 class _FiningAgentsPageState extends State<FiningAgentsPage> {
-  final FiningAgentsService _service = FiningAgentsService();
-  bool _isLoading = true;
-  bool _isSaving = false;
-  FiningAgents? _settings;
-  final Map<String, bool> _values = {};
-  final List<TextEditingController> _extraCtrls = [];
-  final TextEditingController _newExtraCtrl = TextEditingController();
-  String? _error;
+  final FiningAgentsService service = FiningAgentsService();
+  bool isLoading = true;
+  bool isSaving = false;
+  FiningAgents? settings;
+  final Map<String, bool> values = {};
+  final List<TextEditingController> extraCtrls = [];
+  final TextEditingController newExtraCtrl = TextEditingController();
+  String? error;
 
-  static const List<_FiningOption> _options = [
+  static const List<_FiningOption> options = [
     _FiningOption(
       key: 'irish_moss',
       title: 'Irish Moss',
@@ -6115,41 +6116,41 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
   @override
   void dispose() {
-    for (final ctrl in _extraCtrls) {
+    for (final ctrl in extraCtrls) {
       ctrl.dispose();
     }
-    _newExtraCtrl.dispose();
+    newExtraCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      isLoading = true;
+      error = null;
     });
     try {
-      final data = await _service.fetchSettings(widget.profileId);
+      final data = await service.fetchSettings(widget.profileId);
       if (!mounted) return;
       setState(() {
-        _settings = data;
-        _values['irish_moss'] = data.irishMoss;
-        _values['whirlfloc'] = data.whirlfloc;
-        _values['gelatin'] = data.gelatin;
-        _values['biersol'] = data.biersol;
-        _values['polyclar'] = data.polyclar;
-        _values['isinglass'] = data.isinglass;
-        _values['bentonite'] = data.bentonite;
-        _values['egg_whites'] = data.eggWhites;
-        _values['activated_carbon'] = data.activatedCarbon;
-        for (final ctrl in _extraCtrls) {
+        settings = data;
+        values['irish_moss'] = data.irishMoss;
+        values['whirlfloc'] = data.whirlfloc;
+        values['gelatin'] = data.gelatin;
+        values['biersol'] = data.biersol;
+        values['polyclar'] = data.polyclar;
+        values['isinglass'] = data.isinglass;
+        values['bentonite'] = data.bentonite;
+        values['egg_whites'] = data.eggWhites;
+        values['activated_carbon'] = data.activatedCarbon;
+        for (final ctrl in extraCtrls) {
           ctrl.dispose();
         }
-        _extraCtrls
+        extraCtrls
           ..clear()
           ..addAll(
             data.extras
@@ -6159,12 +6160,12 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        error = e.toString();
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -6174,14 +6175,14 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Klärmittel / Schönungsmittel')),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_error != null) ...[
+                  if (error != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 12),
@@ -6189,18 +6190,18 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                         color: Colors.red.shade900.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text('Fehler: $_error'),
+                      child: Text('Fehler: $error'),
                     ),
                   ],
                   Expanded(
                     child: ListView(
                       children: [
-                        ..._options.map(
+                        ...options.map(
                           (option) => CheckboxListTile(
-                            value: _values[option.key] ?? false,
+                            value: values[option.key] ?? false,
                             onChanged: (value) {
                               setState(() {
-                                _values[option.key] = value ?? false;
+                                values[option.key] = value ?? false;
                               });
                             },
                             contentPadding: EdgeInsets.zero,
@@ -6219,7 +6220,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ..._extraCtrls.asMap().entries.map(
+                        ...extraCtrls.asMap().entries.map(
                           (entry) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Row(
@@ -6233,7 +6234,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () => _removeExtra(entry.key),
+                                  onPressed: () => removeExtra(entry.key),
                                   icon: const Icon(Icons.delete_outline),
                                 ),
                               ],
@@ -6241,11 +6242,11 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                           ),
                         ),
                         TextField(
-                          controller: _newExtraCtrl,
+                          controller: newExtraCtrl,
                           decoration: const InputDecoration(
                             labelText: 'Neues Mittel (ENTER zum Hinzufügen)',
                           ),
-                          onSubmitted: (_) => _addExtra(),
+                          onSubmitted: (_) => addExtra(),
                         ),
                       ],
                     ),
@@ -6254,15 +6255,15 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _isSaving ? null : _save,
-                      icon: _isSaving
+                      onPressed: isSaving ? null : save,
+                      icon: isSaving
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.save_alt),
-                      label: Text(_isSaving ? 'Speichert …' : 'Speichern'),
+                      label: Text(isSaving ? 'Speichert …' : 'Speichern'),
                     ),
                   ),
                 ],
@@ -6271,48 +6272,48 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
     );
   }
 
-  void _addExtra() {
-    final value = _newExtraCtrl.text.trim();
+  void addExtra() {
+    final value = newExtraCtrl.text.trim();
     if (value.isEmpty) return;
     setState(() {
-      _extraCtrls.add(TextEditingController(text: value));
-      _newExtraCtrl.clear();
+      extraCtrls.add(TextEditingController(text: value));
+      newExtraCtrl.clear();
     });
   }
 
-  void _removeExtra(int index) {
+  void removeExtra(int index) {
     setState(() {
-      _extraCtrls[index].dispose();
-      _extraCtrls.removeAt(index);
+      extraCtrls[index].dispose();
+      extraCtrls.removeAt(index);
     });
   }
 
-  Future<void> _save() async {
-    if (_settings == null) return;
+  Future<void> save() async {
+    if (settings == null) return;
     setState(() {
-      _isSaving = true;
+      isSaving = true;
     });
     try {
       final updated = FiningAgents(
         userProfileId: widget.profileId,
-        irishMoss: _values['irish_moss'] ?? false,
-        whirlfloc: _values['whirlfloc'] ?? false,
-        gelatin: _values['gelatin'] ?? false,
-        biersol: _values['biersol'] ?? false,
-        polyclar: _values['polyclar'] ?? false,
-        isinglass: _values['isinglass'] ?? false,
-        bentonite: _values['bentonite'] ?? false,
-        eggWhites: _values['egg_whites'] ?? false,
-        activatedCarbon: _values['activated_carbon'] ?? false,
-        extras: _extraCtrls
+        irishMoss: values['irish_moss'] ?? false,
+        whirlfloc: values['whirlfloc'] ?? false,
+        gelatin: values['gelatin'] ?? false,
+        biersol: values['biersol'] ?? false,
+        polyclar: values['polyclar'] ?? false,
+        isinglass: values['isinglass'] ?? false,
+        bentonite: values['bentonite'] ?? false,
+        eggWhites: values['egg_whites'] ?? false,
+        activatedCarbon: values['activated_carbon'] ?? false,
+        extras: extraCtrls
             .map((ctrl) => ctrl.text.trim())
             .where((text) => text.isNotEmpty)
             .toList(),
       );
-      final saved = await _service.saveSettings(updated);
+      final saved = await service.saveSettings(updated);
       if (!mounted) return;
       setState(() {
-        _settings = saved;
+        settings = saved;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Schönungsmittel gespeichert')),
@@ -6325,7 +6326,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
     } finally {
       if (mounted) {
         setState(() {
-          _isSaving = false;
+          isSaving = false;
         });
       }
     }
@@ -6356,28 +6357,28 @@ class PackagingProfileManagerPage extends StatefulWidget {
 
 class _PackagingProfileManagerPageState
     extends State<PackagingProfileManagerPage> {
-  final PackagingProfileService _service = PackagingProfileService();
-  bool _isLoading = true;
-  List<PackagingProfile> _profiles = [];
-  String? _error;
+  final PackagingProfileService service = PackagingProfileService();
+  bool isLoading = true;
+  List<PackagingProfile> profiles = [];
+  String? error;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      isLoading = true;
+      error = null;
     });
     try {
-      final items = await _service.fetchProfiles(widget.profileId);
+      final items = await service.fetchProfiles(widget.profileId);
       if (!mounted) return;
       setState(() {
-        _profiles = items;
-        _profiles.sort(
+        profiles = items;
+        profiles.sort(
           (a, b) {
             if (a.isDefault != b.isDefault) {
               return a.isDefault ? -1 : 1;
@@ -6389,12 +6390,12 @@ class _PackagingProfileManagerPageState
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        error = e.toString();
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -6409,7 +6410,7 @@ class _PackagingProfileManagerPageState
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
-              onPressed: () => _openForm(),
+              onPressed: () => openForm(),
               icon: const Icon(Icons.add),
               label: const Text('Neu'),
               style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -6419,31 +6420,31 @@ class _PackagingProfileManagerPageState
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: _buildBody(),
+        child: buildBody(),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
+  Widget buildBody() {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (error != null) {
       return Center(
         child: Text(
-          'Konnte Profile nicht laden:\n$_error',
+          'Konnte Profile nicht laden:\n$error',
           textAlign: TextAlign.center,
         ),
       );
     }
-    if (_profiles.isEmpty) {
+    if (profiles.isEmpty) {
       return const Center(
         child: Text('Noch keine Abfüll- und Lagerprofile vorhanden.'),
       );
     }
     return ListView.separated(
-      itemCount: _profiles.length,
+      itemCount: profiles.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final profile = _profiles[index];
+        final profile = profiles[index];
         final kegInfo = <String>[];
         final bottleInfo = <String>[];
         if (profile.kegEnabled) {
@@ -6485,10 +6486,10 @@ class _PackagingProfileManagerPageState
                     info.join(' · '),
                   ),
             trailing: CardActions(
-              onEdit: () => _openForm(editing: profile),
-              onDelete: () => _confirmDelete(
+              onEdit: () => openForm(editing: profile),
+              onDelete: () => confirmDelete(
                 'Profil “${profile.name}” löschen?',
-                () => _deleteProfile(profile),
+                () => deleteProfile(profile),
               ),
             ),
           ),
@@ -6497,7 +6498,7 @@ class _PackagingProfileManagerPageState
     );
   }
 
-  Future<void> _openForm({PackagingProfile? editing}) async {
+  Future<void> openForm({PackagingProfile? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
     final bottleCarbCtrl = TextEditingController(
       text: editing?.bottleCarbonationTempC?.toString() ?? '',
@@ -6656,38 +6657,38 @@ class _PackagingProfileManagerPageState
       name: nameCtrl.text.trim(),
       bottleEnabled: bottleEnabled,
       bottleCarbonationTempC:
-          bottleEnabled ? _parseDouble(bottleCarbCtrl.text) : null,
+          bottleEnabled ? parseDouble(bottleCarbCtrl.text) : null,
       bottleStorageTempC:
-          bottleEnabled ? _parseDouble(bottleStorageCtrl.text) : null,
+          bottleEnabled ? parseDouble(bottleStorageCtrl.text) : null,
       kegEnabled: kegEnabled,
       kegCarbonationTempC:
-          kegEnabled ? _parseDouble(kegCarbCtrl.text) : null,
+          kegEnabled ? parseDouble(kegCarbCtrl.text) : null,
       kegStorageTempC:
-          kegEnabled ? _parseDouble(kegStorageCtrl.text) : null,
+          kegEnabled ? parseDouble(kegStorageCtrl.text) : null,
       kegVolumeLiters:
-          kegEnabled ? _parseDouble(volumeCtrl.text) : null,
+          kegEnabled ? parseDouble(volumeCtrl.text) : null,
       isDefault: isDefault,
     );
 
     try {
-      final saved = await _service.saveProfile(profile);
+      final saved = await service.saveProfile(profile);
       if (!mounted) return;
       setState(() {
         if (saved.isDefault) {
-          _profiles = _profiles
+          profiles = profiles
               .map((existing) => existing.id == saved.id
                   ? existing
                   : existing.copyWith(isDefault: false))
               .toList();
         }
         final index =
-            _profiles.indexWhere((element) => element.id == saved.id);
+            profiles.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
-          _profiles[index] = saved;
+          profiles[index] = saved;
         } else {
-          _profiles.add(saved);
+          profiles.add(saved);
         }
-        _profiles.sort(
+        profiles.sort(
           (a, b) {
             if (a.isDefault != b.isDefault) {
               return a.isDefault ? -1 : 1;
@@ -6713,18 +6714,18 @@ class _PackagingProfileManagerPageState
     }
   }
 
-  double? _parseDouble(String value) {
+  double? parseDouble(String value) {
     final cleaned = value.trim();
     if (cleaned.isEmpty) return null;
     return double.tryParse(cleaned.replaceAll(',', '.'));
   }
 
-  Future<void> _deleteProfile(PackagingProfile profile) async {
+  Future<void> deleteProfile(PackagingProfile profile) async {
     if (profile.id == null) return;
     try {
-      await _service.deleteProfile(profile.id!);
+      await service.deleteProfile(profile.id!);
       setState(() {
-        _profiles.removeWhere((item) => item.id == profile.id);
+        profiles.removeWhere((item) => item.id == profile.id);
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -6736,7 +6737,7 @@ class _PackagingProfileManagerPageState
     }
   }
 
-  Future<void> _confirmDelete(
+  Future<void> confirmDelete(
     String title,
     Future<void> Function() onDelete,
   ) async {
@@ -6767,38 +6768,38 @@ class _PackagingProfileManagerPageState
 
 class _FermenterControllerManagerPageState
     extends State<FermenterControllerManagerPage> {
-  final FermenterControllerService _service = FermenterControllerService();
-  bool _isLoading = true;
-  List<FermenterControllerModel> _controllers = [];
-  String? _error;
+  final FermenterControllerService service = FermenterControllerService();
+  bool isLoading = true;
+  List<FermenterControllerModel> controllers = [];
+  String? error;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    load();
   }
 
-  Future<void> _load() async {
+  Future<void> load() async {
     setState(() {
-      _isLoading = true;
-      _error = null;
+      isLoading = true;
+      error = null;
     });
     try {
-      final items = await _service.fetchControllers(widget.profileId);
+      final items = await service.fetchControllers(widget.profileId);
       if (!mounted) return;
       setState(() {
-        _controllers = items;
-        _sortControllers();
+        controllers = items;
+        sortControllers();
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        error = e.toString();
       });
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          isLoading = false;
         });
       }
     }
@@ -6813,7 +6814,7 @@ class _FermenterControllerManagerPageState
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
-              onPressed: () => _openForm(),
+              onPressed: () => openForm(),
               icon: const Icon(Icons.add),
               label: const Text('Neu'),
               style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -6823,29 +6824,29 @@ class _FermenterControllerManagerPageState
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: _buildBody(),
+        child: buildBody(),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
+  Widget buildBody() {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+    if (error != null) {
       return Center(
         child: Text(
-          'Konnte Kontroller nicht laden:\n$_error',
+          'Konnte Kontroller nicht laden:\n$error',
           textAlign: TextAlign.center,
         ),
       );
     }
-    if (_controllers.isEmpty) {
+    if (controllers.isEmpty) {
       return const Center(child: Text('Noch keine Controller vorhanden.'));
     }
     return ListView.separated(
-      itemCount: _controllers.length,
+      itemCount: controllers.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final controller = _controllers[index];
+        final controller = controllers[index];
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
@@ -6869,10 +6870,10 @@ class _FermenterControllerManagerPageState
               ],
             ),
             trailing: CardActions(
-              onEdit: () => _openForm(editing: controller),
-              onDelete: () => _confirmDelete(
+              onEdit: () => openForm(editing: controller),
+              onDelete: () => confirmDelete(
                 'Kontroller “${controller.name}” löschen?',
-                () => _deleteController(controller),
+                () => deleteController(controller),
               ),
             ),
           ),
@@ -6881,7 +6882,7 @@ class _FermenterControllerManagerPageState
     );
   }
 
-  Future<void> _openForm({FermenterControllerModel? editing}) async {
+  Future<void> openForm({FermenterControllerModel? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
     final usernameCtrl = TextEditingController(text: editing?.username ?? '');
     final apiKeyCtrl = TextEditingController(text: editing?.apiKey ?? '');
@@ -6968,24 +6969,24 @@ class _FermenterControllerManagerPageState
     );
 
     try {
-      final saved = await _service.saveController(controller);
+      final saved = await service.saveController(controller);
       if (!mounted) return;
       setState(() {
         if (saved.isDefault) {
-          _controllers = _controllers
+          controllers = controllers
               .map((existing) => existing.id == saved.id
                   ? existing
                   : existing.copyWith(isDefault: false))
               .toList();
         }
         final index =
-            _controllers.indexWhere((element) => element.id == saved.id);
+            controllers.indexWhere((element) => element.id == saved.id);
         if (index >= 0) {
-          _controllers[index] = saved;
+          controllers[index] = saved;
         } else {
-          _controllers.add(saved);
+          controllers.add(saved);
         }
-        _sortControllers();
+        sortControllers();
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -7004,8 +7005,8 @@ class _FermenterControllerManagerPageState
     }
   }
 
-  void _sortControllers() {
-    _controllers.sort((a, b) {
+  void sortControllers() {
+    controllers.sort((a, b) {
       if (a.isDefault != b.isDefault) {
         return a.isDefault ? -1 : 1;
       }
@@ -7013,12 +7014,12 @@ class _FermenterControllerManagerPageState
     });
   }
 
-  Future<void> _deleteController(FermenterControllerModel controller) async {
+  Future<void> deleteController(FermenterControllerModel controller) async {
     if (controller.id == null) return;
     try {
-      await _service.deleteController(controller.id!);
+      await service.deleteController(controller.id!);
       setState(() {
-        _controllers.removeWhere((item) => item.id == controller.id);
+        controllers.removeWhere((item) => item.id == controller.id);
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -7031,7 +7032,7 @@ class _FermenterControllerManagerPageState
     }
   }
 
-  Future<void> _confirmDelete(
+  Future<void> confirmDelete(
     String title,
     Future<void> Function() onDelete,
   ) async {
