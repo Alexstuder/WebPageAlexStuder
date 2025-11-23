@@ -433,7 +433,7 @@ async function ensureTelemetryCache(options = {}) {
   return telemetryCache;
 }
 
-async function refreshTelemetryCache(startDateOverride = null) {
+async function refreshTelemetryCache(startDateOverride = null, hasFallback = false) {
   if (!RAPT_USERNAME || !RAPT_API_KEY) {
     throw new Error('RAPT credentials not configured.');
   }
@@ -510,6 +510,16 @@ async function refreshTelemetryCache(startDateOverride = null) {
     });
     const teleData = await teleRes.json().catch(() => []);
     if (!teleRes.ok) {
+      const shouldFallback =
+        !!startDateOverride &&
+        !hasFallback &&
+        (teleRes.status === 400 || teleRes.status === 404 || teleRes.status === 504);
+
+      if (shouldFallback) {
+        persistedRaptStartDate = null;
+        return refreshTelemetryCache(null, true);
+      }
+
       rows.push({
         hydrometerId,
         error: teleData,
