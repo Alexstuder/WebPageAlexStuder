@@ -75,16 +75,6 @@ jobs:
             proxy/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/proxy/
 
-      - name: Fix proxy permissions
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            sudo chown -R $USER:$USER ${{ secrets.DEPLOY_PATH }}/proxy
-
       - name: Write proxy .env on server
         uses: appleboy/ssh-action@master
         with:

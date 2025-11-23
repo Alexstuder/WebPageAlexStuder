@@ -27,7 +27,9 @@
     .start-override-control{flex:1 1 320px;min-width:220px;display:flex;flex-direction:column;gap:6px;}
     .start-override-control label{font-size:13px;color:#94a3b8;}
     .start-override-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-    .start-override-input{flex:1;min-width:200px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
+    .start-override-field{position:relative;flex:1;min-width:200px;}
+    .start-override-input{width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
+    .start-override-input::-webkit-calendar-picker-indicator{filter:invert(100%);}
     .start-override-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
     .links-footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:22px;}
     .chart-card {position:relative;background:#0b1120;padding:24px;border-radius:24px;border:1px solid rgba(59,130,246,0.25);width:calc(100% - 54px);margin:24px auto 0 auto;}
@@ -98,7 +100,10 @@
             <div class="start-override-control">
               <label for="start-override">Startdatum (optional)</label>
               <div class="start-override-row">
-                <input type="datetime-local" id="start-override" class="start-override-input" />
+                <div class="start-override-field">
+                  <input type="datetime-local" id="start-override" class="start-override-input" />
+                </div>
+                <button class="btn ghost" type="button" id="btn-start-apply">Übernehmen</button>
                 <button class="btn ghost" type="button" id="btn-start-clear">Zurücksetzen</button>
               </div>
             </div>
@@ -187,6 +192,7 @@
     const summaryOgValue=document.getElementById('summary-og-value');
     const reloadInfo=document.getElementById('reload-info');
     const startOverrideInput=document.getElementById('start-override');
+    const startOverrideApply=document.getElementById('btn-start-apply');
     const startOverrideClear=document.getElementById('btn-start-clear');
     const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
     let serverPersistedStart=null;
@@ -558,7 +564,7 @@
     function updateReloadInfo(timestamp,isFresh){
       if(!reloadInfo) return;
       if(!timestamp){
-        reloadInfo.textContent=isFresh?'Gerade aktualisiert':'Keine Daten';
+        reloadInfo.textContent=isFresh?'Gerade aktualisiert':'';
         return;
       }
       const date=new Date(timestamp);
@@ -584,8 +590,8 @@
       if(stored && startOverrideInput){
         startOverrideInput.value=isoToLocalInputValue(stored);
       }
-      if(startOverrideInput){
-        startOverrideInput.addEventListener('change',handleStartOverrideChange);
+      if(startOverrideApply){
+        startOverrideApply.addEventListener('click',handleStartOverrideApply);
       }
       if(startOverrideClear){
         startOverrideClear.addEventListener('click',handleStartOverrideReset);
@@ -603,17 +609,18 @@
       }).catch(()=>{});
     }
 
-    function handleStartOverrideChange(){
+    function handleStartOverrideApply(){
       const iso=getStartOverrideIso();
       if(!iso){
         if(startOverrideInput){
-          const fallback=serverPersistedStart || readPersistedStartOverride() || null;
-          startOverrideInput.value=fallback?isoToLocalInputValue(fallback):'';
+          startOverrideInput.value='';
         }
+        persistStartOverride(null);
+        clearStartOverrideOnServer();
         return;
       }
       persistStartOverride(iso);
-      persistStartOverrideOnServer(iso);
+      persistStartOverrideOnServer(iso).finally(()=>loadTelemetry(true));
     }
 
     function handleStartOverrideReset(){
