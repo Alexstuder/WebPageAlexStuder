@@ -8,7 +8,13 @@
   <style>
     body {background:#020617;color:#f1f5f9;}
     .rapt-panel {width:100%;background: rgba(15,23,42,0.92);padding: 28px;border-radius: 24px;box-shadow: 0 30px 70px rgba(0,0,0,0.5);backdrop-filter: blur(12px);}
-    .table-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .table-actions {display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+    .table-actions__buttons {display:flex;gap:12px;flex-wrap:wrap;}
+    .start-override-control {flex:1 1 280px;min-width:220px;display:flex;flex-direction:column;gap:6px;}
+    .start-override-control label {font-size:13px;color:#94a3b8;}
+    .start-override-row {display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .start-override-input {flex:1;min-width:200px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
+    .start-override-input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
     .rapt-status {margin-bottom:12px;color:#fbbf24;}
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
@@ -34,9 +40,18 @@
     <section class="gpt-preview">
       <div class="rapt-panel">
         <div class="table-actions">
-          <button class="btn primary" id="btn-table-reload">Telemetry laden</button>
-          <button class="btn ghost" id="btn-table-download" disabled>CSV herunterladen</button>
-          <a class="btn" href="../">Zurück zum Dashboard</a>
+          <div class="start-override-control">
+            <label for="table-start-override">Startdatum (optional)</label>
+            <div class="start-override-row">
+              <input type="datetime-local" id="table-start-override" class="start-override-input" />
+              <button class="btn ghost" type="button" id="btn-table-start-clear">Zurücksetzen</button>
+            </div>
+          </div>
+          <div class="table-actions__buttons">
+            <button class="btn primary" id="btn-table-reload">Telemetry laden</button>
+            <button class="btn ghost" id="btn-table-download" disabled>CSV herunterladen</button>
+            <a class="btn" href="../">Zurück zum Dashboard</a>
+          </div>
         </div>
         <div class="rapt-status" id="table-status">Noch nicht geladen.</div>
         <div class="table-wrapper">
@@ -69,6 +84,10 @@
     const tableStatus=document.getElementById('table-status');
     const tableBody=document.querySelector('#telemetry-table tbody');
     const sortButtons=document.querySelectorAll('th button[data-field]');
+    const startOverrideInput=document.getElementById('table-start-override');
+    const startOverrideClear=document.getElementById('btn-table-start-clear');
+    const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
+    let serverPersistedStart=null;
 
     let tableRows=[];
     let currentSort={field:'startDate',direction:'desc'};
@@ -77,12 +96,14 @@
     downloadBtn.addEventListener('click',downloadCsv);
     sortButtons.forEach(btn=>btn.addEventListener('click',()=>setSort(btn.dataset.field)));
 
+    initStartOverrideControl();
     loadTelemetry();
 
     async function loadTelemetry(){
       tableStatus.textContent='⏳ Telemetrie wird geladen ...';
       try{
-        const response=await fetch(getApiUrl('/api/rapt/telemetry'));
+        const startOverrideIso=getStartOverrideIso();
+        const response=await fetch(buildTelemetryUrl(startOverrideIso));
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
           tableStatus.textContent=`❗ HTTP ${response.status}`;
@@ -95,6 +116,9 @@
         if(errorRows.length){
           console.warn('Gefilterte RAPT-Einträge wegen Fehlern:',errorRows);
         }
+        const persistedOverride=data.persistedStartDate || null;
+        serverPersistedStart=persistedOverride;
+        syncStartOverrideInput(persistedOverride,startOverrideIso);
         if(!rows.length){
           tableStatus.textContent=errorRows.length
             ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
@@ -103,6 +127,9 @@
           let status=`✅ ${rows.length} Einträge · Stand ${data.generatedAt || ''}`;
           if(errorRows.length){
             status+=` · ${errorRows.length} ohne Startdatum ignoriert`;
+          }
+          if(startOverrideIso || persistedOverride){
+            status+=' · Benutzerstart aktiv';
           }
           tableStatus.textContent=status;
         }
@@ -141,7 +168,7 @@
         <tr>
           <td>${formatTimestamp(row.startDate)}</td>
           <td>${formatNumber(row.temperature,'°C')}</td>
-          <td>${formatNumber(row.gravity)}</td>
+          <td>${formatNumber(row.gravity,'',4)}</td>
           <td>${formatNumber(row.gravityVelocity)}</td>
         </tr>
       `).join('');
@@ -178,10 +205,11 @@
       return value.replace(/^\\d{4}-/,'').replace('T',' ').substring(0,19);
     }
 
-    function formatNumber(value,unit=''){
+    function formatNumber(value,unit='',decimals=null){
       if(value===undefined || value===null || value==='') return '-';
       const num=Number(value);
-      const formatted=Number.isFinite(num)?num.toFixed(unit?'1':'3'):value;
+      const places=Number.isInteger(decimals)?decimals:(unit?1:3);
+      const formatted=Number.isFinite(num)?num.toFixed(places):value;
       return unit?`${formatted} ${unit}`:formatted;
     }
 
@@ -218,6 +246,168 @@
         return `"${str.replace(/\"/g,'""')}"`;
       }
       return str;
+    }
+
+    function initStartOverrideControl(){
+      const stored=readPersistedStartOverride();
+      if(stored && startOverrideInput){
+        startOverrideInput.value=isoToLocalInputValue(stored);
+      }
+      if(startOverrideInput){
+        startOverrideInput.addEventListener('change',handleStartOverrideChange);
+      }
+      if(startOverrideClear){
+        startOverrideClear.addEventListener('click',handleStartOverrideReset);
+      }
+      fetchServerStartOverride().then(serverValue=>{
+        if(serverValue){
+          serverPersistedStart=serverValue;
+          if(startOverrideInput && !startOverrideInput.value){
+            startOverrideInput.value=isoToLocalInputValue(serverValue);
+          }
+          persistStartOverride(serverValue);
+        }else{
+          serverPersistedStart=null;
+        }
+      }).catch(()=>{});
+    }
+
+    function handleStartOverrideChange(){
+      const iso=getStartOverrideIso();
+      if(!iso){
+        if(startOverrideInput){
+          const fallback=serverPersistedStart || readPersistedStartOverride() || null;
+          startOverrideInput.value=fallback?isoToLocalInputValue(fallback):'';
+        }
+        return;
+      }
+      persistStartOverride(iso);
+      persistStartOverrideOnServer(iso);
+    }
+
+    function handleStartOverrideReset(){
+      if(startOverrideInput){
+        startOverrideInput.value='';
+      }
+      persistStartOverride(null);
+      serverPersistedStart=null;
+      clearStartOverrideOnServer().finally(()=>loadTelemetry());
+    }
+
+    function getStartOverrideIso(){
+      if(!startOverrideInput) return null;
+      const value=startOverrideInput.value?.trim();
+      if(!value) return null;
+      return localInputValueToIso(value);
+    }
+
+    function localInputValueToIso(value){
+      if(!value) return null;
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return null;
+      return parsed.toISOString();
+    }
+
+    function isoToLocalInputValue(value){
+      if(!value) return '';
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return '';
+      const year=parsed.getFullYear();
+      const month=String(parsed.getMonth()+1).padStart(2,'0');
+      const day=String(parsed.getDate()).padStart(2,'0');
+      const hours=String(parsed.getHours()).padStart(2,'0');
+      const minutes=String(parsed.getMinutes()).padStart(2,'0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function readPersistedStartOverride(){
+      try{
+        return window.localStorage?window.localStorage.getItem(START_OVERRIDE_STORAGE_KEY):null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    function persistStartOverride(value){
+      try{
+        if(!window.localStorage) return;
+        if(value){
+          window.localStorage.setItem(START_OVERRIDE_STORAGE_KEY,value);
+        }else{
+          window.localStorage.removeItem(START_OVERRIDE_STORAGE_KEY);
+        }
+      }catch(error){
+        // ignore storage errors
+      }
+    }
+
+    function buildTelemetryUrl(startOverrideIso){
+      const base=getApiUrl('/api/rapt/telemetry');
+      const url=createTelemetryUrl(base);
+      if(startOverrideIso){
+        url.searchParams.set('start',startOverrideIso);
+      }
+      return url.toString();
+    }
+
+    function createTelemetryUrl(base){
+      if(base.startsWith('http://') || base.startsWith('https://')){
+        return new URL(base);
+      }
+      return new URL(base,window.location.origin);
+    }
+
+    function syncStartOverrideInput(serverValue,currentRequestValue){
+      if(!startOverrideInput) return;
+      if(currentRequestValue){
+        return;
+      }
+      if(serverValue){
+        startOverrideInput.value=isoToLocalInputValue(serverValue);
+        persistStartOverride(serverValue);
+      }else{
+        startOverrideInput.value='';
+        persistStartOverride(null);
+      }
+    }
+
+    async function fetchServerStartOverride(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'));
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok) return null;
+        return typeof data.startDate==='string'?data.startDate:null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    async function persistStartOverrideOnServer(value){
+      if(!value) return;
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({startDate:value})
+        });
+        const data=await response.json().catch(()=>({}));
+        if(response.ok){
+          serverPersistedStart=typeof data.startDate==='string'?data.startDate:value;
+        }
+      }catch(error){
+        // ignore
+      }
+    }
+
+    async function clearStartOverrideOnServer(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{method:'DELETE'});
+        if(response.ok){
+          serverPersistedStart=null;
+        }
+      }catch(error){
+        // ignore
+      }
     }
   </script>
 </body>

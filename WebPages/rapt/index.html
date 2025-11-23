@@ -20,9 +20,15 @@
     .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
     .btn.ghost:hover {background:rgba(148,163,184,0.08);}
     .btn.icon {padding:0;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-    .chart-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:6px 0 0;}
+    .chart-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:6px 0 0;}
+    .chart-actions__group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .chart-actions__info{font-size:12px;color:#94a3b8;}
     .chart-actions__label{font-size:14px;color:#cbd5f5;}
+    .start-override-control{flex:1 1 320px;min-width:220px;display:flex;flex-direction:column;gap:6px;}
+    .start-override-control label{font-size:13px;color:#94a3b8;}
+    .start-override-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .start-override-input{flex:1;min-width:200px;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
+    .start-override-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
     .links-footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:22px;}
     .chart-card {position:relative;background:#0b1120;padding:24px;border-radius:24px;border:1px solid rgba(59,130,246,0.25);width:calc(100% - 54px);margin:24px auto 0 auto;}
     .chart-card .panel-label{top:16px;left:24px;}
@@ -83,9 +89,18 @@
             <canvas id="telemetry-chart"></canvas>
           </div>
           <div class="chart-actions">
-            <span class="chart-actions__info" id="reload-info">Lädt...</span>
-            <span class="chart-actions__label">Reload</span>
-            <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
+            <div class="start-override-control">
+              <label for="start-override">Startdatum (optional)</label>
+              <div class="start-override-row">
+                <input type="datetime-local" id="start-override" class="start-override-input" />
+                <button class="btn ghost" type="button" id="btn-start-clear">Zurücksetzen</button>
+              </div>
+            </div>
+            <div class="chart-actions__group">
+              <span class="chart-actions__info" id="reload-info">Lädt...</span>
+              <span class="chart-actions__label">Reload</span>
+              <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
+            </div>
           </div>
           </div>
           <div class="links-footer">
@@ -164,6 +179,10 @@
     const summaryGravity=document.getElementById('summary-gravity');
     const summaryAbv=document.getElementById('summary-abv');
     const reloadInfo=document.getElementById('reload-info');
+    const startOverrideInput=document.getElementById('start-override');
+    const startOverrideClear=document.getElementById('btn-start-clear');
+    const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
+    let serverPersistedStart=null;
     let telemetryChart=null;
     let latestTelemetry=[];
     let initialGravityValue=null;
@@ -174,6 +193,7 @@
     updateProfileHeading();
     updateSummary([]);
     updateReloadInfo(null,false);
+    initStartOverrideControl();
 
     loadTelemetry();
 
@@ -182,7 +202,8 @@
       telemetryRange.textContent='Zeitraum wird geladen ...';
       setLoadingState(true);
       try{
-        const endpoint=force?getApiUrl('/api/rapt/telemetry?reload=1'):getApiUrl('/api/rapt/telemetry');
+        const startOverrideIso=getStartOverrideIso();
+        const endpoint=buildTelemetryRequestUrl(force,startOverrideIso);
         const response=await fetch(endpoint);
         const data=await response.json().catch(()=>({}));
         if(!response.ok){
@@ -212,12 +233,19 @@
           setLoadingState(false);
           return;
         }
+        const persistedOverride=data.persistedStartDate || null;
+        serverPersistedStart=persistedOverride;
+        syncStartOverrideInput(persistedOverride,startOverrideIso);
+        const effectiveOverrideIso=startOverrideIso || persistedOverride || null;
         let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
         if(errorRows.length){
           statusMsg+=` · ${errorRows.length} ohne Startdatum ignoriert`;
         }
+        if(effectiveOverrideIso){
+          statusMsg+=' · Benutzerstart aktiv';
+        }
         telemetryStatus.textContent=statusMsg;
-        const start=data.startDate || rows[0]?.startDate || '';
+        const start=data.resolvedStartDate || data.startDate || rows[0]?.startDate || '';
         const end=data.endDate || data.generatedAt || rows[rows.length-1]?.startDate || '';
         updateRangeInfo(start,end);
         const resolvedProfileName=data.profileName || rows.find(r=>r?.profileName)?.profileName || null;
@@ -325,7 +353,15 @@
                   const label=labels[idx] || '';
                   return formatFullTimestamp(label);
                 },
-                label:ctx=>`${ctx.dataset.label}: ${ctx.formattedValue}`
+                label:ctx=>{
+                  const label=ctx.dataset.label || '';
+                  const value=Number.isFinite(ctx.parsed?.y)?ctx.parsed.y:null;
+                  const isGravity=label.toLowerCase().includes('gravity');
+                  const formatted=isGravity && Number.isFinite(value)
+                    ? value.toFixed(4)
+                    : ctx.formattedValue;
+                  return `${label}: ${formatted}`;
+                }
               }
             },
             dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8}
@@ -450,7 +486,7 @@
       if(value===undefined || value===null) return '–';
       const num=Number(value);
       if(!Number.isFinite(num)) return '–';
-      return num.toFixed(3);
+      return num.toFixed(4);
     }
 
     function formatAbvDisplay(value){
@@ -529,6 +565,171 @@
         return `"${str.replace(/\"/g,'""')}"`;
       }
       return str;
+    }
+
+    function initStartOverrideControl(){
+      const stored=readPersistedStartOverride();
+      if(stored && startOverrideInput){
+        startOverrideInput.value=isoToLocalInputValue(stored);
+      }
+      if(startOverrideInput){
+        startOverrideInput.addEventListener('change',handleStartOverrideChange);
+      }
+      if(startOverrideClear){
+        startOverrideClear.addEventListener('click',handleStartOverrideReset);
+      }
+      fetchServerStartOverride().then(serverValue=>{
+        if(serverValue){
+          serverPersistedStart=serverValue;
+          if(startOverrideInput && !startOverrideInput.value){
+            startOverrideInput.value=isoToLocalInputValue(serverValue);
+          }
+          persistStartOverride(serverValue);
+        }else{
+          serverPersistedStart=null;
+        }
+      }).catch(()=>{});
+    }
+
+    function handleStartOverrideChange(){
+      const iso=getStartOverrideIso();
+      if(!iso){
+        if(startOverrideInput){
+          const fallback=serverPersistedStart || readPersistedStartOverride() || null;
+          startOverrideInput.value=fallback?isoToLocalInputValue(fallback):'';
+        }
+        return;
+      }
+      persistStartOverride(iso);
+      persistStartOverrideOnServer(iso);
+    }
+
+    function handleStartOverrideReset(){
+      if(startOverrideInput){
+        startOverrideInput.value='';
+      }
+      persistStartOverride(null);
+      serverPersistedStart=null;
+      clearStartOverrideOnServer().finally(()=>loadTelemetry(true));
+    }
+
+    function getStartOverrideIso(){
+      if(!startOverrideInput) return null;
+      const value=startOverrideInput.value?.trim();
+      if(!value) return null;
+      return localInputValueToIso(value);
+    }
+
+    function localInputValueToIso(value){
+      if(!value) return null;
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return null;
+      return parsed.toISOString();
+    }
+
+    function isoToLocalInputValue(value){
+      if(!value) return '';
+      const parsed=new Date(value);
+      if(Number.isNaN(parsed.getTime())) return '';
+      const year=parsed.getFullYear();
+      const month=String(parsed.getMonth()+1).padStart(2,'0');
+      const day=String(parsed.getDate()).padStart(2,'0');
+      const hours=String(parsed.getHours()).padStart(2,'0');
+      const minutes=String(parsed.getMinutes()).padStart(2,'0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function readPersistedStartOverride(){
+      try{
+        return window.localStorage?window.localStorage.getItem(START_OVERRIDE_STORAGE_KEY):null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    function persistStartOverride(value){
+      try{
+        if(!window.localStorage) return;
+        if(value){
+          window.localStorage.setItem(START_OVERRIDE_STORAGE_KEY,value);
+        }else{
+          window.localStorage.removeItem(START_OVERRIDE_STORAGE_KEY);
+        }
+      }catch(error){
+        // storage unavailable
+      }
+    }
+
+    function buildTelemetryRequestUrl(forceReload,startOverrideIso){
+      const base=getApiUrl('/api/rapt/telemetry');
+      const url=createTelemetryUrl(base);
+      if(forceReload){
+        url.searchParams.set('reload','1');
+      }
+      if(startOverrideIso){
+        url.searchParams.set('start',startOverrideIso);
+      }
+      return url.toString();
+    }
+
+    function createTelemetryUrl(base){
+      if(base.startsWith('http://') || base.startsWith('https://')){
+        return new URL(base);
+      }
+      return new URL(base,window.location.origin);
+    }
+
+    function syncStartOverrideInput(serverValue,currentRequestValue){
+      if(!startOverrideInput) return;
+      if(currentRequestValue){
+        return;
+      }
+      if(serverValue){
+        startOverrideInput.value=isoToLocalInputValue(serverValue);
+        persistStartOverride(serverValue);
+      }else{
+        startOverrideInput.value='';
+        persistStartOverride(null);
+      }
+    }
+
+    async function fetchServerStartOverride(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'));
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok) return null;
+        return typeof data.startDate==='string'?data.startDate:null;
+      }catch(error){
+        return null;
+      }
+    }
+
+    async function persistStartOverrideOnServer(value){
+      if(!value) return;
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({startDate:value})
+        });
+        const data=await response.json().catch(()=>({}));
+        if(response.ok){
+          serverPersistedStart=typeof data.startDate==='string'?data.startDate:value;
+        }
+      }catch(error){
+        // ignore
+      }
+    }
+
+    async function clearStartOverrideOnServer(){
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{method:'DELETE'});
+        if(response.ok){
+          serverPersistedStart=null;
+        }
+      }catch(error){
+        // ignore
+      }
     }
   </script>
 </body>

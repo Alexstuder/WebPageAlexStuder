@@ -29,6 +29,7 @@ if (!OPENAI_API_KEY) {
 let telemetryCache = null;
 let telemetryCacheTimestamp = 0;
 let telemetryCachePromise = null;
+let persistedRaptStartDate = null;
 
 const server = http.createServer(async (req, res) => {
   setCorsHeaders(res);
@@ -61,6 +62,10 @@ const server = http.createServer(async (req, res) => {
     await handleRaptTelemetryRequest(req, res);
     return;
   }
+  if (url.pathname === '/api/rapt/telemetry/start-override') {
+    await handleRaptStartOverrideRequest(req, res);
+    return;
+  }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));
@@ -68,11 +73,11 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Proxy listening on http://localhost:${PORT}`);
-  ensureTelemetryCache(true).catch(err => {
+  ensureTelemetryCache({ force: true }).catch(err => {
     console.error('Initial telemetry preload failed:', err.message || err);
   });
   setInterval(() => {
-    ensureTelemetryCache(true).catch(err => {
+    ensureTelemetryCache({ force: true }).catch(err => {
       console.error('Scheduled telemetry refresh failed:', err.message || err);
     });
   }, CACHE_INTERVAL_MS);
@@ -287,13 +292,67 @@ async function handleRaptTelemetryRequest(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const forceReload = ['1', 'true'].includes((url.searchParams.get('reload') || '').toLowerCase());
-    const data = await ensureTelemetryCache(forceReload);
-    respondJson(res, 200, data);
+    const startOverrideRaw = url.searchParams.get('start') || url.searchParams.get('startDate');
+    const startOverride = normalizeStartDateParam(startOverrideRaw);
+    if (startOverrideRaw && !startOverride) {
+      respondJson(res, 400, { error: 'Ungültiges Startdatum.' });
+      return;
+    }
+    const effectiveStartOverride = startOverride || persistedRaptStartDate || null;
+    const data = await ensureTelemetryCache({
+      force: forceReload,
+      startDateOverride: effectiveStartOverride,
+    });
+    const payload = {
+      ...data,
+      persistedStartDate: persistedRaptStartDate,
+      resolvedStartDate: effectiveStartOverride || data.startDate || null,
+    };
+    respondJson(res, 200, payload);
   } catch (error) {
     console.error('RAPT telemetry error:', error);
     const status = error.statusCode ?? 500;
     respondJson(res, status, { error: error.message ?? 'RAPT telemetry request failed.' });
   }
+}
+
+async function handleRaptStartOverrideRequest(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  if (req.method === 'GET') {
+    respondJson(res, 200, { startDate: persistedRaptStartDate });
+    return;
+  }
+  if (req.method === 'DELETE') {
+    persistedRaptStartDate = null;
+    resetTelemetryCache();
+    respondJson(res, 200, { startDate: null });
+    return;
+  }
+  if (req.method === 'POST' || req.method === 'PUT') {
+    try {
+      const body = await readBody(req);
+      const data = JSON.parse(body || '{}');
+      const normalized = normalizeStartDateParam(
+        data?.startDate || data?.start || data?.value || data?.date,
+      );
+      if (!normalized) {
+        respondJson(res, 400, { error: 'Ungültiges Startdatum.' });
+        return;
+      }
+      persistedRaptStartDate = normalized;
+      resetTelemetryCache();
+      respondJson(res, 200, { startDate: persistedRaptStartDate });
+      return;
+    } catch (error) {
+      respondJson(res, 400, { error: 'Konnte Startdatum nicht setzen.' });
+      return;
+    }
+  }
+  respondJson(res, 405, { error: 'Method not allowed.' });
 }
 
 async function requestRaptToken() {
@@ -335,7 +394,28 @@ function respondJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
-async function ensureTelemetryCache(force = false) {
+function normalizeStartDateParam(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toISOString();
+}
+
+function resetTelemetryCache() {
+  telemetryCache = null;
+  telemetryCacheTimestamp = 0;
+}
+
+async function ensureTelemetryCache(options = {}) {
+  const { force = false, startDateOverride = null } = options;
+  if (startDateOverride) {
+    if (!force && telemetryCache && telemetryCache.requestedStartDate === startDateOverride) {
+      return telemetryCache;
+    }
+    return refreshTelemetryCache(startDateOverride);
+  }
   const cacheAge = Date.now() - telemetryCacheTimestamp;
   if (force || !telemetryCache) {
     if (!telemetryCachePromise) {
@@ -353,7 +433,7 @@ async function ensureTelemetryCache(force = false) {
   return telemetryCache;
 }
 
-async function refreshTelemetryCache() {
+async function refreshTelemetryCache(startDateOverride = null) {
   if (!RAPT_USERNAME || !RAPT_API_KEY) {
     throw new Error('RAPT credentials not configured.');
   }
@@ -391,9 +471,10 @@ async function refreshTelemetryCache() {
       hydrometer?.HydrometerId ||
       hydrometer?.id ||
       hydrometer?.Id;
-    const startDate =
+    const fallbackStart =
       hydrometer?.activeProfileSession?.startDate ||
       hydrometer?.activeProfileSession?.StartDate;
+    const startDate = startDateOverride || fallbackStart;
     const profileName = hydrometer?.activeProfileSession?.name || null;
 
     if (!hydrometerId) {
@@ -459,15 +540,19 @@ async function refreshTelemetryCache() {
   });
 
   const firstStart = rows[0]?.startDate || null;
-  telemetryCache = {
+  const payload = {
     rows,
     generatedAt: nowIso,
-    startDate: firstStart,
+    startDate: startDateOverride || firstStart,
     endDate: nowIso,
     profileName: firstProfileName,
+    requestedStartDate: startDateOverride || null,
   };
-  telemetryCacheTimestamp = Date.now();
-  return telemetryCache;
+  if (!startDateOverride || startDateOverride === persistedRaptStartDate) {
+    telemetryCache = payload;
+    telemetryCacheTimestamp = Date.now();
+  }
+  return payload;
 }
 
 function loadEnvFile(filePath) {
