@@ -48,7 +48,11 @@ jobs:
       - name: Deploy Flutter web to VPS
         run: |
           PORT=${SSH_PORT:-22}
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" flutter_brew_assistent/build/web/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
+          rsync -avz --delete \
+            --exclude 'proxy/' \
+            -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" \
+            flutter_brew_assistent/build/web/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
       - name: Deploy static site root to VPS
         run: |

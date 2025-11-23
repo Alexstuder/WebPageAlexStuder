@@ -42,6 +42,8 @@
     .summary-label {font-size:15px;color:#cbd5f5;text-transform:uppercase;letter-spacing:0.08em;}
     .summary-value {font-size:clamp(36px,6vw,64px);font-weight:700;line-height:1;color:#f8fafc;}
     .summary-unit {font-size:16px;color:rgba(241,245,249,0.7);}
+    .summary-note {font-size:11px;color:#94a3b8;margin-top:6px;display:flex;justify-content:space-between;gap:8px;}
+    .summary-note-label {text-transform:uppercase;letter-spacing:0.08em;}
     .summary-tile.blue {border-color:rgba(59,130,246,0.4);}
     .summary-tile.red {border-color:rgba(239,68,68,0.4);}
     .summary-tile.yellow {border-color:rgba(251,191,36,0.45);}
@@ -78,6 +80,10 @@
               <span class="summary-label">Gravity</span>
               <span class="summary-value" id="summary-gravity">–</span>
               <span class="summary-unit">SG</span>
+              <div class="summary-note">
+                <span class="summary-note-label">OG</span>
+                <span id="summary-og-value">–</span>
+              </div>
             </div>
             <div class="summary-tile yellow">
               <span class="summary-label">Alkohol</span>
@@ -178,6 +184,7 @@
     const summaryTemp=document.getElementById('summary-temp');
     const summaryGravity=document.getElementById('summary-gravity');
     const summaryAbv=document.getElementById('summary-abv');
+    const summaryOgValue=document.getElementById('summary-og-value');
     const reloadInfo=document.getElementById('reload-info');
     const startOverrideInput=document.getElementById('start-override');
     const startOverrideClear=document.getElementById('btn-start-clear');
@@ -461,6 +468,7 @@
 
     function updateSummary(rows){
       const latest=Array.isArray(rows) && rows.length?rows[rows.length-1]:null;
+      const firstEntry=Array.isArray(rows) && rows.length?rows[0]:null;
       if(summaryTemp){
         summaryTemp.textContent=formatTempDisplay(latest?.temperature);
       }
@@ -472,6 +480,10 @@
         const gravityValue=latest?normalizeGravity(latest?.gravity):null;
         const abv=computeAbv(initialGravityValue,gravityValue);
         summaryAbv.textContent=formatAbvDisplay(abv);
+      }
+      if(summaryOgValue){
+        const ogValue=firstEntry?normalizeGravity(firstEntry?.gravity):null;
+        summaryOgValue.textContent=formatGravityDisplay(ogValue);
       }
     }
 
