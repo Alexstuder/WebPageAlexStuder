@@ -69,7 +69,11 @@ jobs:
       - name: Deploy proxy to VPS
         run: |
           PORT=${SSH_PORT:-22}
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" proxy/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/proxy/
+          rsync -avz --delete \
+            --exclude 'node_modules/' \
+            -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" \
+            proxy/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/proxy/
 
       - name: Write proxy .env on server
         uses: appleboy/ssh-action@master
@@ -86,6 +90,17 @@ jobs:
             RAPT_API_KEY=${{ secrets.RAPT_API_KEY }}
             RAPT_USERNAME=${{ secrets.RAPT_USERNAME }}
             EOF
+
+      - name: Install proxy dependencies
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/proxy
+            npm install --production
 
       - name: Restart proxy service
         uses: appleboy/ssh-action@master
