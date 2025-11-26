@@ -88,6 +88,10 @@
                 <span class="summary-note-label">OG</span>
                 <span id="summary-og-value">–</span>
               </div>
+              <div class="summary-note">
+                <span class="summary-note-label">Δ 24h</span>
+                <span id="summary-gravity-delta">–</span>
+              </div>
             </div>
             <div class="summary-tile yellow">
               <span class="summary-label">Alkohol</span>
@@ -140,7 +144,9 @@
     Chart.register({
       id:'dayMarkers',
       afterDatasetsDraw(chart){
-        const labels=chart.config.options.plugins.dayMarkers?.labels || [];
+        const markerOptions=chart.config.options.plugins.dayMarkers || {};
+        const labels=markerOptions.labels || [];
+        const deltaMap=markerOptions.deltaMap || {};
         const xScale=chart.scales?.x;
         const ctx=chart.ctx;
         if(!labels.length || !xScale || !ctx) return;
@@ -151,7 +157,8 @@
         const bottom=chart.chartArea.bottom;
         const textMarkers=[];
         labels.forEach((label,idx)=>{
-          const day=new Date(label).toDateString();
+          const labelDate=new Date(label);
+          const day=labelDate.toDateString();
           if(!day || day===lastDay) return;
           lastDay=day;
           const x=xScale.getPixelForValue(idx);
@@ -162,7 +169,11 @@
           ctx.stroke();
           const text=formatDayShort(label);
           if(text){
-            textMarkers.push({x,text});
+            const dayKey=Number.isNaN(labelDate.getTime())?null:labelDate.toISOString().slice(0,10);
+            const deltaValue=dayKey && Object.prototype.hasOwnProperty.call(deltaMap,dayKey)
+              ? deltaMap[dayKey]
+              : null;
+            textMarkers.push({x,text,deltaValue});
           }
         });
         const minSpacing=28;
@@ -178,8 +189,13 @@
         ctx.textAlign='center';
         ctx.textBaseline='top';
         textMarkers.forEach(marker=>{
-          const y=marker.bumped?bottom+18:bottom+4;
-          ctx.fillText(marker.text,marker.x,y);
+          const baseY=marker.bumped?bottom+18:bottom+4;
+          ctx.fillStyle='#cbd5f5';
+          ctx.fillText(marker.text,marker.x,baseY);
+          if(marker.deltaValue !== null && marker.deltaValue !== undefined){
+            ctx.fillStyle='#4ade80';
+            ctx.fillText(formatGravityDelta(marker.deltaValue),marker.x,baseY+12);
+          }
         });
         ctx.restore();
       }
@@ -196,6 +212,7 @@
     const summaryGravity=document.getElementById('summary-gravity');
     const summaryAbv=document.getElementById('summary-abv');
     const summaryOgValue=document.getElementById('summary-og-value');
+    const summaryGravityDelta=document.getElementById('summary-gravity-delta');
     const reloadInfo=document.getElementById('reload-info');
     const startOverrideInput=document.getElementById('start-override');
     const startOverrideApply=document.getElementById('btn-start-apply');
@@ -355,6 +372,12 @@
         }
       ];
 
+      const dailyDeltaEntries=computeDailyGravityDeltas(rows);
+      const dailyDeltaMap=dailyDeltaEntries.reduce((acc,item)=>{
+        acc[item.key]=item.delta;
+        return acc;
+      },{});
+
       const config={
         type:'line',
         data:{labels,datasets},
@@ -383,7 +406,7 @@
                 }
               }
             },
-            dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8}
+            dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8,deltaMap:dailyDeltaMap}
           },
           scales:{
             yTemp:{
@@ -478,24 +501,98 @@
       return diff*131.25;
     }
 
+    function parseRowTimestamp(row){
+      const raw=row?.createdOn || row?.startDate || '';
+      if(!raw) return NaN;
+      const ts=Date.parse(raw);
+      return Number.isNaN(ts)?NaN:ts;
+    }
+
+    function findGravityDelta(rows){
+      if(!Array.isArray(rows) || rows.length===0) return null;
+      const latestRow=rows[rows.length-1];
+      const latestTimestamp=parseRowTimestamp(latestRow);
+      const latestGravity=normalizeGravity(latestRow?.gravity);
+      if(!Number.isFinite(latestTimestamp) || !Number.isFinite(latestGravity)) return null;
+      const threshold=latestTimestamp-24*60*60*1000;
+      let comparisonRow=null;
+      for(let i=rows.length-1;i>=0;i--){
+        const ts=parseRowTimestamp(rows[i]);
+        if(Number.isNaN(ts)) continue;
+        comparisonRow=rows[i];
+        if(ts <= threshold){
+          break;
+        }
+      }
+      const comparisonGravity= comparisonRow ? normalizeGravity(comparisonRow?.gravity) : null;
+      if(!Number.isFinite(comparisonGravity)) return null;
+      return latestGravity - comparisonGravity;
+    }
+
+    function computeDailyGravityDeltas(rows){
+      if(!Array.isArray(rows) || rows.length===0) return [];
+      const dayMap=new Map();
+      rows.forEach(row=>{
+        const ts=parseRowTimestamp(row);
+        if(Number.isNaN(ts)) return;
+        const dayKey=new Date(ts).toISOString().slice(0,10);
+        if(!dayMap.has(dayKey)){
+          dayMap.set(dayKey,{startRow:null,startTs:Infinity,endRow:null,endTs:-Infinity});
+        }
+        const entry=dayMap.get(dayKey);
+        if(ts < entry.startTs){
+          entry.startRow=row;
+          entry.startTs=ts;
+        }
+        if(ts >= entry.endTs){
+          entry.endRow=row;
+          entry.endTs=ts;
+        }
+      });
+      const sorted = Array.from(dayMap.entries())
+        .sort((a,b)=>a[0].localeCompare(b[0]));
+      // Erste Tagesdifferenz auslassen (keine Veränderung zum vorherigen Tag)
+      return sorted.slice(1).map(([key,entry])=>{
+          const start=normalizeGravity(entry.startRow?.gravity);
+          const end=normalizeGravity(entry.endRow?.gravity);
+          const delta=(Number.isFinite(start) && Number.isFinite(end))? end-start : null;
+          return {
+            key,
+            label:formatDailyDeltaLabel(entry.endTs),
+            delta,
+          };
+        })
+        .filter(item=>item.delta!==null);
+    }
+
+    function formatDailyDeltaLabel(timestamp){
+      if(!Number.isFinite(timestamp)) return '';
+      const d=new Date(timestamp);
+      if(Number.isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+    }
+
     function updateSummary(rows){
       const latest=Array.isArray(rows) && rows.length?rows[rows.length-1]:null;
       const firstEntry=Array.isArray(rows) && rows.length?rows[0]:null;
       if(summaryTemp){
         summaryTemp.textContent=formatTempDisplay(latest?.temperature);
       }
+      const latestGravity=latest?normalizeGravity(latest?.gravity):null;
       if(summaryGravity){
-        const gravityValue=latest?normalizeGravity(latest?.gravity):null;
-        summaryGravity.textContent=formatGravityDisplay(gravityValue);
+        summaryGravity.textContent=formatGravityDisplay(latestGravity);
       }
       if(summaryAbv){
-        const gravityValue=latest?normalizeGravity(latest?.gravity):null;
-        const abv=computeAbv(initialGravityValue,gravityValue);
+        const abv=computeAbv(initialGravityValue,latestGravity);
         summaryAbv.textContent=formatAbvDisplay(abv);
       }
       if(summaryOgValue){
         const ogValue=firstEntry?normalizeGravity(firstEntry?.gravity):null;
         summaryOgValue.textContent=formatGravityDisplay(ogValue);
+      }
+      if(summaryGravityDelta){
+        const delta=findGravityDelta(rows);
+        summaryGravityDelta.textContent=formatGravityDelta(delta);
       }
     }
 
@@ -511,6 +608,14 @@
       const num=Number(value);
       if(!Number.isFinite(num)) return '–';
       return num.toFixed(4);
+    }
+
+    function formatGravityDelta(value){
+      if(value===undefined || value===null) return '–';
+      const num=Number(value);
+      if(!Number.isFinite(num)) return '–';
+      const sign = num > 0 ? '+' : '';
+      return `${sign}${num.toFixed(4)}`;
     }
 
     function formatAbvDisplay(value){
