@@ -3,7 +3,26 @@
     {
       "id": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
       "title": "Backlog",
-      "cards": []
+      "cards": [
+        {
+          "id": "511d4120-c7c5-420f-8278-244cb7228c12",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Eigene DNS erstelltn",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "25b6758a-fef2-4523-9e8b-5ca6f1d5a951",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Titel für den aktuellen Sud stimmt nicht",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
     },
     {
       "id": "912cbbea-7706-4989-b9c5-4c9205be37a3",

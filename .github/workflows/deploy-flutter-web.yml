@@ -91,6 +91,16 @@ jobs:
             RAPT_USERNAME=${{ secrets.RAPT_USERNAME }}
             EOF
 
+      - name: Ensure telemetry cache file
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            sudo install -o ${{ secrets.SSH_USER }} -g psacln -m 0644 /dev/null ${{ secrets.DEPLOY_PATH }}/proxy/rapt-cache.json
+
       - name: Install proxy dependencies
         uses: appleboy/ssh-action@master
         with:
@@ -110,3 +120,14 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: sudo systemctl restart brew-proxy
+
+      - name: Preload telemetry cache
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            PORT=${{ secrets.PROXY_PORT || 3000 }}
+            curl -sS "http://127.0.0.1:$PORT/api/rapt/telemetry?reload=1" >/dev/null || true
