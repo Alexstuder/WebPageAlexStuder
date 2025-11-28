@@ -99,7 +99,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            sudo install -o ${{ secrets.SSH_USER }} -g psacln -m 0644 /dev/null ${{ secrets.DEPLOY_PATH }}/proxy/rapt-cache.json
+            touch ${{ secrets.DEPLOY_PATH }}/proxy/rapt-cache.json
 
       - name: Install proxy dependencies
         uses: appleboy/ssh-action@master

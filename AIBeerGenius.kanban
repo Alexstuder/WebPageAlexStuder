@@ -21,6 +21,15 @@
           "labels": [],
           "checkboxes": [],
           "comments": []
+        },
+        {
+          "id": "d54e75c0-5b5a-49f5-827c-160813e3b5a8",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Mehrere Controller auswählbar",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
         }
       ]
     },
