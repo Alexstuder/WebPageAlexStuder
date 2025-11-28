@@ -389,7 +389,17 @@
           plugins:{
           legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
             tooltip:{
+              usePointStyle:true,
               callbacks:{
+                labelPointStyle:ctx=>{
+                  const color=ctx.dataset.backgroundColor || ctx.dataset.borderColor || '#f1f5f9';
+                  return {
+                    pointStyle:'rect',
+                    rotation:0,
+                    backgroundColor:color,
+                    borderColor:color,
+                  };
+                },
                 title:items=>{
                   const idx=items[0]?.dataIndex ?? 0;
                   const label=labels[idx] || '';

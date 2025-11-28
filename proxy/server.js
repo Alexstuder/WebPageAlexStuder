@@ -425,11 +425,6 @@ async function ensureTelemetryCache(options = {}) {
     }
     return telemetryCachePromise;
   }
-  if (cacheAge > CACHE_INTERVAL_MS) {
-    refreshTelemetryCache().catch(err => {
-      console.error('Background telemetry refresh failed:', err.message || err);
-    });
-  }
   return telemetryCache;
 }
 
