@@ -6,6 +6,7 @@ const { searchShops } = require('./services/shopCrawler');
 
 const BASE_PATH = __dirname;
 const LOCAL_ENV = process.env.PROXY_ENV ?? path.join(BASE_PATH, '.env');
+const CACHE_FILE_PATH = path.join(BASE_PATH, 'rapt-cache.json');
 
 loadEnvFile(LOCAL_ENV);
 
@@ -30,6 +31,8 @@ let telemetryCache = null;
 let telemetryCacheTimestamp = 0;
 let telemetryCachePromise = null;
 let persistedRaptStartDate = null;
+
+loadTelemetryCacheFromDisk();
 
 const server = http.createServer(async (req, res) => {
   setCorsHeaders(res);
@@ -73,7 +76,8 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Proxy listening on http://localhost:${PORT}`);
-  ensureTelemetryCache({ force: true }).catch(err => {
+  const initialForce = !telemetryCache;
+  ensureTelemetryCache({ force: initialForce }).catch(err => {
     console.error('Initial telemetry preload failed:', err.message || err);
   });
   setInterval(() => {
@@ -406,6 +410,41 @@ function normalizeStartDateParam(value) {
 function resetTelemetryCache() {
   telemetryCache = null;
   telemetryCacheTimestamp = 0;
+  try {
+    fs.unlinkSync(CACHE_FILE_PATH);
+  } catch (error) {
+    // ignore missing file
+  }
+}
+
+function saveTelemetryCacheToDisk() {
+  const data = {
+    timestamp: telemetryCacheTimestamp,
+    payload: telemetryCache,
+    persistedStartDate: persistedRaptStartDate,
+  };
+  fs.writeFile(CACHE_FILE_PATH, JSON.stringify(data), err => {
+    if (err) {
+      console.warn('Failed to persist telemetry cache:', err.message || err);
+    }
+  });
+}
+
+function loadTelemetryCacheFromDisk() {
+  try {
+    const raw = fs.readFileSync(CACHE_FILE_PATH, 'utf8');
+    const data = JSON.parse(raw);
+    if (data && typeof data.timestamp === 'number' && data.payload) {
+      telemetryCacheTimestamp = data.timestamp;
+      telemetryCache = data.payload;
+      if (data.persistedStartDate) {
+        persistedRaptStartDate = data.persistedStartDate;
+      }
+      console.log('Telemetry cache restored from disk.');
+    }
+  } catch (error) {
+    // ignore missing or invalid cache file
+  }
 }
 
 async function ensureTelemetryCache(options = {}) {
@@ -556,6 +595,7 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
   if (!startDateOverride || startDateOverride === persistedRaptStartDate) {
     telemetryCache = payload;
     telemetryCacheTimestamp = Date.now();
+    saveTelemetryCacheToDisk();
   }
   return payload;
 }
