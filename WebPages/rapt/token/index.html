@@ -21,6 +21,7 @@
     .token-copy {margin:12px 0 20px;display:none;flex-direction:column;gap:8px;}
     .token-copy.active {display:flex;}
     .token-copy label {font-size:13px;color:#94a3b8;}
+    .token-copy-label-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .token-copy-row {display:flex;gap:8px;flex-wrap:wrap;}
     .token-copy-row input {flex:1;min-width:220px;border-radius:10px;border:1px solid rgba(148,163,184,0.35);background:#020b1d;padding:12px;color:#f8fafc;font-family:monospace;font-size:13px;}
     .token-copy-row input:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
@@ -44,10 +45,12 @@
         </div>
         <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
         <div class="token-copy" id="token-copy">
-          <label for="token-value">Access Token</label>
+          <div class="token-copy-label-row">
+            <label for="token-value">Access Token</label>
+            <button class="btn ghost" type="button" id="btn-token-copy">Token kopieren</button>
+          </div>
           <div class="token-copy-row">
             <input type="text" id="token-value" readonly value="" />
-            <button class="btn ghost" type="button" id="btn-token-copy">Token kopieren</button>
           </div>
           <div class="token-copy-feedback" id="token-copy-feedback"></div>
         </div>
@@ -88,7 +91,7 @@
         }
         tokenStatus.textContent='✅ Token erfolgreich geladen';
         setAccessToken(extractAccessToken(data));
-        tokenData.innerHTML=renderNodes(data,'token');
+        tokenData.innerHTML=`<div class="token-tree-root">${renderNodes(data,'token')}</div>`;
       }catch(error){
         tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
         tokenData.textContent=error.message;
@@ -142,9 +145,9 @@
       }
       if(node && typeof node==='object'){
         const entries=Object.entries(node).map(([key,val])=>renderNodes(val,key)).join('');
-        return `<details open><summary>${escapeHtml(label)}</summary>${entries}</details>`;
+        return `<details><summary>${escapeHtml(label)}</summary>${entries}</details>`;
       }
-      return `<p><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
+      return `<p class="token-leaf"><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
     }
 
     function escapeHtml(str){
@@ -158,3 +161,11 @@
   </script>
 </body>
 </html>
+    .token-tree-root{margin-top:8px;}
+    .token-tree-root details{background:#060b17;border:1px solid rgba(148,163,184,0.2);border-radius:18px;padding:18px;margin:12px 0;}
+    .token-tree-root details summary{font-weight:600;color:#bae6fd;list-style:none;}
+    .token-tree-root details summary::-webkit-details-marker{display:none;}
+    .token-tree-root details summary::before{content:'▸';display:inline-block;margin-right:8px;color:#94a3b8;transition:transform .2s ease;}
+    .token-tree-root details[open] summary::before{transform:rotate(90deg);}
+    .token-tree-root details details{margin:14px 0 0;}
+    .token-leaf{margin:4px 0;font-size:13px;color:#cbd5f5;}
