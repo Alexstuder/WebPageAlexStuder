@@ -40,7 +40,7 @@
       <div class="rapt-panel">
         <div class="rapt-actions">
           <button class="btn primary" id="btn-token">Token aktualisieren</button>
-          <a class="btn ghost" href="https://api.rapt.io/index.html" target="_blank" rel="noopener">RAPT OpenAPI</a>
+          <button class="btn ghost" type="button" id="btn-openapi">RAPT OpenAPI</button>
           <a class="btn" href="../">Zurück zum Dashboard</a>
         </div>
         <div class="rapt-status" id="token-status">Noch kein Token geladen.</div>
@@ -72,9 +72,11 @@
     const tokenValueInput=document.getElementById('token-value');
     const tokenCopyBtn=document.getElementById('btn-token-copy');
     const tokenCopyFeedback=document.getElementById('token-copy-feedback');
+    const openApiBtn=document.getElementById('btn-openapi');
 
-    tokenBtn.addEventListener('click',loadToken);
+    tokenBtn.addEventListener('click',()=>loadToken());
     tokenCopyBtn.addEventListener('click',copyToken);
+    openApiBtn.addEventListener('click',openOpenApiDocs);
     loadToken();
 
     async function loadToken(){
@@ -87,14 +89,17 @@
         if(!response.ok){
           tokenStatus.textContent=`❗ HTTP ${response.status}`;
           tokenData.textContent=JSON.stringify(data,null,2);
-          return;
+          return '';
         }
         tokenStatus.textContent='✅ Token erfolgreich geladen';
-        setAccessToken(extractAccessToken(data));
+        const token=extractAccessToken(data);
+        setAccessToken(token);
         tokenData.innerHTML=`<div class="token-tree-root">${renderNodes(data,'token')}</div>`;
+        return token;
       }catch(error){
         tokenStatus.textContent='❗ Token-Abruf fehlgeschlagen';
         tokenData.textContent=error.message;
+        return '';
       }
     }
 
@@ -123,19 +128,52 @@
       const value=tokenValueInput.value.trim();
       if(!value) return;
       try{
-        await navigator.clipboard.writeText(value);
+        await copyText(value);
         tokenCopyFeedback.textContent='✅ Token in die Zwischenablage kopiert.';
-      }catch{
-        try{
-          tokenValueInput.select();
-          document.execCommand('copy');
-          tokenCopyFeedback.textContent='✅ Token kopiert (Fallback).';
-        }catch(err){
-          tokenCopyFeedback.textContent='❗ Konnte Token nicht kopieren.';
-          return;
-        }
+      }catch(err){
+        tokenCopyFeedback.textContent='❗ Konnte Token nicht kopieren.';
+        return;
       }
       setTimeout(()=>tokenCopyFeedback.textContent='',2500);
+    }
+
+    async function openOpenApiDocs(){
+      const previous=openApiBtn.textContent;
+      openApiBtn.disabled=true;
+      openApiBtn.textContent='Token wird geladen...';
+      try{
+        const token=await loadToken();
+        const activeToken=token || tokenValueInput.value.trim();
+        if(!activeToken){
+          tokenStatus.textContent='❗ Konnte keinen Token abrufen.';
+          return;
+        }
+        await copyText(activeToken);
+        tokenStatus.textContent='✅ Token kopiert. API wird geöffnet ...';
+        window.open('https://api.rapt.io/','_blank','noopener');
+      }finally{
+        openApiBtn.disabled=false;
+        openApiBtn.textContent=previous;
+      }
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch{
+        const temp=document.createElement('textarea');
+        temp.value=text;
+        temp.style.position='fixed';
+        temp.style.opacity='0';
+        document.body.appendChild(temp);
+        try{
+          temp.focus();
+          temp.select();
+          document.execCommand('copy');
+        }finally{
+          document.body.removeChild(temp);
+        }
+      }
     }
 
     function renderNodes(node,label='root'){
