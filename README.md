@@ -103,14 +103,14 @@ Kurzanleitung (Landing Page):
   - `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PORT` (wie bisher)
   - `DEPLOY_PATH` (Root-Verzeichnis auf dem Server)
   - `OPENAI_API_KEY` (wird in `proxy/.env` geschrieben)
-  - `PROXY_URL` (für Prod jetzt `https://alexstuder.run.place/api/brew`, landet in `flutter_brew_assistent/.env`)
+  - `PROXY_URL` (für Prod jetzt `https://alexstuder.ch/api/brew`, landet in `flutter_brew_assistent/.env`)
   - `RAPT_API_KEY` & `RAPT_USERNAME` (für den RAPT Explorer; nur serverseitig genutzt)
-- Öffentliche AiBrewGenius-Web-App: `https://alexstuder.run.place/brew_app/` (Startseite und Karussell führen direkt dorthin.)
+- Öffentliche AiBrewGenius-Web-App: `https://alexstuder.ch/brew_app/` (Startseite und Karussell führen direkt dorthin.)
 - RAPT API Explorer lokal via `WebPages/rapt/` oder live über deine Domain.
   - Enthält einen integrierten Token-Generator (`https://id.rapt.io/connect/token`), der deinen Benutzer/API-Key nutzt und den erhaltenen JWT automatisch als Bearer-Token einträgt.
   - Ruft automatisch `GetProfiles`, `GetHydrometers`, `GetTelemetry` ab und zeigt Token + Messwerte tabellarisch an.
-- Öffentliche URL der Web-App: `https://alexstuder.run.place/brew_app/` (Landing-Page-Links zeigen dorthin).
-  - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.run.place` setzen)
+- Öffentliche URL der Web-App: `https://alexstuder.ch/brew_app/` (Landing-Page-Links zeigen dorthin).
+  - Optional `CORS_ORIGIN` (bei Bedarf auf `https://alexstuder.ch` setzen)
 - Workflow-Schritte:
   1. Flutter `.env` mit `PROXY_URL` erzeugen, Build erstellen und nach `${DEPLOY_PATH}` hochladen.
      - Da die Web-App unter `/brew_app/` ausgeliefert wird, verwendet der Workflow automatisch `flutter build web --wasm --base-href /brew_app/`.

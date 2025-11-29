@@ -36,7 +36,17 @@
     {
       "id": "912cbbea-7706-4989-b9c5-4c9205be37a3",
       "title": "To Do",
-      "cards": []
+      "cards": [
+        {
+          "id": "9f3c589d-ca04-455c-9565-7dc03fb81b6e",
+          "listId": "912cbbea-7706-4989-b9c5-4c9205be37a3",
+          "title": "Telemetrie für RAPT korrigieren",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
     },
     {
       "id": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",

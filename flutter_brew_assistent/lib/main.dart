@@ -2778,7 +2778,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   }
 
   Future<void> _openHomepage() async {
-    final uri = Uri.parse('https://alexstuder.run.place/');
+    final uri = Uri.parse('https://alexstuder.ch/');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
