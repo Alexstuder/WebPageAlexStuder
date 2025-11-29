@@ -303,10 +303,17 @@ async function handleRaptTelemetryRequest(req, res) {
       return;
     }
     const effectiveStartOverride = startOverride || persistedRaptStartDate || null;
-    const data = await ensureTelemetryCache({
-      force: forceReload,
-      startDateOverride: effectiveStartOverride,
-    });
+    const requestedKey = effectiveStartOverride || null;
+    const canServeCached =
+      !forceReload &&
+      telemetryCache &&
+      telemetryCache.requestedStartDate === requestedKey;
+    const data = canServeCached
+      ? telemetryCache
+      : await ensureTelemetryCache({
+          force: forceReload,
+          startDateOverride: effectiveStartOverride,
+        });
     const payload = {
       ...data,
       persistedStartDate: persistedRaptStartDate,
