@@ -223,6 +223,8 @@
     let telemetryChart=null;
     let latestTelemetry=[];
     let initialGravityValue=null;
+    const DISPLAY_LOCALE='de-CH';
+    const DISPLAY_TIMEZONE='Europe/Zurich';
 
     reloadBtn.addEventListener('click',()=>loadTelemetry(true));
     downloadBtn.addEventListener('click',downloadCsv);
@@ -274,7 +276,8 @@
         serverPersistedStart=persistedOverride;
         syncStartOverrideInput(persistedOverride,startOverrideIso);
         const effectiveOverrideIso=startOverrideIso || persistedOverride || null;
-        let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${data.generatedAt || ''}`;
+        const generatedLabel=formatStatusTimestamp(data.generatedAt);
+        let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
         if(errorRows.length){
           statusMsg+=` · ${errorRows.length} ohne Startdatum ignoriert`;
         }
@@ -483,17 +486,23 @@
     let lastDayTick=null;
 
     function formatDayShort(label){
-      if(!label) return '';
-      const date=new Date(label);
-      if(Number.isNaN(date.getTime())) return '';
-      return date.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+      return formatWithTimezone(label,{day:'2-digit',month:'2-digit'});
     }
 
     function formatFullTimestamp(label){
-      if(!label) return '';
-      const date=new Date(label);
-      if(Number.isNaN(date.getTime())) return label;
-      return date.toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return formatWithTimezone(label,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+    }
+
+    function formatWithTimezone(value,options){
+      if(!value) return '';
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime())) return typeof value==='string'?value:'';
+      const opts={timeZone:DISPLAY_TIMEZONE,...(options || {})};
+      return date.toLocaleString(DISPLAY_LOCALE,opts);
+    }
+
+    function formatStatusTimestamp(value){
+      return formatWithTimezone(value,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
     }
 
     function normalizeGravity(value){
@@ -655,10 +664,7 @@
     }
 
     function formatRangeDate(value){
-      if(!value) return '';
-      const date=new Date(value);
-      if(Number.isNaN(date.getTime())) return value;
-      return date.toLocaleString('de-CH',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      return formatWithTimezone(value,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
     }
 
     function downloadCsv(){
@@ -687,13 +693,8 @@
         reloadInfo.textContent=isFresh?'Gerade aktualisiert':'';
         return;
       }
-      const date=new Date(timestamp);
-      if(Number.isNaN(date.getTime())){
-        reloadInfo.textContent='Zeit unbekannt';
-        return;
-      }
-      const label=date.toLocaleString('de-CH',{hour:'2-digit',minute:'2-digit'});
-      reloadInfo.textContent=isFresh?`Stand ${label}`:`Letzter Stand ${label}`;
+      const label=formatWithTimezone(timestamp,{hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+      reloadInfo.textContent=label? (isFresh?`Stand ${label}`:`Letzter Stand ${label}`) : 'Zeit unbekannt';
     }
 
     function escapeCsv(value){
