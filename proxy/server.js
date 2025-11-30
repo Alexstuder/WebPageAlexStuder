@@ -17,7 +17,10 @@ const RAPT_TOKEN_ENDPOINT = process.env.RAPT_TOKEN_ENDPOINT ?? 'https://id.rapt.
 const RAPT_API_BASE = process.env.RAPT_API_BASE ?? 'https://api.rapt.io';
 const RAPT_PROFILE_ENDPOINT = process.env.RAPT_PROFILE_ENDPOINT ?? '/api/Profiles/GetProfiles';
 const RAPT_HYDR_ENDPOINT = process.env.RAPT_HYDR_ENDPOINT ?? '/api/Hydrometers/GetHydrometers';
+const RAPT_HYDR_DETAIL_ENDPOINT = process.env.RAPT_HYDR_DETAIL_ENDPOINT ?? '/api/Hydrometers/GetHydrometer';
 const RAPT_TELEMETRY_ENDPOINT = process.env.RAPT_TELEMETRY_ENDPOINT ?? '/api/Hydrometers/GetTelemetry';
+const RAPT_TEMPCONTROLLER_ENDPOINT = process.env.RAPT_TEMPCONTROLLER_ENDPOINT ?? '/api/TemperatureControllers/GetTemperatureControllers';
+const RAPT_TEMPCONTROLLER_DETAIL_ENDPOINT = process.env.RAPT_TEMPCONTROLLER_DETAIL_ENDPOINT ?? '/api/TemperatureControllers/GetTemperatureController';
 const PORT = Number(process.env.PORT ?? 3000);
 const CACHE_INTERVAL_MS = Number(process.env.RAPT_CACHE_INTERVAL_MS ?? 60 * 60 * 1000);
 const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*';
@@ -67,6 +70,26 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/api/rapt/telemetry/start-override') {
     await handleRaptStartOverrideRequest(req, res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/temperature-controllers' && req.method === 'GET') {
+    await handleRaptTemperatureControllers(req, res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/temperature-controllers/detail' && req.method === 'GET') {
+    await handleRaptTemperatureControllerDetail(req, res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/hydrometers' && req.method === 'GET') {
+    await handleRaptHydrometers(req, res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/hydrometers/detail' && req.method === 'GET') {
+    await handleRaptHydrometerDetail(req, res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/hydrometers/telemetry' && req.method === 'GET') {
+    await handleRaptHydrometerTelemetry(req, res);
     return;
   }
 
@@ -366,6 +389,228 @@ async function handleRaptStartOverrideRequest(req, res) {
   respondJson(res, 405, { error: 'Method not allowed.' });
 }
 
+async function handleRaptTemperatureControllers(req, res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const response = await fetch(`${base}${RAPT_TEMPCONTROLLER_ENDPOINT}`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      respondJson(res, response.status, data);
+      return;
+    }
+    respondJson(res, 200, data);
+  } catch (error) {
+    console.error('Temperature controller error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch temperature controllers.' });
+  }
+}
+
+async function handleRaptTemperatureControllerDetail(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const controllerId = url.searchParams.get('id');
+  if (!controllerId) {
+    respondJson(res, 400, { error: 'Missing temperature controller id.' });
+    return;
+  }
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const detailUrl = new URL(`${base}${RAPT_TEMPCONTROLLER_DETAIL_ENDPOINT}`);
+    detailUrl.searchParams.set('temperatureControllerId', controllerId);
+    const response = await fetch(detailUrl, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      respondJson(res, response.status, data);
+      return;
+    }
+    respondJson(res, 200, data);
+  } catch (error) {
+    console.error('Temperature controller detail error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch temperature controller detail.' });
+  }
+}
+
+async function handleRaptHydrometers(req, res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const response = await fetch(`${base}${RAPT_HYDR_ENDPOINT}`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      respondJson(res, response.status, data);
+      return;
+    }
+    respondJson(res, 200, data);
+  } catch (error) {
+    console.error('Hydrometer list error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch hydrometers.' });
+  }
+}
+
+async function handleRaptHydrometerDetail(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const hydrometerId = url.searchParams.get('id');
+  if (!hydrometerId) {
+    respondJson(res, 400, { error: 'Missing hydrometer id.' });
+    return;
+  }
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const detailUrl = new URL(`${base}${RAPT_HYDR_DETAIL_ENDPOINT}`);
+    detailUrl.searchParams.set('hydrometerId', hydrometerId);
+    const response = await fetch(detailUrl, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      respondJson(res, response.status, data);
+      return;
+    }
+    respondJson(res, 200, data);
+  } catch (error) {
+    console.error('Hydrometer detail error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch hydrometer detail.' });
+  }
+}
+
+async function handleRaptHydrometers(req, res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const data = await fetchHydrometerList(token);
+    respondJson(res, 200, data);
+  } catch (error) {
+    console.error('Hydrometer list error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch hydrometers.' });
+  }
+}
+
+async function handleRaptHydrometerDetail(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const hydrometerId = url.searchParams.get('id');
+  if (!hydrometerId) {
+    respondJson(res, 400, { error: 'Missing hydrometer id.' });
+    return;
+  }
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const detail = await fetchHydrometerDetail(token, hydrometerId);
+    respondJson(res, 200, detail);
+  } catch (error) {
+    console.error('Hydrometer detail error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch hydrometer detail.' });
+  }
+}
+
+async function handleRaptHydrometerTelemetry(req, res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const hydrometerId = url.searchParams.get('id');
+  const startOverrideRaw = url.searchParams.get('start');
+  const startOverride = normalizeStartDateParam(startOverrideRaw);
+  const fallbackStartRaw = url.searchParams.get('fallbackStart');
+  const fallbackStart = normalizeStartDateParam(fallbackStartRaw);
+  const profileNameParam = url.searchParams.get('profileName') || null;
+  if (!hydrometerId) {
+    respondJson(res, 400, { error: 'Missing hydrometer id.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    const startDate = startOverride || fallbackStart;
+    if (!startDate) {
+      respondJson(res, 400, { error: 'No start date available for hydrometer.' });
+      return;
+    }
+    try {
+      const data = await fetchHydrometerTelemetry(token, hydrometerId, startDate, profileNameParam);
+      data.requestedStartDate = startOverride || null;
+      data.resolvedStartDate = startDate;
+      respondJson(res, 200, data);
+      return;
+    } catch (error) {
+      const shouldFallback =
+        !!startOverride &&
+        fallbackStart &&
+        (error.statusCode === 400 || error.statusCode === 404 || error.statusCode === 504);
+      if (shouldFallback) {
+        try {
+          const fallbackData = await fetchHydrometerTelemetry(token, hydrometerId, fallbackStart, profileNameParam);
+          fallbackData.requestedStartDate = startOverride;
+          fallbackData.resolvedStartDate = fallbackStart;
+          fallbackData.fallbackUsed = true;
+          respondJson(res, 200, fallbackData);
+          return;
+        } catch (innerError) {
+          console.error('Hydrometer telemetry fallback failed:', innerError);
+          const status = innerError.statusCode ?? 500;
+          respondJson(res, status, { error: innerError.message || 'Failed to fetch hydrometer telemetry.' });
+          return;
+        }
+      }
+      console.error('Hydrometer telemetry error:', error);
+      const status = error.statusCode ?? 500;
+      respondJson(res, status, { error: error.message || 'Failed to fetch hydrometer telemetry.' });
+    }
+  } catch (error) {
+    console.error('Hydrometer telemetry error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message || 'Failed to fetch hydrometer telemetry.' });
+  }
+}
+
 async function requestRaptToken() {
   const body = new URLSearchParams({
     client_id: 'rapt-user',
@@ -628,4 +873,84 @@ function loadEnvFile(filePath) {
       console.warn(`No env file loaded at ${filePath}`);
     }
   }
+}
+
+async function fetchHydrometerList(token) {
+  const base = RAPT_API_BASE.replace(/\/$/, '');
+  const response = await fetch(`${base}${RAPT_HYDR_ENDPOINT}`, {
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error('Failed to fetch hydrometers');
+    error.statusCode = response.status;
+    error.details = data;
+    throw error;
+  }
+  return data;
+}
+
+async function fetchHydrometerDetail(token, hydrometerId) {
+  const base = RAPT_API_BASE.replace(/\/$/, '');
+  const detailUrl = new URL(`${base}${RAPT_HYDR_DETAIL_ENDPOINT}`);
+  detailUrl.searchParams.set('hydrometerId', hydrometerId);
+  const response = await fetch(detailUrl, {
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error('Failed to fetch hydrometer detail');
+    error.statusCode = response.status;
+    error.details = data;
+    throw error;
+  }
+  return data;
+}
+
+async function fetchHydrometerTelemetry(token, hydrometerId, startDate, profileName = null) {
+  const base = RAPT_API_BASE.replace(/\/$/, '');
+  const nowIso = new Date().toISOString();
+  const telemetryUrl = new URL(`${base}${RAPT_TELEMETRY_ENDPOINT}`);
+  telemetryUrl.searchParams.set('hydrometerId', hydrometerId);
+  telemetryUrl.searchParams.set('startDate', startDate);
+  telemetryUrl.searchParams.set('endDate', nowIso);
+  const response = await fetch(telemetryUrl, {
+    headers: {
+      'Authorization': `Bearer ${token.access_token}`,
+      'Accept': 'application/json',
+    },
+  });
+  const data = await response.json().catch(() => []);
+  if (!response.ok) {
+    const error = new Error('Failed to fetch hydrometer telemetry');
+    error.statusCode = response.status;
+    error.details = data;
+    throw error;
+  }
+  const entries = Array.isArray(data) ? data : [data];
+  const rows = entries.map(entry => ({
+    hydrometerId,
+    startDate: entry?.startDate || entry?.StartDate || startDate || null,
+    createdOn: entry?.createdOn || entry?.CreatedOn || null,
+    temperature: entry?.temperature ?? entry?.Temperature ?? null,
+    gravity: entry?.gravity ?? entry?.Gravity ?? null,
+    gravityVelocity: entry?.gravityVelocity ?? entry?.GravityVelocity ?? null,
+    battery: entry?.battery ?? entry?.Battery ?? null,
+    macAddress: entry?.macAddress || entry?.MacAddress || null,
+    profileName,
+  }));
+  return {
+    rows,
+    hydrometerId,
+    profileName,
+    startDate,
+    endDate: nowIso,
+    generatedAt: nowIso,
+  };
 }

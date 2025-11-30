@@ -52,6 +52,22 @@
     .summary-tile.blue {border-color:rgba(59,130,246,0.4);}
     .summary-tile.red {border-color:rgba(239,68,68,0.4);}
     .summary-tile.yellow {border-color:rgba(251,191,36,0.45);}
+    .controller-picker {margin:16px 0;display:flex;flex-direction:column;gap:6px;}
+    .controller-picker label {font-size:13px;color:#94a3b8;}
+    .controller-picker select {background:#020b1d;color:#f8fafc;border:1px solid rgba(148,163,184,0.35);border-radius:10px;padding:10px;font-size:14px;}
+    .controller-picker select:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
+    .profile-steps{margin:18px 0;background:#050c1e;border:1px solid rgba(148,163,184,0.35);border-radius:16px;padding:16px;}
+    .profile-steps__title{font-size:13px;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;}
+    .profile-steps ol{list-style:none;padding:0;margin:0;counter-reset:step;}
+    .profile-step{position:relative;display:flex;flex-direction:column;gap:6px;font-size:14px;color:#f1f5f9;margin:6px 0;padding:10px 14px 10px 42px;border-radius:10px;background:rgba(148,163,184,0.08);cursor:pointer;transition:border .2s ease;}
+    .profile-step::before{counter-increment:step;content:counter(step) '.';color:#94a3b8;font-weight:600;position:absolute;left:14px;top:10px;}
+    .profile-step>div.step-header{display:flex;align-items:center;gap:8px;}
+    .profile-step>div.step-header span.step-name{flex:1;}
+    .profile-step.active{border:1px solid #3b82f6;background:rgba(59,130,246,0.12);}
+    .profile-step.empty{justify-content:center;color:#94a3b8;font-style:italic;cursor:default;}
+    .profile-step .step-details{display:none;font-size:13px;color:#cbd5f5;padding-left:18px;}
+    .profile-step.expanded .step-details{display:block;}
+    .profile-step .step-details div{margin:2px 0;}
     @media (max-width:640px){
       .summary-value {font-size:40px;}
       .summary-tiles{flex-wrap:wrap;}
@@ -100,6 +116,12 @@
               <span class="summary-unit">Vol.%</span>
             </div>
           </div>
+          <div class="controller-picker">
+            <label for="controller-select">Temperature Controller</label>
+            <select id="controller-select">
+              <option value="">Controller auswählen …</option>
+            </select>
+          </div>
           <div class="chart-frame">
             <canvas id="telemetry-chart"></canvas>
           </div>
@@ -124,10 +146,15 @@
               </div>
             </div>
           </div>
+          <div class="profile-steps" id="profile-steps">
+            <div class="profile-steps__title">Brauprogramm-Schritte</div>
+            <ol id="profile-steps-list"></ol>
+          </div>
           </div>
           <div class="links-footer">
             <a class="btn ghost" href="./token/">Bearer-Details</a>
             <a class="btn ghost" href="./table/">Tabellenansicht</a>
+            <a class="btn ghost" href="./telemetriedata/">TelemetrieData</a>
             <button class="btn ghost" id="btn-download" disabled>CSV herunterladen</button>
           </div>
         </div>
@@ -218,15 +245,23 @@
     const startOverrideInput=document.getElementById('start-override');
     const startOverrideApply=document.getElementById('btn-start-apply');
     const startOverrideClear=document.getElementById('btn-start-clear');
+    const controllerSelect=document.getElementById('controller-select');
+    const profileStepsContainer=document.getElementById('profile-steps');
+    const profileStepsList=document.getElementById('profile-steps-list');
     const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
-    let serverPersistedStart=null;
+    const controllerDataMap=new Map();
+    let controllerList=[];
+    let currentControllerId='';
     let telemetryChart=null;
     let latestTelemetry=[];
     let initialGravityValue=null;
     const DISPLAY_LOCALE='de-CH';
     const DISPLAY_TIMEZONE='Europe/Zurich';
+    if(profileStepsContainer){
+      profileStepsContainer.style.display='none';
+    }
 
-    reloadBtn.addEventListener('click',()=>loadTelemetry(true));
+    reloadBtn.addEventListener('click',()=>loadTelemetryForSelected(true));
     downloadBtn.addEventListener('click',downloadCsv);
     downloadBtn.disabled=true;
     updateProfileHeading();
@@ -234,67 +269,122 @@
     updateReloadInfo(null,false);
     initStartOverrideControl();
 
-    loadTelemetry();
+    if(controllerSelect){
+      controllerSelect.addEventListener('change',()=>loadTelemetryForSelected());
+    }
+    loadControllers();
 
-    async function loadTelemetry(force=false){
+    async function loadControllers(){
+      telemetryStatus.textContent='⏳ Lade Temperature Controller ...';
+      try{
+        const response=await fetch(getApiUrl('/api/rapt/temperature-controllers'));
+        const data=await response.json().catch(()=>[]);
+        if(!response.ok){
+          telemetryStatus.textContent=`❗ Controller HTTP ${response.status}`;
+          return;
+        }
+      controllerDataMap.clear();
+      controllerList=(Array.isArray(data)?data:[]).filter(controller=>{
+        const use=controller?.customerUse || controller?.CustomerUse || controller?.use_case;
+        return !use || use==='Beer Fermentation';
+      });
+      controllerList.forEach(controller=>{
+        const id=getControllerId(controller);
+        if(id){
+          controllerDataMap.set(id,controller);
+        }
+      });
+        populateControllerSelect();
+        if(controllerList.length){
+          currentControllerId=controllerSelect?.value || '';
+          await loadTelemetryForSelected();
+        }else{
+          telemetryStatus.textContent='Keine Temperature Controller gefunden.';
+        }
+      }catch(error){
+        telemetryStatus.textContent='❗ Controller konnten nicht geladen werden';
+      }
+    }
+
+    function populateControllerSelect(){
+      if(!controllerSelect) return;
+      controllerSelect.innerHTML='<option value=\"\">Controller auswählen …</option>';
+      controllerList.forEach(controller=>{
+        const id=getControllerId(controller);
+        if(!id) return;
+        const name=controller?.name || controller?.controllerName || id;
+        const option=document.createElement('option');
+        option.value=id;
+        option.textContent=name;
+        controllerSelect.appendChild(option);
+      });
+      if(controllerList.length){
+        controllerSelect.value=getControllerId(controllerList[0]) || '';
+        currentControllerId=controllerSelect.value;
+      }
+    }
+
+    async function loadTelemetryForSelected(force=false){
+      const controllerId=controllerSelect?.value || currentControllerId;
+      if(!controllerId){
+        telemetryStatus.textContent='Bitte Temperature Controller auswählen.';
+        return;
+      }
+      currentControllerId=controllerId;
       telemetryStatus.textContent=force?'♻️ Aktualisiere Daten ...':'⏳ Telemetrie wird geladen ...';
       telemetryRange.textContent='Zeitraum wird geladen ...';
       setLoadingState(true);
       try{
-        const startOverrideIso=getStartOverrideIso();
-        const endpoint=buildTelemetryRequestUrl(force,startOverrideIso);
-        const response=await fetch(endpoint);
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok){
-          telemetryStatus.textContent=`❗ HTTP ${response.status}`;
+        const controllerData=controllerDataMap.get(controllerId);
+        if(!controllerData){
+          telemetryStatus.textContent='❗ Controller-Daten nicht verfügbar.';
           renderChart([]);
-          updateRangeInfo();
-          updateProfileHeading();
-          updateSummary([]);
           setLoadingState(false);
           return;
         }
-        const allRows=Array.isArray(data.rows)?data.rows:[];
-        const errorRows=allRows.filter(r=>r?.error);
-        if(errorRows.length){
-          console.warn('Gefilterte RAPT-Einträge wegen Fehlern:',errorRows);
+        renderProfileSteps(controllerData);
+        const controllerInfo=getControllerTelemetryInfo(controllerData);
+        if(!controllerInfo.hydrometerId){
+          telemetryStatus.textContent='❗ Kein Hydrometer für diesen Controller gefunden.';
+          renderChart([]);
+          setLoadingState(false);
+          return;
         }
-        const rows=allRows.filter(r=>!r?.error);
+        const profileName=controllerInfo.profileName;
+        const startOverrideIso=getStartOverrideIso() || controllerInfo.defaultStart;
+        const telemetryData=await fetchHydrometerTelemetryData(
+          controllerInfo.hydrometerId,
+          startOverrideIso,
+          controllerInfo.defaultStart,
+          profileName
+        );
+        const rows=Array.isArray(telemetryData.rows)?telemetryData.rows:[];
         if(!rows.length){
-          telemetryStatus.textContent=errorRows.length
-            ? `⚠️ Keine gültigen Telemetriedaten ( ${errorRows.length} ohne Startdatum ).`
-            : 'Keine Telemetriedaten vorhanden.';
+          telemetryStatus.textContent='Keine Telemetriedaten vorhanden.';
           renderChart([]);
           updateRangeInfo();
-          updateProfileHeading();
+          updateProfileHeading(profileName);
           updateSummary([]);
-          updateReloadInfo(data.generatedAt || null,false);
+          updateReloadInfo(null,false);
           setLoadingState(false);
           return;
         }
-        const persistedOverride=data.persistedStartDate || null;
-        serverPersistedStart=persistedOverride;
-        syncStartOverrideInput(persistedOverride,startOverrideIso);
-        const effectiveOverrideIso=startOverrideIso || persistedOverride || null;
-        const generatedLabel=formatStatusTimestamp(data.generatedAt);
+        const generatedLabel=formatStatusTimestamp(telemetryData.generatedAt);
         let statusMsg=`✅ ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
-        if(errorRows.length){
-          statusMsg+=` · ${errorRows.length} ohne Startdatum ignoriert`;
-        }
-        if(effectiveOverrideIso){
-          statusMsg+=' · Benutzerstart aktiv';
-        }
         telemetryStatus.textContent=statusMsg;
-        const start=data.resolvedStartDate || data.startDate || rows[0]?.startDate || '';
-        const end=data.endDate || data.generatedAt || rows[rows.length-1]?.startDate || '';
+        const start=telemetryData.resolvedStartDate || telemetryData.startDate || rows[0]?.startDate || '';
+        const end=telemetryData.endDate || telemetryData.generatedAt || rows[rows.length-1]?.startDate || '';
         updateRangeInfo(start,end);
-        const resolvedProfileName=data.profileName || rows.find(r=>r?.profileName)?.profileName || null;
-        updateProfileHeading(resolvedProfileName);
+        updateProfileHeading(profileName || telemetryData.profileName);
         renderChart(rows);
         updateSummary(rows);
-        updateReloadInfo(end || data.generatedAt || null,true);
+        updateReloadInfo(end || telemetryData.generatedAt || null,true);
+        if(telemetryData.requestedStartDate && telemetryData.resolvedStartDate && telemetryData.requestedStartDate!==telemetryData.resolvedStartDate){
+          telemetryStatus.textContent+= ' · Startdatum angepasst';
+        }
         setLoadingState(false);
       }catch(error){
+        console.error('Telemetry load failed',error);
         telemetryStatus.textContent='❗ Telemetrie-Abruf fehlgeschlagen';
         renderChart([]);
         updateRangeInfo();
@@ -303,6 +393,190 @@
         updateReloadInfo(null,false);
         setLoadingState(false);
       }
+    }
+
+    function getControllerId(controller){
+      return controller?.id || controller?.Id || controller?.temperatureControllerId || controller?.TemperatureControllerId || null;
+    }
+
+    function getControllerTelemetryInfo(controller){
+      if(!controller) return {hydrometerId:null,profileName:'',defaultStart:null};
+      const session=controller?.activeProfileSession || controller?.ActiveProfileSession || {};
+      const hydrometerId=
+        controller?.hydrometerId ||
+        controller?.HydrometerId ||
+        session?.hydrometerId ||
+        session?.HydrometerId ||
+        null;
+      const profileName=session?.name || session?.Name || controller?.profileName || controller?.name || '';
+      const defaultStart=findControllerStartDate(controller,session);
+      return {hydrometerId,profileName,defaultStart};
+    }
+
+    function findControllerStartDate(controller,session){
+      const candidates=[
+        session?.startDate,
+        session?.StartDate,
+        session?.startTime,
+        session?.StartTime,
+        session?.startTimestamp,
+        session?.StartTimestamp,
+        session?.sessionStart,
+        session?.SessionStart,
+        controller?.startDate,
+        controller?.StartDate,
+        controller?.startTime,
+        controller?.StartTime,
+        controller?.activeProfileStartTime,
+        controller?.ActiveProfileStartTime,
+      ];
+      for(const candidate of candidates){
+        if(candidate){
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    function renderProfileSteps(detail){
+      if(!profileStepsContainer || !profileStepsList) return;
+      const steps=getProfileSteps(detail);
+      const activeId=getActiveProfileStepId(detail);
+      profileStepsContainer.style.display='block';
+      if(!steps.length){
+        profileStepsList.innerHTML='<li class="profile-step empty">Keine Schritte im Profil gefunden.</li>';
+        return;
+      }
+      const items=steps.map((step,index)=>{
+        const id=normalizeStepId(step,index);
+        const name=step?.name || step?.Name || step?.title || step?.Title || `Schritt ${index+1}`;
+        const isActive=activeId && id && String(id)===String(activeId);
+        const endType=step?.endType || step?.EndType || '';
+        const temperatureValue=step?.temperature ?? step?.Temperature ?? null;
+        const durationText=String(endType).toLowerCase()==='duration'
+          ? formatStepDurationText(step)
+          : '';
+        const detailsParts=[];
+        if(endType){
+          detailsParts.push(`<div><strong>Endtyp:</strong> ${escapeHtml(endType)}${durationText?` · ${escapeHtml(durationText)}`:''}</div>`);
+        }
+        if(temperatureValue!==null && temperatureValue!==undefined){
+          const tempDisplay=Number(temperatureValue);
+          const formattedTemp=Number.isFinite(tempDisplay)
+            ? tempDisplay.toLocaleString('de-CH',{minimumFractionDigits:0,maximumFractionDigits:1})
+            : temperatureValue;
+          detailsParts.push(`<div><strong>Temperatur:</strong> ${escapeHtml(formattedTemp)} °C</div>`);
+        }
+        const stepDetails=detailsParts.length?`<div class="step-details">${detailsParts.join('')}</div>`:'';
+        const classes=['profile-step'];
+        if(isActive) classes.push('active','expanded');
+        return `<li class="${classes.join(' ')}"><div class="step-header"><span class="step-name">${escapeHtml(name)}</span></div>${stepDetails}</li>`;
+      }).join('');
+      profileStepsList.innerHTML=items || '<li class="profile-step empty">Keine Schritte vorhanden.</li>';
+      attachStepToggleHandlers();
+    }
+
+    function getProfileSteps(detail){
+      if(!detail) return [];
+      const session=
+        detail?.activeProfileSession
+        || detail?.ActiveProfileSession
+        || detail?.session
+        || detail?.Session
+        || null;
+      const candidates=[
+        detail?.steps,
+        detail?.Steps,
+        session?.steps,
+        session?.Steps,
+        session?.profileSteps,
+        session?.ProfileSteps,
+        session?.profile?.steps,
+        session?.profile?.Steps,
+        session?.profile?.profileSteps,
+        session?.profile?.ProfileSteps,
+      ];
+      for(const candidate of candidates){
+        if(Array.isArray(candidate) && candidate.length){
+          return candidate;
+        }
+        if(candidate && Array.isArray(candidate.$values) && candidate.$values.length){
+          return candidate.$values;
+        }
+      }
+      if(session){
+        const fallback=Object.values(session).find(val=>Array.isArray(val) && val.length && hasStepLikeShape(val[0]));
+        if(Array.isArray(fallback) && fallback.length){
+          return fallback;
+        }
+      }
+      return [];
+    }
+
+    function hasStepLikeShape(obj){
+      if(!obj || typeof obj!=='object') return false;
+      return !!(obj.name || obj.Name || obj.title || obj.Title || obj.stepName || obj.StepName || obj.order || obj.Order);
+    }
+
+    function getActiveProfileStepId(detail){
+      const session=detail?.activeProfileSession || detail?.ActiveProfileSession || {};
+      return detail?.activeProfileStepId
+        || session.activeProfileStepId
+        || session.activeStepId
+        || session.currentStepId
+        || null;
+    }
+
+    function normalizeStepId(step,index){
+      return step?.id || step?.Id || step?.stepId || step?.StepId || step?.sequence || step?.Sequence || index+1;
+    }
+
+    function attachStepToggleHandlers(){
+      if(!profileStepsList) return;
+      profileStepsList.querySelectorAll('.profile-step').forEach(item=>{
+        if(item.classList.contains('empty')) return;
+        item.addEventListener('click',()=>{
+          item.classList.toggle('expanded');
+        });
+      });
+    }
+
+    function formatStepDurationText(step){
+      const raw=step?.length ?? step?.Length ?? step?.durationSeconds ?? step?.DurationSeconds ?? null;
+      const seconds=Number(raw);
+      if(!Number.isFinite(seconds) || seconds<=0) return '';
+      const totalHours=Math.floor(seconds/3600);
+      const days=Math.floor(totalHours/24);
+      const hours=totalHours%24;
+      const parts=[];
+      if(days>0) parts.push(`${days} ${days===1?'Tag':'Tage'}`);
+      if(hours>0) parts.push(`${hours} ${hours===1?'Stunde':'Stunden'}`);
+      if(!parts.length){
+        const minutes=Math.floor((seconds%3600)/60);
+        if(minutes>0) parts.push(`${minutes} ${minutes===1?'Minute':'Minuten'}`);
+      }
+      return parts.length?`Für ${parts.join(' und ')}`:'';
+    }
+
+    async function fetchHydrometerTelemetryData(hydrometerId,startOverrideIso,defaultStart,profileName){
+      const base=getApiUrl('/api/rapt/hydrometers/telemetry');
+      const url=base.startsWith('http')?new URL(base):new URL(base,window.location.origin);
+      url.searchParams.set('id',hydrometerId);
+      if(startOverrideIso){
+        url.searchParams.set('start',startOverrideIso);
+      }
+      if(defaultStart){
+        url.searchParams.set('fallbackStart',defaultStart);
+      }
+      if(profileName){
+        url.searchParams.set('profileName',profileName);
+      }
+      const response=await fetch(url.toString());
+      const data=await response.json().catch(()=>({rows:[]}));
+      if(!response.ok){
+        throw new Error(`Telemetrie HTTP ${response.status}`);
+      }
+      return data;
     }
 
     function renderChart(rows){
@@ -717,17 +991,6 @@
       if(startOverrideClear){
         startOverrideClear.addEventListener('click',handleStartOverrideReset);
       }
-      fetchServerStartOverride().then(serverValue=>{
-        if(serverValue){
-          serverPersistedStart=serverValue;
-          if(startOverrideInput && !startOverrideInput.value){
-            startOverrideInput.value=isoToLocalInputValue(serverValue);
-          }
-          persistStartOverride(serverValue);
-        }else{
-          serverPersistedStart=null;
-        }
-      }).catch(()=>{});
     }
 
     function handleStartOverrideApply(){
@@ -737,11 +1000,11 @@
           startOverrideInput.value='';
         }
         persistStartOverride(null);
-        clearStartOverrideOnServer();
+        loadTelemetryForSelected(true);
         return;
       }
       persistStartOverride(iso);
-      persistStartOverrideOnServer(iso).finally(()=>loadTelemetry(true));
+      loadTelemetryForSelected(true);
     }
 
     function handleStartOverrideReset(){
@@ -749,8 +1012,7 @@
         startOverrideInput.value='';
       }
       persistStartOverride(null);
-      serverPersistedStart=null;
-      clearStartOverrideOnServer().finally(()=>loadTelemetry(true));
+      loadTelemetryForSelected(true);
     }
 
     function getStartOverrideIso(){
@@ -762,7 +1024,11 @@
 
     function localInputValueToIso(value){
       if(!value) return null;
-      const parsed=new Date(value);
+      let normalized=value.trim();
+      if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized)){
+        normalized+=':00';
+      }
+      const parsed=new Date(normalized);
       if(Number.isNaN(parsed.getTime())) return null;
       return parsed.toISOString();
     }
@@ -800,77 +1066,16 @@
       }
     }
 
-    function buildTelemetryRequestUrl(forceReload,startOverrideIso){
-      const base=getApiUrl('/api/rapt/telemetry');
-      const url=createTelemetryUrl(base);
-      if(forceReload){
-        url.searchParams.set('reload','1');
-      }
-      if(startOverrideIso){
-        url.searchParams.set('start',startOverrideIso);
-      }
-      return url.toString();
+    function escapeHtml(str){
+      if(str===undefined || str===null) return '';
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/\"/g,'&quot;')
+        .replace(/'/g,'&#39;');
     }
 
-    function createTelemetryUrl(base){
-      if(base.startsWith('http://') || base.startsWith('https://')){
-        return new URL(base);
-      }
-      return new URL(base,window.location.origin);
-    }
-
-    function syncStartOverrideInput(serverValue,currentRequestValue){
-      if(!startOverrideInput) return;
-      if(currentRequestValue){
-        return;
-      }
-      if(serverValue){
-        startOverrideInput.value=isoToLocalInputValue(serverValue);
-        persistStartOverride(serverValue);
-      }else{
-        startOverrideInput.value='';
-        persistStartOverride(null);
-      }
-    }
-
-    async function fetchServerStartOverride(){
-      try{
-        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'));
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok) return null;
-        return typeof data.startDate==='string'?data.startDate:null;
-      }catch(error){
-        return null;
-      }
-    }
-
-    async function persistStartOverrideOnServer(value){
-      if(!value) return;
-      try{
-        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({startDate:value})
-        });
-        const data=await response.json().catch(()=>({}));
-        if(response.ok){
-          serverPersistedStart=typeof data.startDate==='string'?data.startDate:value;
-        }
-      }catch(error){
-        // ignore
-      }
-    }
-
-    async function clearStartOverrideOnServer(){
-      try{
-        const response=await fetch(getApiUrl('/api/rapt/telemetry/start-override'),{method:'DELETE'});
-        if(response.ok){
-          serverPersistedStart=null;
-        }
-      }catch(error){
-        // ignore
-      }
-    }
   </script>
 </body>
 </html>

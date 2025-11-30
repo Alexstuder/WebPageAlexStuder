@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AiBrewGenius · TelemetrieData</title>
+  <link rel="stylesheet" href="../../../css/styles.css?v=4" />
+  <style>
+    html,body {min-height:100%;overflow:auto;background:#020617;color:#f1f5f9;}
+    .telemetry-stack {display:flex;flex-direction:column;gap:24px;}
+    .telemetry-panel {background:rgba(15,23,42,0.92);padding:32px;border-radius:24px;box-shadow:0 30px 70px rgba(0,0,0,0.5);}
+    .telemetry-status {margin-bottom:16px;color:#cbd5f5;}
+    .telemetry-actions {display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .details-tree details {border:1px solid rgba(148,163,184,0.35);border-radius:14px;padding:16px;background:#0b1120;margin-bottom:12px;}
+    .details-tree summary {cursor:pointer;font-weight:600;color:#bae6fd;}
+    .details-tree summary::-webkit-details-marker{display:none;}
+    .details-tree summary::before{content:'▸';display:inline-block;margin-right:8px;transition:transform .2s ease;color:#94a3b8;}
+    .details-tree details[open] summary::before{transform:rotate(90deg);}
+    .details-tree .leaf{margin:4px 0;font-size:13px;color:#cbd5f5;}
+    .warning-box{border:1px solid rgba(248,113,113,0.5);background:rgba(127,29,29,0.35);padding:12px;border-radius:10px;margin-bottom:16px;display:none;}
+    .detail-block{margin-top:24px;border:1px solid rgba(148,163,184,0.35);border-radius:18px;padding:20px;background:#050c1e;}
+    .detail-block h2{margin:0 0 12px;font-size:18px;color:#f1f5f9;}
+    .section-title{margin:12px 0;font-size:20px;font-weight:600;}
+    .telemetry-sep{border:0;height:1px;background:rgba(148,163,184,0.25);margin:24px 0;}
+  </style>
+</head>
+<body data-page="rapt">
+  <main class="gpt-shell">
+    <header class="gpt-head">
+      <div class="gpt-badge gpt-badge--brew">RAPT</div>
+      <h1>TelemetrieData</h1>
+      <p>Erzeuge zuerst einen neuen RAPT Token und lade anschließend die Temperature Controllers direkt von der offiziellen API.</p>
+    </header>
+
+    <section class="gpt-preview telemetry-stack">
+      <div class="telemetry-panel">
+        <div class="telemetry-actions">
+          <button class="btn primary" id="btn-refresh">Neu laden</button>
+          <span class="telemetry-status" id="telemetry-status">Noch keine Daten geladen.</span>
+        </div>
+        <div class="warning-box" id="telemetry-warning"></div>
+        <div id="telemetry-data" class="details-tree">-</div>
+      </div>
+    </section>
+
+    <footer class="gpt-foot">
+      <a class="btn" href="../">Zurück zum Dashboard</a>
+      <a class="btn ghost" href="../token/">Bearer Token Verwaltung</a>
+    </footer>
+  </main>
+
+  <script src="../../../js/api-base.js"></script>
+  <script>
+    const refreshBtn=document.getElementById('btn-refresh');
+    const telemetryStatus=document.getElementById('telemetry-status');
+    const telemetryData=document.getElementById('telemetry-data');
+    const telemetryWarning=document.getElementById('telemetry-warning');
+    const CONTROLLERS_ENDPOINT='/api/rapt/temperature-controllers';
+    const CONTROLLER_DETAIL_ENDPOINT='/api/rapt/temperature-controllers/detail';
+    const HYDROMETERS_ENDPOINT='/api/rapt/hydrometers';
+    const HYDROMETER_DETAIL_ENDPOINT='/api/rapt/hydrometers/detail';
+
+    refreshBtn.addEventListener('click',loadTelemetryData);
+    loadTelemetryData();
+
+    async function loadTelemetryData(){
+      telemetryWarning.style.display='none';
+      telemetryWarning.textContent='';
+      telemetryStatus.textContent='🔄 RAPT Token wird angefordert ...';
+      telemetryData.textContent='';
+      refreshBtn.disabled=true;
+      try{
+        const token=await requestRaptToken();
+        if(!token){
+          telemetryStatus.textContent='❗ Kein Token erhalten.';
+          return;
+        }
+        telemetryStatus.textContent='🔄 Lade Temperature Controllers ...';
+        const sections=[];
+        const controllers=await requestTemperatureControllers();
+        const controllerList=renderNodes(controllers,'TemperatureControllers');
+        const controllerDetailBlocks=[];
+        if(Array.isArray(controllers)){
+          for(const item of controllers){
+            const controllerId=item?.id || item?.Id || item?.temperatureControllerId || item?.TemperatureControllerId;
+            if(!controllerId) continue;
+            const detail=await requestTemperatureControllerDetail(controllerId);
+            controllerDetailBlocks.push(renderControllerDetail(controllerId,detail));
+          }
+        }
+        sections.push(`<section><h2 class="section-title">Temperature Controllers</h2>${controllerList}${controllerDetailBlocks.join('')}</section>`);
+
+        const hydrometers=await requestHydrometers();
+        const hydrometerList=renderNodes(hydrometers,'Hydrometers');
+        const hydrometerDetailBlocks=[];
+        if(Array.isArray(hydrometers)){
+          for(const item of hydrometers){
+            const hydrometerId=item?.hydrometerId || item?.HydrometerId || item?.id || item?.Id;
+            if(!hydrometerId) continue;
+            const detail=await requestHydrometerDetail(hydrometerId);
+            hydrometerDetailBlocks.push(renderHydrometerDetail(hydrometerId,detail));
+          }
+        }
+        sections.push(`<section><h2 class="section-title">Hydrometers</h2>${hydrometerList}${hydrometerDetailBlocks.join('')}</section>`);
+
+        const count=Array.isArray(controllers)?controllers.length:0;
+        telemetryStatus.textContent=`✅ ${count} Temperature Controller geladen.`;
+        telemetryData.innerHTML=sections.join('<hr class="telemetry-sep" />');
+      }catch(error){
+        telemetryStatus.textContent='❗ Abruf fehlgeschlagen';
+        telemetryData.textContent=error.message || 'Unbekannter Fehler.';
+      }finally{
+        refreshBtn.disabled=false;
+      }
+    }
+
+    async function requestRaptToken(){
+      const response=await fetch(getApiUrl('/api/rapt/token'),{method:'POST'});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok){
+        throw new Error(`Token-API antwortet mit HTTP ${response.status}`);
+      }
+      return extractAccessToken(data);
+    }
+
+    async function requestTemperatureControllers(){
+      const response=await fetch(getApiUrl(CONTROLLERS_ENDPOINT));
+      const data=await response.json().catch(()=>null);
+      if(response.status===401){
+        telemetryWarning.style.display='block';
+        telemetryWarning.textContent='Unautorisiert. Stelle sicher, dass der neue Token gültig ist.';
+      }
+      if(!response.ok){
+        throw new Error(`API Fehler (HTTP ${response.status})`);
+      }
+      return data;
+    }
+
+    function extractAccessToken(payload){
+      if(!payload || typeof payload!=='object') return '';
+      if(typeof payload.access_token==='string') return payload.access_token;
+      if(typeof payload.accessToken==='string') return payload.accessToken;
+      if(payload.token && typeof payload.token==='object'){
+        return extractAccessToken(payload.token);
+      }
+      return '';
+    }
+
+    async function requestTemperatureControllerDetail(id){
+      const base=getApiUrl(CONTROLLER_DETAIL_ENDPOINT);
+      const url=base.startsWith('http')?new URL(base):new URL(base,window.location.origin);
+      url.searchParams.set('id',id);
+      const response=await fetch(url.toString());
+      const data=await response.json().catch(()=>null);
+      if(!response.ok){
+        throw new Error(`Detail API Fehler (HTTP ${response.status})`);
+      }
+      return data;
+    }
+
+    async function requestHydrometers(){
+      const response=await fetch(getApiUrl(HYDROMETERS_ENDPOINT));
+      const data=await response.json().catch(()=>null);
+      if(!response.ok){
+        throw new Error(`Hydrometer API Fehler (HTTP ${response.status})`);
+      }
+      return data;
+    }
+
+    async function requestHydrometerDetail(id){
+      const base=getApiUrl(HYDROMETER_DETAIL_ENDPOINT);
+      const url=base.startsWith('http')?new URL(base):new URL(base,window.location.origin);
+      url.searchParams.set('id',id);
+      const response=await fetch(url.toString());
+      const data=await response.json().catch(()=>null);
+      if(!response.ok){
+        throw new Error(`Hydrometer Detail API Fehler (HTTP ${response.status})`);
+      }
+      return data;
+    }
+
+    function renderControllerDetail(id,data){
+      const inner=renderNodes(data,'Detail');
+      return `<div class="detail-block"><h2>TemperatureController: ${escapeHtml(String(id))}</h2>${inner}</div>`;
+    }
+
+    function renderHydrometerDetail(id,data){
+      const inner=renderNodes(data,'Detail');
+      return `<div class="detail-block"><h2>Hydrometer: ${escapeHtml(String(id))}</h2>${inner}</div>`;
+    }
+
+    function renderNodes(node,label='root'){
+      if(Array.isArray(node)){
+        if(!node.length) return `<p class="leaf"><strong>${escapeHtml(label)}</strong>: []</p>`;
+        return node.map((item,idx)=>renderNodes(item,`${label}[${idx}]`)).join('');
+      }
+      if(node && typeof node==='object'){
+        const entries=Object.entries(node).map(([key,val])=>renderNodes(val,key)).join('');
+        return `<details><summary>${escapeHtml(label)}</summary>${entries}</details>`;
+      }
+      return `<p class="leaf"><strong>${escapeHtml(label)}</strong>: <code>${escapeHtml(String(node))}</code></p>`;
+    }
+
+    function escapeHtml(str){
+      return str
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+  </script>
+</body>
+</html>
