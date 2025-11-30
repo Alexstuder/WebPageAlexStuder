@@ -89,15 +89,15 @@ jobs:
             CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
             RAPT_API_KEY=${{ secrets.RAPT_API_KEY }}
             RAPT_USERNAME=${{ secrets.RAPT_USERNAME }}
-            RAPT_TOKEN_ENDPOINT=${{ secrets.RAPT_TOKEN_ENDPOINT }}
-            RAPT_API_BASE=${{ secrets.RAPT_API_BASE }}
-            RAPT_PROFILE_ENDPOINT=${{ secrets.RAPT_PROFILE_ENDPOINT }}
-            RAPT_CONTROLLER_ENDPOINT=${{ secrets.RAPT_CONTROLLER_ENDPOINT }}
-            RAPT_TELEMETRY_ENDPOINT=${{ secrets.RAPT_TELEMETRY_ENDPOINT }}
-            RAPT_CONTROLLER_USE=${{ secrets.RAPT_CONTROLLER_USE }}
-            RAPT_CACHE_INTERVAL_MS=${{ secrets.RAPT_CACHE_INTERVAL_MS }}
-            PORT=${{ secrets.PROXY_PORT || 3000 }}
             EOF
+            [ -n "${{ secrets.RAPT_TOKEN_ENDPOINT }}" ] && echo "RAPT_TOKEN_ENDPOINT=${{ secrets.RAPT_TOKEN_ENDPOINT }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_API_BASE }}" ] && echo "RAPT_API_BASE=${{ secrets.RAPT_API_BASE }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_PROFILE_ENDPOINT }}" ] && echo "RAPT_PROFILE_ENDPOINT=${{ secrets.RAPT_PROFILE_ENDPOINT }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_CONTROLLER_ENDPOINT }}" ] && echo "RAPT_CONTROLLER_ENDPOINT=${{ secrets.RAPT_CONTROLLER_ENDPOINT }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_TELEMETRY_ENDPOINT }}" ] && echo "RAPT_TELEMETRY_ENDPOINT=${{ secrets.RAPT_TELEMETRY_ENDPOINT }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_CONTROLLER_USE }}" ] && echo "RAPT_CONTROLLER_USE=${{ secrets.RAPT_CONTROLLER_USE }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            [ -n "${{ secrets.RAPT_CACHE_INTERVAL_MS }}" ] && echo "RAPT_CACHE_INTERVAL_MS=${{ secrets.RAPT_CACHE_INTERVAL_MS }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
+            echo "PORT=${{ secrets.PROXY_PORT || 3000 }}" >> ${{ secrets.DEPLOY_PATH }}/proxy/.env
 
       - name: Ensure proxy cache directory
         uses: appleboy/ssh-action@master
