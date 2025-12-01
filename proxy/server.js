@@ -103,14 +103,7 @@ server.listen(PORT, () => {
   }).catch(err => {
     console.error('Initial telemetry preload failed:', err.message || err);
   });
-  setInterval(() => {
-    ensureTelemetryCache({
-      force: true,
-      startDateOverride: getLastKnownStartDate(),
-    }).catch(err => {
-      console.error('Scheduled telemetry refresh failed:', err.message || err);
-    });
-  }, CACHE_INTERVAL_MS);
+  scheduleHourlyTelemetryRefresh();
 });
 
 function setCorsHeaders(req, res) {
@@ -830,6 +823,29 @@ async function requestHydrometerTelemetry(base, accessToken, hydrometerId, start
 
 function getLastKnownStartDate() {
   return persistedRaptStartDate || lastEffectiveStartDate || telemetryCache?.startDate || null;
+}
+
+function scheduleHourlyTelemetryRefresh() {
+  const scheduleNext = () => {
+    const delay = getMsUntilNextHour();
+    setTimeout(() => {
+      ensureTelemetryCache({
+        force: true,
+        startDateOverride: getLastKnownStartDate(),
+      }).catch(err => {
+        console.error('Scheduled telemetry refresh failed:', err.message || err);
+      });
+      scheduleNext();
+    }, delay);
+  };
+  scheduleNext();
+}
+
+function getMsUntilNextHour(referenceTime = Date.now()) {
+  const referenceDate = new Date(referenceTime);
+  referenceDate.setMinutes(0, 0, 0);
+  const nextHourMs = referenceDate.getTime() + CACHE_INTERVAL_MS;
+  return Math.max(1000, nextHourMs - referenceTime);
 }
 
 function loadEnvFile(filePath) {
