@@ -12,41 +12,22 @@
           "labels": [],
           "checkboxes": [],
           "comments": []
+        },
+        {
+          "id": "95873bdf-931d-4749-b4ec-e66589991923",
+          "listId": "d5e427f8-9f74-4620-ae83-e82f20ef2e56",
+          "title": "Startdatum stimmt nicht immer",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
         }
       ]
     },
     {
       "id": "912cbbea-7706-4989-b9c5-4c9205be37a3",
       "title": "To Do",
-      "cards": [
-        {
-          "id": "9f3c589d-ca04-455c-9565-7dc03fb81b6e",
-          "listId": "912cbbea-7706-4989-b9c5-4c9205be37a3",
-          "title": "Telemetrie für RAPT korrigieren",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        },
-        {
-          "id": "25b6758a-fef2-4523-9e8b-5ca6f1d5a951",
-          "listId": "912cbbea-7706-4989-b9c5-4c9205be37a3",
-          "title": "Titel für den aktuellen Sud stimmt nicht",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        },
-        {
-          "id": "d54e75c0-5b5a-49f5-827c-160813e3b5a8",
-          "listId": "912cbbea-7706-4989-b9c5-4c9205be37a3",
-          "title": "Mehrere Controller auswählbar",
-          "description": "",
-          "labels": [],
-          "checkboxes": [],
-          "comments": []
-        }
-      ]
+      "cards": []
     },
     {
       "id": "9d990e41-3ebc-4e13-8675-ecf2eb2922fb",
@@ -67,6 +48,33 @@
       "id": "d315180d-7a16-43f6-aa98-33e946c2d701",
       "title": "Done",
       "cards": [
+        {
+          "id": "9f3c589d-ca04-455c-9565-7dc03fb81b6e",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Telemetrie für RAPT korrigieren",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "d54e75c0-5b5a-49f5-827c-160813e3b5a8",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Mehrere Controller auswählbar",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "25b6758a-fef2-4523-9e8b-5ca6f1d5a951",
+          "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",
+          "title": "Titel für den aktuellen Sud stimmt nicht",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
         {
           "id": "40308cf6-d49e-4e7a-a822-d515d0c9aa38",
           "listId": "d315180d-7a16-43f6-aa98-33e946c2d701",

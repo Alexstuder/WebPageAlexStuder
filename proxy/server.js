@@ -25,7 +25,11 @@ const RAPT_TELEMETRY_ENDPOINT = process.env.RAPT_TELEMETRY_ENDPOINT ?? '/api/Hyd
 const RAPT_CONTROLLER_USE = process.env.RAPT_CONTROLLER_USE ?? 'Beer Fermentation';
 const PORT = Number(process.env.PORT ?? 3000);
 const CACHE_INTERVAL_MS = Number(process.env.RAPT_CACHE_INTERVAL_MS ?? 60 * 60 * 1000);
-const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*';
+const ALLOWED_ORIGIN_RAW = process.env.CORS_ORIGIN ?? '*';
+const ALLOWED_ORIGINS = ALLOWED_ORIGIN_RAW.split(',')
+  .map(value => value.trim())
+  .filter(Boolean);
+const ALLOW_ALL_ORIGINS = ALLOWED_ORIGINS.includes('*');
 
 if (!OPENAI_API_KEY) {
   console.error('OPENAI_API_KEY is not set. Provide it via environment variable or proxy/.env file.');
@@ -36,13 +40,14 @@ let telemetryCache = null;
 let telemetryCacheTimestamp = 0;
 let telemetryCachePromise = null;
 let persistedRaptStartDate = null;
+let lastEffectiveStartDate = null;
 let controllersCache = null;
 
 loadTelemetryCacheFromDisk();
 loadControllersCacheFromDisk();
 
 const server = http.createServer(async (req, res) => {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -92,20 +97,36 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Proxy listening on http://localhost:${PORT}`);
   const initialForce = !telemetryCache;
-  ensureTelemetryCache({ force: initialForce }).catch(err => {
+  ensureTelemetryCache({
+    force: initialForce,
+    startDateOverride: getLastKnownStartDate(),
+  }).catch(err => {
     console.error('Initial telemetry preload failed:', err.message || err);
   });
   setInterval(() => {
-    ensureTelemetryCache({ force: true }).catch(err => {
+    ensureTelemetryCache({
+      force: true,
+      startDateOverride: getLastKnownStartDate(),
+    }).catch(err => {
       console.error('Scheduled telemetry refresh failed:', err.message || err);
     });
   }, CACHE_INTERVAL_MS);
 });
 
-function setCorsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+function setCorsHeaders(req, res) {
+  const requestOrigin = req.headers.origin;
+  const resolved =
+    ALLOW_ALL_ORIGINS && requestOrigin
+      ? requestOrigin
+      : ALLOW_ALL_ORIGINS
+        ? '*'
+        : (requestOrigin && ALLOWED_ORIGINS.includes(requestOrigin))
+          ? requestOrigin
+          : ALLOWED_ORIGINS[0] || '*';
+  res.setHeader('Access-Control-Allow-Origin', resolved);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 async function handleBrewRequest(req, res) {
@@ -492,6 +513,9 @@ function loadTelemetryCacheFromDisk() {
     if (data && typeof data.timestamp === 'number' && data.payload) {
       telemetryCacheTimestamp = data.timestamp;
       telemetryCache = data.payload;
+      if (telemetryCache?.startDate) {
+        lastEffectiveStartDate = telemetryCache.startDate;
+      }
       if (data.persistedStartDate) {
         persistedRaptStartDate = data.persistedStartDate;
       }
@@ -657,6 +681,7 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
   };
   telemetryCache = payload;
   telemetryCacheTimestamp = Date.now();
+  lastEffectiveStartDate = payload.startDate || null;
   saveTelemetryCacheToDisk();
   return payload;
 }
@@ -801,6 +826,10 @@ async function requestHydrometerTelemetry(base, accessToken, hydrometerId, start
     throw err;
   }
   return payload;
+}
+
+function getLastKnownStartDate() {
+  return persistedRaptStartDate || lastEffectiveStartDate || telemetryCache?.startDate || null;
 }
 
 function loadEnvFile(filePath) {
