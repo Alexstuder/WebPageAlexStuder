@@ -576,6 +576,7 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
   const controllers = await fetchTemperatureControllers(base, token.access_token);
   const filteredControllers = filterControllersForUse(controllers, RAPT_CONTROLLER_USE);
   updateControllersCache(filteredControllers);
+  const cachedRowsByController = mapRowsByControllerId(telemetryCache?.rows || []);
   const nowIso = new Date().toISOString();
   const rows = [];
   let firstProfileName = null;
@@ -588,8 +589,37 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
       controller?.name ||
       null;
     const hydrometerId = getHydrometerIdFromController(controller);
+    const hasActiveSession = controllerHasActiveSession(controller);
     const fallbackStart = getControllerStartDate(controller);
     const startDate = startDateOverride || fallbackStart;
+    const cachedRowsForController =
+      controllerId && cachedRowsByController.has(controllerId)
+        ? cachedRowsByController.get(controllerId)
+        : null;
+
+    if (!hasActiveSession) {
+      if (cachedRowsForController && cachedRowsForController.length) {
+        cachedRowsForController.forEach(entry => {
+          rows.push({
+            ...entry,
+            reusedFromCache: true,
+          });
+        });
+        if (!firstProfileName) {
+          const cachedName = cachedRowsForController.find(r => r?.profileName)?.profileName;
+          if (cachedName) {
+            firstProfileName = cachedName;
+          }
+        }
+        continue;
+      }
+      rows.push({
+        controllerId,
+        hydrometerId: hydrometerId || '(unbekannt)',
+        error: 'Kein aktiver Controller-Prozess. Telemetrie aus Cache nicht verfügbar.',
+      });
+      continue;
+    }
 
     if (!hydrometerId) {
       rows.push({
@@ -655,6 +685,13 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
         error: telemetryError.details || telemetryError.message || 'Telemetry request failed.',
       });
     }
+  }
+
+  const hasValidRows = rows.some(row => row && !row.error);
+
+  if (!hasValidRows && telemetryCache && Array.isArray(telemetryCache.rows) && telemetryCache.rows.length) {
+    console.warn('Telemetry refresh yielded no valid rows – keeping previous cache.');
+    return telemetryCache;
   }
 
   rows.sort((a, b) => {
@@ -796,6 +833,28 @@ function getControllerStartDate(controller) {
     }
   }
   return null;
+}
+
+function controllerHasActiveSession(controller) {
+  if (!controller) return false;
+  return !!(controller?.activeProfileSession || controller?.ActiveProfileSession);
+}
+
+function mapRowsByControllerId(rows) {
+  const map = new Map();
+  if (!Array.isArray(rows)) {
+    return map;
+  }
+  rows.forEach(row => {
+    if (!row || !row.controllerId) {
+      return;
+    }
+    if (!map.has(row.controllerId)) {
+      map.set(row.controllerId, []);
+    }
+    map.get(row.controllerId).push(row);
+  });
+  return map;
 }
 
 async function requestHydrometerTelemetry(base, accessToken, hydrometerId, startDate, endDate) {
