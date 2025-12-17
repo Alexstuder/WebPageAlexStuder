@@ -113,7 +113,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
         final item = _fermentables[index];
         final name = item['name'] ?? 'Unbekannt';
         final supplier = item['supplier'] ?? '';
-        final amount = item['amount'] ?? 0;
+        final amount = item['inventory'] ?? item['amount'] ?? 0;
         final unit = item['amountUnit'] ?? 'kg';
         final color = item['color'] ?? 0;
         final type = item['type'] ?? '';

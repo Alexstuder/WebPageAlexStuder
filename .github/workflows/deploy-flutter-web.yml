@@ -82,12 +82,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            echo "DEBUG INFO START"
-            echo "User: $(whoami)"
-            echo "Groups: $(groups)"
-            echo "Docker Sock Permission: $(ls -l /var/run/docker.sock)"
-            echo "DEBUG INFO END"
-
             # Container: supabase_db_supabase-instance
             # Running Init Schema (DANGER: Drops Schema!)
             docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
