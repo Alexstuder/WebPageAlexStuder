@@ -5,6 +5,10 @@ class YeastBankEntry {
     this.brewfatherId,
     required this.brand,
     required this.strain,
+    this.productId,
+    this.form,
+    this.inventory,
+    this.unit,
     this.style,
     this.attenuationMin,
     this.attenuationMax,
@@ -21,6 +25,10 @@ class YeastBankEntry {
   final String? brewfatherId;
   final String brand;
   final String strain;
+  final String? productId;
+  final String? form;
+  final double? inventory;
+  final String? unit;
   final String? style;
   final double? attenuationMin;
   final double? attenuationMax;
@@ -37,6 +45,10 @@ class YeastBankEntry {
     String? brewfatherId,
     String? brand,
     String? strain,
+    String? productId,
+    String? form,
+    double? inventory,
+    String? unit,
     String? style,
     double? attenuationMin,
     double? attenuationMax,
@@ -53,6 +65,10 @@ class YeastBankEntry {
       brewfatherId: brewfatherId ?? this.brewfatherId,
       brand: brand ?? this.brand,
       strain: strain ?? this.strain,
+      productId: productId ?? this.productId,
+      form: form ?? this.form,
+      inventory: inventory ?? this.inventory,
+      unit: unit ?? this.unit,
       style: style ?? this.style,
       attenuationMin: attenuationMin ?? this.attenuationMin,
       attenuationMax: attenuationMax ?? this.attenuationMax,
@@ -74,6 +90,10 @@ class YeastBankEntry {
       brewfatherId: json['brewfather_id'] as String?,
       brand: json['brand'] as String? ?? '',
       strain: json['strain'] as String? ?? '',
+      productId: json['product_id'] as String?,
+      form: json['form'] as String?,
+      inventory: (json['inventory'] as num?)?.toDouble(),
+      unit: json['unit'] as String?,
       style: json['style'] as String?,
       attenuationMin: (json['attenuation_min'] as num?)?.toDouble(),
       attenuationMax: (json['attenuation_max'] as num?)?.toDouble(),
@@ -93,6 +113,10 @@ class YeastBankEntry {
       if (brewfatherId != null) 'brewfather_id': brewfatherId,
       'brand': brand,
       'strain': strain,
+      'product_id': productId,
+      'form': form,
+      'inventory': inventory,
+      'unit': unit,
       'style': style,
       'attenuation_min': attenuationMin,
       'attenuation_max': attenuationMax,

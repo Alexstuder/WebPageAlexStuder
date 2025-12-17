@@ -2698,6 +2698,11 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     );
   }
 
+  double? _parseDouble(String value) {
+     if (value.trim().isEmpty) return null;
+     return double.tryParse(value.replaceAll(',', '.').trim());
+  }
+
   String _rangeString(double? min, double? max, {String suffix = ''}) {
     if (min == null && max == null) return '–';
     if (min != null && max != null) {
@@ -2721,8 +2726,41 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     final tempMaxCtrl =
         TextEditingController(text: editing?.temperatureMax?.toString() ?? '');
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+    
+    // Initialize new controllers (try editing entry first, then fallback to debug map if needed, though usually editing is source of truth after sync)
+    // We actually need access to the debug map here if we want to pre-fill for the FIRST time before DB has these columns populated.
+    // However, _syncWithBrewfather should eventually populate the DB entry.
+    // Let's rely on `editing` entry fields mostly, but if they are null and we have debug map, we might peek.
+    // Actually, simpler: Initialize with empty string, and if editing is not null, use it.
+    // Sync logic updates DB, so editing object should have data if synced.
+    
+    String initialProductId = editing?.productId ?? '';
+    String initialForm = editing?.form ?? '';
+    String initialInventory = editing?.inventory != null ? editing!.inventory.toString() : '';
+    // Unit is usually part of inventory display string but stored separately. Let's assume unit is editable or fixed? 
+    // User asked "Bestand: 1.2 pkg". In BF it's amount + unit.
+    // We will make inventory a number field, and maybe add a unit field or keep unit as text.
+    // Let's check what we added to DB: `unit TEXT`.
+    String initialUnit = editing?.unit ?? '';
+    
+    // If empty and we have debug map (legacy case), try to fill?
+    if (editing != null && (initialProductId.isEmpty || initialForm.isEmpty) && _debugJsonMap.containsKey(editing.strain)) {
+       try {
+         final data = jsonDecode(_debugJsonMap[editing.strain]!) as Map<String, dynamic>;
+         if (initialProductId.isEmpty) initialProductId = data['productId']?.toString() ?? '';
+         if (initialForm.isEmpty) initialForm = data['form']?.toString() ?? '';
+         if (initialInventory.isEmpty && data['inventory'] != null) initialInventory = data['inventory'].toString();
+         if (initialUnit.isEmpty && data['unit'] != null) initialUnit = data['unit'].toString();
+       } catch (_) {}
+    }
+
+    final productIdCtrl = TextEditingController(text: initialProductId);
+    final formCtrl = TextEditingController(text: initialForm);
+    final inventoryCtrl = TextEditingController(text: initialInventory);
+    final unitCtrl = TextEditingController(text: initialUnit);
     String? brandError;
     String? strainError;
+    final isSynced = editing?.brewfatherId != null && editing!.brewfatherId!.isNotEmpty;
 
     final result = await showDialog<bool>(
       context: context,
@@ -2733,140 +2771,236 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Builder(
-                  builder: (context) {
-                    Map<String, dynamic> data = {};
-                    if (editing != null && _debugJsonMap.containsKey(editing.strain)) {
-                       try {
-                         data = jsonDecode(_debugJsonMap[editing.strain]!);
-                       } catch (_) {}
-                    }
                     
-                    return Column(
+                    Column(
                       children: [
-                        TextField(
-                          controller: brandCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Marke',
-                            errorText: brandError,
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: brandCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
+                              labelText: 'Marke',
+                              errorText: brandError,
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                            ),
                           ),
                         ),
-                        if (data['productId'] != null) ...[
-                          const SizedBox(height: 12),
-                          InputDecorator(
-                            decoration: const InputDecoration(
+                        const SizedBox(height: 12),
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: productIdCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
                               labelText: 'Produkt ID',
-                              border: OutlineInputBorder(),
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
                             ),
-                            child: Text('${data['productId']}'),
-                          ),
-                        ],
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: strainCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Stamm',
-                            errorText: strainError,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
-                          controller: styleCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Stil / Verwendung',
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: strainCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
+                              labelText: 'Stamm',
+                              errorText: strainError,
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                            ),
                           ),
                         ),
-                        if (data['form'] != null) ...[
-                          const SizedBox(height: 12),
-                          InputDecorator(
-                            decoration: const InputDecoration(
+                        const SizedBox(height: 12),
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: styleCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
+                              labelText: 'Stil / Verwendung',
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: formCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
                               labelText: 'Form',
-                              border: OutlineInputBorder(),
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
                             ),
-                            child: Text('${data['form']}'),
                           ),
-                        ],
-                const SizedBox(height: 12),
-                TextField(
-                  controller: urlCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'URL',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: attenuationMinCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'EVG min %',
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: attenuationMaxCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'EVG max %',
+                        const SizedBox(height: 12),
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: urlCtrl,
+                            readOnly: isSynced,
+                            decoration: InputDecoration(
+                              labelText: 'URL',
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                            ),
+                          ),
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: tempMinCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Temp. min (°C)',
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Tooltip(
+                                message: isSynced
+                                    ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                                    : '',
+                                child: TextField(
+                                  controller: attenuationMinCtrl,
+                                  readOnly: isSynced,
+                                  decoration: InputDecoration(
+                                    labelText: 'EVG min %',
+                                    filled: isSynced,
+                                    fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                                  ),
+                                  keyboardType: const TextInputType.numberWithOptions(
+                                      decimal: true),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Tooltip(
+                                message: isSynced
+                                    ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                                    : '',
+                                child: TextField(
+                                  controller: attenuationMaxCtrl,
+                                  readOnly: isSynced,
+                                  decoration: InputDecoration(
+                                    labelText: 'EVG max %',
+                                    filled: isSynced,
+                                    fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                                  ),
+                                  keyboardType: const TextInputType.numberWithOptions(
+                                      decimal: true),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: tempMaxCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Temp. max (°C)',
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Tooltip(
+                                message: isSynced
+                                    ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                                    : '',
+                                child: TextField(
+                                  controller: tempMinCtrl,
+                                  readOnly: isSynced,
+                                  decoration: InputDecoration(
+                                    labelText: 'Temp. min (°C)',
+                                    filled: isSynced,
+                                    fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                                  ),
+                                  keyboardType: const TextInputType.numberWithOptions(
+                                      decimal: true),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Tooltip(
+                                message: isSynced
+                                    ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                                    : '',
+                                child: TextField(
+                                  controller: tempMaxCtrl,
+                                  readOnly: isSynced,
+                                  decoration: InputDecoration(
+                                    labelText: 'Temp. max (°C)',
+                                    filled: isSynced,
+                                    fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                                  ),
+                                  keyboardType: const TextInputType.numberWithOptions(
+                                      decimal: true),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                      ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextField(
+                                controller: inventoryCtrl,
+                                // Inventory is editable!
+                                decoration: const InputDecoration(
+                                  labelText: 'Bestand',
+                                ),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 1,
+                              child: Tooltip(
+                                message: isSynced
+                                    ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                                    : '',
+                                child: TextField(
+                                  controller: unitCtrl,
+                                  readOnly: isSynced,
+                                  decoration: InputDecoration(
+                                    labelText: 'Einheit',
+                                    filled: isSynced,
+                                    fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Tooltip(
+                          message: isSynced
+                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              : '',
+                          child: TextField(
+                            controller: notesCtrl,
+                            readOnly: isSynced,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Notizen',
+                              filled: isSynced,
+                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                if (data['inventory'] != null) ...[
-                  const SizedBox(height: 12),
-                  InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Bestand',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: Text('${data['inventory']} ${data['unit'] ?? ''}'),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                TextField(
-                  controller: notesCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notizen',
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
               ],
             ),
           ),
@@ -2902,6 +3036,10 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       brewfatherId: editing?.brewfatherId,
       brand: brandCtrl.text.trim(),
       strain: strainCtrl.text.trim(),
+      productId: productIdCtrl.text.trim().isEmpty ? null : productIdCtrl.text.trim(),
+      form: formCtrl.text.trim().isEmpty ? null : formCtrl.text.trim(),
+      inventory: _parseDouble(inventoryCtrl.text),
+      unit: unitCtrl.text.trim().isEmpty ? null : unitCtrl.text.trim(),
       style: styleCtrl.text.trim().isEmpty ? null : styleCtrl.text.trim(),
       url: urlCtrl.text.trim().isEmpty ? null : urlCtrl.text.trim(),
       attenuationMin: _parseDouble(attenuationMinCtrl.text),
@@ -2928,6 +3066,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                    'minTemp': saved.temperatureMin ?? 18,
                    'maxTemp': saved.temperatureMax ?? 23,
                    'description': saved.notes ?? '',
+                   'productId': saved.productId,
+                   'form': saved.form,
+                   'inventory': saved.inventory,
+                   // Unit is seemingly not always updateable or depends on field? 
+                   // Brewfather API might respect 'unit' in body.
+                   'unit': saved.unit,
                 });
                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Update an Brewfather gesendet.')));
@@ -2984,11 +3128,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     }
   }
 
-  double? _parseDouble(String value) {
-    final cleaned = value.trim();
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned.replaceAll(',', '.'));
-  }
+
 
   Future<void> _deleteEntry(YeastBankEntry entry) async {
     if (entry.id == null) return;
