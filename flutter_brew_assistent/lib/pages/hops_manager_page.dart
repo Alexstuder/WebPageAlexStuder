@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import '../services/brewfather_service.dart';
 import '../services/user_profile_service.dart';
-import '../models/fermentable.dart';
+import '../models/hop.dart';
 
-class AvailableIngredientsPage extends StatefulWidget {
-  const AvailableIngredientsPage({super.key, required this.profileId});
+class HopsManagerPage extends StatefulWidget {
+  const HopsManagerPage({super.key, required this.profileId});
 
   final String profileId;
 
   @override
-  State<AvailableIngredientsPage> createState() => _AvailableIngredientsPageState();
+  State<HopsManagerPage> createState() => _HopsManagerPageState();
 }
 
-class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
+class _HopsManagerPageState extends State<HopsManagerPage> {
   final UserProfileService _userService = UserProfileService();
   bool _isLoading = true;
   String? _error;
-  List<Fermentable> _fermentables = [];
+  List<Hop> _hops = [];
 
   @override
   void initState() {
@@ -34,24 +34,21 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       final profile = await _userService.fetchProfile(widget.profileId);
       if (profile == null) throw Exception('Profil nicht gefunden');
 
-      // 1. Load from DB first to show something quickly (optional, but good UX)
-      var localItems = await _userService.getFermentables(widget.profileId);
+      // 1. Load from DB first
+      var localItems = await _userService.getHops(widget.profileId);
       if (mounted && localItems.isNotEmpty) {
         setState(() {
-          _fermentables = localItems;
+          _hops = localItems;
           _isLoading = false;
         });
       }
 
       if ((profile.brewfatherUserId ?? '').isEmpty ||
           (profile.brewfatherApiKey ?? '').isEmpty) {
-        // Only throw if we have no local data either? 
-        // Or just warn? Let's keep it as is for now, blocking if no creds.
         if (localItems.isEmpty) {
           throw Exception(
             'Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key in den Einstellungen.');
         } else {
-             // If we have local items but no credentials, just stop here
              if (mounted) setState(() => _isLoading = false);
              return;
         }
@@ -63,32 +60,27 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       );
 
       // 2. Fetch from Brewfather
-      final bfData = await bfService.getFermentables();
+      final bfData = await bfService.getHops();
       
       // 3. Filter and Convert
-      // "alle anderen Einträge sollen in die DB eingetragen werden"
-      // "null in inventory ... sollen nicht dargestellt werden"
-      // So we filter existing nulls from display, but should we save them?
-      // Use filter for saving too? Probably yes, to keep DB clean of empty stuff.
-      
-      final List<Fermentable> newItems = [];
+      final List<Hop> newItems = [];
       for (var item in bfData) {
         final inventory = item['inventory'];
         if (inventory == null || (inventory is num && inventory == 0)) continue; 
         
-        newItems.add(Fermentable.fromBrewfather(item, widget.profileId));
+        newItems.add(Hop.fromBrewfather(item, widget.profileId));
       }
 
       // 4. Upsert to DB
-      await _userService.saveFermentables(newItems);
+      await _userService.saveHops(newItems);
 
-      // 5. Reload completely from DB to be clean and have all IDs etc.
-      localItems = await _userService.getFermentables(widget.profileId);
+      // 5. Reload completely from DB
+      localItems = await _userService.getHops(widget.profileId);
 
       if (!mounted) return;
 
       setState(() {
-        _fermentables = localItems;
+        _hops = localItems;
         _isLoading = false;
       });
     } catch (e) {
@@ -104,7 +96,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vergärbare Zutaten (Brewfather)'),
+        title: const Text('Hopfen (Brewfather)'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -143,11 +135,11 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       );
     }
 
-    final validItems = _fermentables.where((i) => i.name.isNotEmpty).toList();
+    final validItems = _hops.where((i) => i.name.isNotEmpty).toList();
 
     if (validItems.isEmpty) {
       return const Center(
-        child: Text('Keine fermentierbaren Zutaten in Brewfather gefunden.'),
+        child: Text('Kein Hopfen in Brewfather gefunden.'),
       );
     }
 
@@ -157,22 +149,12 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       itemBuilder: (context, index) {
         final item = validItems[index];
         final name = item.name;
-        final supplier = item.supplier ?? '';
+        final alpha = item.alpha ?? 0.0;
+        final year = item.year ?? '';
+        final origin = item.origin ?? '';
         final amount = item.amount;
-        final unit = item.unit ?? 'kg';
+        final unit = item.unit ?? 'g';
         final type = item.type ?? '';
-
-        // Priority: potential (explicit SG) -> yield (calculated) -> attenuation (fallback)
-        double sg = 1.0;
-        if (item.potential != null) {
-           sg = item.potential!;
-        } else if (item.yield != null) {
-           // Yield is typically percentage e.g. 80
-           // ~0.46 points per percent yield is a standard approximation for sucrose equivalent
-           sg = 1 + (item.yield! * 0.46) / 1000;
-        } else if (item.attenuation != null) {
-             sg = 1 + (item.attenuation! * 0.46) / 1000;
-        }
 
         return ListTile(
           leading: (item.brewfatherId != null && item.brewfatherId!.isNotEmpty)
@@ -180,14 +162,14 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
               : Image.asset('assets/icon_small.png', width: 24, height: 24),
           title: Text(name),
           subtitle: Text(
-            '$type${supplier.isNotEmpty ? ' • $supplier' : ''} • ${sg.toStringAsFixed(3)} SG',
+            '$type $year $origin • ${alpha.toStringAsFixed(1)}% Alpha',
             style: const TextStyle(color: Colors.white70),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${amount.toStringAsFixed(3)} $unit',
+                '${amount.toStringAsFixed(1)} $unit',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
                 IconButton(
@@ -201,7 +183,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     );
   }
 
-  void _onEditItem(Fermentable item) {
+  void _onEditItem(Hop item) {
     if (item.brewfatherId != null && item.brewfatherId!.isNotEmpty) {
       _editBFInventory(item);
     } else {
@@ -209,22 +191,27 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     }
   }
 
-  Future<void> _openManualForm({Fermentable? editing}) async {
+  Future<void> _openManualForm({Hop? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
-    final supplierCtrl = TextEditingController(text: editing?.supplier ?? '');
+    final originCtrl = TextEditingController(text: editing?.origin ?? '');
+    final yearCtrl = TextEditingController(text: editing?.year ?? '');
     final amountCtrl = TextEditingController(text: editing?.amount.toString() ?? '0.0');
-    // final unitCtrl = TextEditingController(text: editing?.unit ?? 'kg'); // Removed
-    String selectedUnit = editing?.unit ?? 'kg';
-    const List<String> unitOptions = ['kg', 'g', 'lbs', 'oz']; // Add other units as needed
-    final typeCtrl = TextEditingController(text: editing?.type ?? 'Grain');
-    final potentialCtrl = TextEditingController(text: editing?.potential?.toString() ?? '');
+    final alphaCtrl = TextEditingController(text: editing?.alpha?.toString() ?? '');
+    
+    String selectedUnit = editing?.unit ?? 'g';
+    const List<String> unitOptions = ['g', 'kg', 'oz', 'lbs'];
+    
+    // Type options for Hops
+    final typeCtrl = TextEditingController(text: editing?.type ?? 'Pellets');
+    // We could make type a dropdown too if needed, but text is fine for now or stick to standard BF types (Pellet, Leaf, Cryo)
+    
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
 
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(editing == null ? 'Zutat hinzufügen' : 'Zutat bearbeiten'),
+          title: Text(editing == null ? 'Hopfen hinzufügen' : 'Hopfen bearbeiten'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -233,9 +220,12 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name'),
                 ),
-                TextField(
-                  controller: supplierCtrl,
-                  decoration: const InputDecoration(labelText: 'Hersteller'),
+                Row(
+                  children: [
+                     Expanded(child: TextField(controller: originCtrl, decoration: const InputDecoration(labelText: 'Herkunft'))),
+                     const SizedBox(width: 8),
+                     Expanded(child: TextField(controller: yearCtrl, decoration: const InputDecoration(labelText: 'Jahr'))),
+                  ],
                 ),
                 Row(
                   children: [
@@ -267,13 +257,13 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
                   ],
                 ),
                 TextField(
-                  controller: typeCtrl,
-                  decoration: const InputDecoration(labelText: 'Typ (Grain, Hops, etc.)'),
+                  controller: alphaCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Alpha Säure (%)'),
                 ),
                 TextField(
-                  controller: potentialCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Potential (SG, z.B. 1.036)'),
+                  controller: typeCtrl,
+                  decoration: const InputDecoration(labelText: 'Typ (Pellets, Leaf, Cryo)'),
                 ),
                 TextField(
                   controller: notesCtrl,
@@ -310,27 +300,28 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       setState(() => _isLoading = true);
       try {
         final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
-        final potential = double.tryParse(potentialCtrl.text.replaceAll(',', '.'));
+        final alpha = double.tryParse(alphaCtrl.text.replaceAll(',', '.'));
 
-        final newItem = Fermentable(
-          id: editing?.id, // Keep ID if editing, null if new
+        final newItem = Hop(
+          id: editing?.id,
           userProfileId: widget.profileId,
-          brewfatherId: null, // Manual entry
+          brewfatherId: null,
           name: nameCtrl.text.trim(),
-          supplier: supplierCtrl.text.trim(),
+          origin: originCtrl.text.trim(),
+          year: yearCtrl.text.trim(),
           amount: amount,
           unit: selectedUnit,
           type: typeCtrl.text.trim(),
-          potential: potential,
+          alpha: alpha,
           notes: notesCtrl.text.trim(),
         );
 
-        await _userService.saveFermentable(newItem);
-        await _load(); // Reload to show changes
+        await _userService.saveHop(newItem);
+        await _load();
 
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Zutat gespeichert.')),
+             const SnackBar(content: Text('Hopfen gespeichert.')),
            );
         }
       } catch (e) {
@@ -343,11 +334,11 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     }
   }
 
-  Future<void> _deleteItem(Fermentable item) async {
+  Future<void> _deleteItem(Hop item) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Zutat löschen?'),
+        title: const Text('Hopfen löschen?'),
         content: Text('Möchten Sie "${item.name}" wirklich löschen?'),
         actions: [
           TextButton(
@@ -364,14 +355,14 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     );
 
     if (confirm == true) {
-      if (item.id == null) return; // Should not happen for existing items
+      if (item.id == null) return;
       setState(() => _isLoading = true);
       try {
-        await _userService.deleteFermentable(item.id!);
+        await _userService.deleteHop(item.id!);
         await _load();
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Zutat gelöscht.')),
+             const SnackBar(content: Text('Hopfen gelöscht.')),
            );
         }
       } catch (e) {
@@ -384,7 +375,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     }
   }
 
-  Future<void> _editBFInventory(Fermentable item) async {
+  Future<void> _editBFInventory(Hop item) async {
     final TextEditingController amountCtrl = TextEditingController(
       text: item.amount.toString(),
     );
@@ -401,7 +392,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Menge (${item.unit ?? "kg"})',
+                  labelText: 'Menge (${item.unit ?? "g"})',
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -440,10 +431,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
 
         if (item.brewfatherId == null) throw Exception('Keine Brewfather ID vorhanden.');
 
-        // Update in Brewfather
-        await bfService.updateFermentableInventory(item.brewfatherId!, newAmount);
-
-        // Update Locally via sync
+        await bfService.updateHopInventory(item.brewfatherId!, newAmount);
         await _load();
 
         if (mounted) {

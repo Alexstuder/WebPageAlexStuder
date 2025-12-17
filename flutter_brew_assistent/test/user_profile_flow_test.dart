@@ -4,6 +4,8 @@ import 'package:brew_genius/models/user_profile.dart';
 import 'package:brew_genius/models/water_profile.dart';
 import 'package:brew_genius/services/user_profile_service.dart';
 import 'package:brew_genius/services/water_profile_service.dart';
+import 'package:brew_genius/models/fermentable.dart';
+import 'package:brew_genius/models/hop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -122,9 +124,41 @@ class FakeUserProfileRepository implements UserProfileRepository {
     stored = profile;
   }
 
+
+
   @override
   Future<UserProfile?> fetchDefaultProfile({bool refresh = false}) async {
     return stored;
+  }
+
+  @override
+  Future<List<Fermentable>> getFermentables(String userProfileId) async {
+    return [];
+  }
+
+  @override
+  Future<void> saveFermentables(List<Fermentable> fermentables) async {
+    // no-op for now
+  }
+
+  @override
+  Future<void> saveFermentable(Fermentable fermentable) async {
+    // no-op for now
+  }
+  
+  @override
+  Future<List<Hop>> getHops(String userProfileId) async {
+    return [];
+  }
+
+  @override
+  Future<void> saveHops(List<Hop> hops) async {
+    // no-op
+  }
+
+  @override
+  Future<void> saveHop(Hop hop) async {
+    // no-op
   }
 }
 

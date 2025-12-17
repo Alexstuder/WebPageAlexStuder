@@ -25,8 +25,7 @@ class WaterCalculator {
   static const double _bakingSodaNa = 27.37;
   static const double _bakingSodaHCO3 = 71.85;
 
-  static const double _chalkCa = 40.04;
-  static const double _chalkHCO3 = 60.0; // Very approximate, solubility issues
+
 
   static List<SaltAddition> calculate({
     required WaterProfile source,
@@ -44,7 +43,7 @@ class WaterCalculator {
 
     bool treatMash = true;
     bool treatSparge = false;
-    bool addToBoilInsteadOfSparge = false;
+
 
     if (strategy.toLowerCase().contains('kochen') && !strategy.toLowerCase().contains('maische')) {
        // Only Boil? Treat full volume?
@@ -156,7 +155,6 @@ class WaterCalculator {
     
     // 5. Check Na? If dNa still high, add Salt (NaCl)
     double naclFactorNa = 39.3 * 10 / liters; // NaCl is ~39.3% Na, 60.7% Cl
-    double naclFactorCl = 60.7 * 10 / liters;
     
     if (naclFactorNa > 0 && dNa > 5) { // Threshold 5mg/L ignore
        double saltG = dNa / naclFactorNa;

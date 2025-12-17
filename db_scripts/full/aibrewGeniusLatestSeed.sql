@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0c6oR7aS7TdJCMWcOsM70updqiMEYIr30hNOfY8Eby1ZzhMiC3jDuPA90fysiJx
+\restrict GvcrXPieDgh07hcWXlV9yWAmX1jaw41POVBt7uez1I8t3uanoWBzww4Cd3NsPFC
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -34,6 +34,19 @@ INSERT INTO aibrewgenius.brew_kettles (id, user_profile_id, brand, model, is_def
 
 
 --
+-- Data for Name: fermentables; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
+--
+
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('ba8cf7b6-1745-49d4-b2fb-24074a059f5f', 'self_hosted_profile', 'default-108df1f', 'Pilsner Malt', 'Avangard', 2.15, 'kg', 'Grain', NULL, NULL, NULL, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('4a95dde8-ffbb-498d-9ba1-e3d9475270aa', 'self_hosted_profile', 'default-72225b4', 'Vienna Malt', 'Avangard', 6.18, 'kg', 'Grain', NULL, NULL, 0.79, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('6ca24bc5-f557-471b-ba68-d263c70553a5', 'self_hosted_profile', 'default-741be46', 'Caramunich II', 'Weyermann', 0.45, 'kg', 'Grain', NULL, NULL, NULL, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('0ec2a20c-3949-49c1-b009-0d2ab9a308b8', 'self_hosted_profile', 'default-N8AabgDY2ZKiSrSwraIExKXtjkMHO9', 'Terroir Paulista Munich 2', 'Atelier do Malte', 5.2, 'kg', 'Grain', NULL, NULL, NULL, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('5aedf1e0-bcf5-440a-8554-f71844a0e39c', 'self_hosted_profile', 'default-aaaccad', 'Carahell', 'Weyermann', 0.17, 'kg', 'Grain', NULL, NULL, NULL, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('50c97ac3-728f-45ac-bfe6-d12749da1af6', 'self_hosted_profile', 'default-de1e508', 'Caraaroma', 'Weyermann', 0.2, 'kg', 'Grain', NULL, NULL, NULL, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+INSERT INTO aibrewgenius.fermentables (id, user_profile_id, brewfather_id, name, supplier, amount, unit, type, potential, yield, attenuation, notes, created_at, updated_at) VALUES ('dc8a1146-5cba-4bd3-b5d1-4be90b968f53', 'self_hosted_profile', 'default-dea89b1', 'Munich Malt, Germany', 'Avangard', 0.4, 'kg', 'Grain', NULL, NULL, 0.77, NULL, '2025-12-17 12:57:37.474384+00', '2025-12-17 13:00:38.809827+00');
+
+
+--
 -- Data for Name: fermenter_controllers; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
 --
 
@@ -52,6 +65,14 @@ INSERT INTO aibrewgenius.fermenters (id, user_profile_id, brand, type, is_defaul
 --
 
 INSERT INTO aibrewgenius.fining_agents (user_profile_id, irish_moss, whirlfloc, gelatin, biersol, polyclar, isinglass, bentonite, egg_whites, activated_carbon, extras, created_at, updated_at) VALUES ('self_hosted_profile', false, true, false, true, false, false, false, false, false, '[]', '2025-11-17 15:35:00+00', '2025-11-17 15:35:00+00');
+
+
+--
+-- Data for Name: hops; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
+--
+
+INSERT INTO aibrewgenius.hops (id, user_profile_id, brewfather_id, name, alpha, origin, year, amount, unit, type, notes, created_at, updated_at) VALUES ('77c8603a-24de-4888-a43a-0b4c36d8c57b', 'self_hosted_profile', 'default-J71h7Tm0SBpGpQDA1rDyIyUjwxuXkX', 'Tettnanger', 4, NULL, NULL, 15, 'g', 'Pellet', NULL, '2025-12-17 12:55:09.475201+00', '2025-12-17 13:00:42.506839+00');
+INSERT INTO aibrewgenius.hops (id, user_profile_id, brewfather_id, name, alpha, origin, year, amount, unit, type, notes, created_at, updated_at) VALUES ('e3b28f82-9d52-4871-885c-df74932b0617', 'self_hosted_profile', 'default-b73163ee', 'Hallertauer Mittelfrueh', 4, NULL, NULL, 103, 'g', 'Pellet', NULL, '2025-12-17 12:55:09.475201+00', '2025-12-17 13:00:42.506839+00');
 
 
 --
@@ -84,13 +105,13 @@ INSERT INTO aibrewgenius.water_profiles (id, user_profile_id, name, is_default, 
 --
 
 INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id, brand, strain, product_id, form, inventory, unit, style, attenuation_min, attenuation_max, temperature_min, temperature_max, url, notes, created_at, updated_at) VALUES ('0aa08817-d2b1-4219-8ff1-d113ad315ee5', 'self_hosted_profile', NULL, 'WYEAST LABS', '1084 Irish Ale', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-12-16 23:15:32.481+00', '2025-12-16 23:15:32.481+00');
-INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id, brand, strain, product_id, form, inventory, unit, style, attenuation_min, attenuation_max, temperature_min, temperature_max, url, notes, created_at, updated_at) VALUES ('a975c716-d891-460f-8f41-18bb7489e748', 'self_hosted_profile', 'default-73f938', 'Wyeast Labs', 'Weihenstephan Weizen', '3068', 'Liquid', 1, 'pkg', 'Wheat', 77, 77, 17.8, 23.9, NULL, '', '2025-12-16 22:48:29.698244+00', '2025-12-17 11:24:06.638721+00');
-INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id, brand, strain, product_id, form, inventory, unit, style, attenuation_min, attenuation_max, temperature_min, temperature_max, url, notes, created_at, updated_at) VALUES ('47eb502c-1019-4d1e-822f-406c8c8143f4', 'self_hosted_profile', 'default-77d700', 'Wyeast Labs', 'Bavarian Lager', '2206', 'Liquid', 1, 'pkg', 'Lager', 77, 77, 7.8, 14.4, 'https://wyeastlab.com/product/bavarian-lager/', '', '2025-12-16 22:48:29.708472+00', '2025-12-17 11:24:06.645952+00');
+INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id, brand, strain, product_id, form, inventory, unit, style, attenuation_min, attenuation_max, temperature_min, temperature_max, url, notes, created_at, updated_at) VALUES ('a975c716-d891-460f-8f41-18bb7489e748', 'self_hosted_profile', 'default-73f938', 'Wyeast Labs', 'Weihenstephan Weizen', '3068', 'Liquid', 1, 'pkg', 'Wheat', 77, 77, 17.8, 23.9, NULL, '', '2025-12-16 22:48:29.698244+00', '2025-12-17 13:00:53.957356+00');
+INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id, brand, strain, product_id, form, inventory, unit, style, attenuation_min, attenuation_max, temperature_min, temperature_max, url, notes, created_at, updated_at) VALUES ('47eb502c-1019-4d1e-822f-406c8c8143f4', 'self_hosted_profile', 'default-77d700', 'Wyeast Labs', 'Bavarian Lager', '2206', 'Liquid', 1, 'pkg', 'Lager', 77, 77, 7.8, 14.4, 'https://wyeastlab.com/product/bavarian-lager/', '', '2025-12-16 22:48:29.708472+00', '2025-12-17 13:00:53.966168+00');
 
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0c6oR7aS7TdJCMWcOsM70updqiMEYIr30hNOfY8Eby1ZzhMiC3jDuPA90fysiJx
+\unrestrict GvcrXPieDgh07hcWXlV9yWAmX1jaw41POVBt7uez1I8t3uanoWBzww4Cd3NsPFC
 

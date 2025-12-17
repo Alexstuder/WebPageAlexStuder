@@ -210,6 +210,67 @@ CREATE POLICY "Allow full access" ON aibrewgenius.packaging_profiles FOR ALL TO 
 CREATE POLICY "Allow full access" ON aibrewgenius.yeast_bank_entries FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow full access" ON aibrewgenius.malt_depots FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow full access" ON aibrewgenius.fermenter_controllers FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE TABLE aibrewgenius.fermentables (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  brewfather_id TEXT,
+  name TEXT NOT NULL,
+  supplier TEXT,
+  amount DOUBLE PRECISION,
+  unit TEXT,
+  type TEXT,
+  potential DOUBLE PRECISION,
+  yield DOUBLE PRECISION,
+  attenuation DOUBLE PRECISION,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TRIGGER fermentables_set_updated_at
+BEFORE UPDATE ON aibrewgenius.fermentables
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
+CREATE UNIQUE INDEX fermentables_user_brewfather_unique
+  ON aibrewgenius.fermentables(user_profile_id, brewfather_id);
+
+ALTER TABLE aibrewgenius.fermentables ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access" ON aibrewgenius.fermentables FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE TABLE aibrewgenius.hops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  brewfather_id TEXT,
+  name TEXT NOT NULL,
+  alpha DOUBLE PRECISION,
+  origin TEXT,
+  year TEXT,
+  amount DOUBLE PRECISION,
+  unit TEXT,
+  type TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TRIGGER hops_set_updated_at
+BEFORE UPDATE ON aibrewgenius.hops
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
+CREATE UNIQUE INDEX hops_user_brewfather_unique
+  ON aibrewgenius.hops(user_profile_id, brewfather_id);
+
+ALTER TABLE aibrewgenius.hops ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access" ON aibrewgenius.hops FOR ALL TO anon USING (true) WITH CHECK (true);
+
+GRANT ALL ON TABLE aibrewgenius.hops TO anon, authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO service_role;
+
 CREATE POLICY "Allow full access" ON aibrewgenius.fining_agents FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- Storage bucket configuration for Avatars

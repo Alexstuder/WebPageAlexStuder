@@ -28,6 +28,7 @@ import 'models/yeast_bank_entry.dart';
 import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
 import 'pages/available_ingredients_page.dart';
+import 'pages/hops_manager_page.dart';
 import 'models/packaging_profile.dart';
 import 'models/fining_agents.dart';
 import 'models/ai_recipe.dart';
@@ -607,6 +608,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+
+
+  void _openHopsManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => HopsManagerPage(profileId: _profileId),
+      ),
+    );
+  }
+
   void _openAvailableIngredientsManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -840,13 +851,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             _managerButton(
               icon: Icons.biotech_outlined,
-              label: 'Hefedatenbank',
+              label: 'Hefe',
               onPressed: _openYeastBankManager,
             ),
             _managerButton(
               icon: Icons.grain_outlined,
-              label: 'Verfügbare Zutaten',
+              label: 'Vergärbare Zutaten',
               onPressed: _openAvailableIngredientsManager,
+            ),
+            _managerButton(
+              icon: Icons.grass_outlined,
+              label: 'Hopfen',
+              onPressed: _openHopsManager,
             ),
           ],
         ),
@@ -2722,6 +2738,9 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            leading: (entry.brewfatherId != null && entry.brewfatherId!.isNotEmpty)
+                ? Image.asset('assets/Brewfather_logo.png', width: 24, height: 24)
+                : Image.asset('assets/icon_small.png', width: 24, height: 24),
             onTap: () => _openForm(editing: entry),
             title: Text('${entry.brand} · ${entry.strain}'),
             subtitle: Column(
@@ -3355,7 +3374,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   String? _imageName;
   String? _imageMime;
   bool _isSearchingShops = false;
-  ParsedIngredientsSummary? _summary;
+
   String? _lastGeneratedPrompt;
   AiRecipe? _lastGeneratedRecipe; // NEW: Store the parsed recipe object
 
@@ -3388,7 +3407,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       _isLoading = true;
       _error = null;
       _response = null;
-      _summary = null;
+
       _lastGeneratedPrompt = null;
     });
 
@@ -3854,11 +3873,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     return null;
   }
 
-  ParsedIngredientsSummary? _parseIngredientsSummary(String text) {
-    final json = _tryParseIngredientJson(text);
-    if (json == null) return null;
-    return ParsedIngredientsSummary.fromJson(json);
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -4159,22 +4174,9 @@ class _ImagePreview extends StatelessWidget {
                     filterQuality: FilterQuality.none,
                   ),
                 );
-                return SizedBox(
-                  height: targetHeight,
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.none,
-                  ),
-                );
-                return SizedBox(
-                  height: targetHeight,
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.none,
-                  ),
-                );
+
+
+
               },
             ),
           ),
@@ -4193,29 +4195,8 @@ class _ImagePreview extends StatelessWidget {
   }
 }
 
-class _RecipeCard extends StatelessWidget {
-  const _RecipeCard({required this.text, required this.isWide});
 
-  final String text;
-  final bool isWide;
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Card(
-        color: const Color(0xFF0F172A),
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Padding(
-          padding: EdgeInsets.all(isWide ? 28 : 20),
-          child: SelectableText(
-            text,
-            style: const TextStyle(height: 1.5, fontSize: 16),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ShopResultsSheet extends StatelessWidget {
   const _ShopResultsSheet({required this.results});
@@ -4357,283 +4338,10 @@ class _ShopCard extends StatelessWidget {
   }
 }
 
-class ParsedIngredientsSummary {
-  ParsedIngredientsSummary({
-    required this.malz,
-    required this.hopfen,
-    required this.hefe,
-    required this.target,
-  });
 
-  final List<IngredientEntry> malz;
-  final List<IngredientEntry> hopfen;
-  final List<IngredientEntry> hefe;
-  final Zielwerte target;
 
-  factory ParsedIngredientsSummary.fromJson(Map<String, dynamic> json) {
-    // Check for complex structure first
-    if (json.containsKey('Zutaten') && json['Zutaten'] is Map) {
-      final zutaten = json['Zutaten'] as Map<String, dynamic>;
-      // Wrap single Hefe object in list if needed
-      var hefeData = zutaten['Original_Hefe'];
-      if (hefeData is Map) {
-        hefeData = [hefeData];
-      }
 
-      return ParsedIngredientsSummary(
-        malz: IngredientEntry.listFromJson(zutaten['Original_Malz']),
-        hopfen: IngredientEntry.listFromJson(zutaten['Original_Hopfen']),
-        hefe: IngredientEntry.listFromJson(hefeData),
-        target: Zielwerte.fromJson(json['Zielwerte'] as Map<String, dynamic>? ??
-            json['zielwerte'] as Map<String, dynamic>?),
-      );
-    }
 
-    return ParsedIngredientsSummary(
-      malz: IngredientEntry.listFromJson(json['malz']),
-      hopfen: IngredientEntry.listFromJson(json['hopfen']),
-      hefe: IngredientEntry.listFromJson(json['hefe']),
-      target: Zielwerte.fromJson(json['zielwerte'] as Map<String, dynamic>?),
-    );
-  }
-}
-
-class IngredientEntry {
-  IngredientEntry({required this.name, this.amount, this.extra});
-
-  final String name;
-  final String? amount;
-  final String? extra;
-
-  static List<IngredientEntry> listFromJson(dynamic data) {
-    if (data is! List) return const [];
-    final entries = <IngredientEntry>[];
-    for (final item in data) {
-      if (item is Map<String, dynamic>) {
-        // Handle mixed casing (name vs Name vs Sortenname)
-        String rawName = (item['name'] ?? item['Name'] ?? item['Sortenname'] ?? '')
-            .toString()
-            .trim();
-        if (rawName.isEmpty || rawName.toLowerCase() == 'unbekannt') {
-          continue;
-        }
-
-        String? amount;
-        // Check standard lowercase keys
-        if (item.containsKey('menge_kg')) {
-          amount = '${item['menge_kg']} kg';
-        } else if (item.containsKey('menge_g')) {
-          amount = '${item['menge_g']} g';
-        } else if (item.containsKey('menge_pack')) {
-          amount = '${item['menge_pack']} Pack';
-        }
-        // Check Capitalized keys from template
-        else if (item.containsKey('Menge_g')) {
-          final val = item['Menge_g'];
-          // Convert large grams to kg for display if desired, or keep as g
-          if (val is num && val >= 1000) {
-            amount = '${val / 1000} kg';
-          } else {
-            amount = '$val g';
-          }
-        } else if (item.containsKey('Menge')) {
-          amount = '${item['Menge']}';
-        }
-
-        // Extra info (Alpha, Einsatz, Form, etc.)
-        List<String> extras = [];
-        if (item.containsKey('einsatz')) extras.add(item['einsatz'].toString());
-        if (item.containsKey('Alpha_Saeure')) {
-          extras.add('Alpha: ${item['Alpha_Saeure']}%');
-        }
-        if (item.containsKey('Form')) extras.add(item['Form'].toString());
-        if (item.containsKey('Hinweis')) extras.add(item['Hinweis'].toString());
-        
-        final existingExtra = item['extra']?.toString();
-        if (existingExtra != null) extras.add(existingExtra);
-
-        entries.add(
-          IngredientEntry(
-            name: rawName,
-            amount: amount,
-            extra: extras.isNotEmpty ? extras.join(', ') : null,
-          ),
-        );
-      }
-    }
-    return entries;
-  }
-}
-
-class Zielwerte {
-  Zielwerte({
-    required this.stammwuerze,
-    required this.alkohol,
-    required this.ibu,
-    required this.farbe,
-  });
-
-  final double stammwuerze;
-  final double alkohol;
-  final double ibu;
-  final double farbe;
-
-  factory Zielwerte.fromJson(Map<String, dynamic>? json) {
-    final map = json ?? const {};
-    double parse(num? value) => value?.toDouble() ?? 0.0;
-    return Zielwerte(
-      stammwuerze: parse(map['stammwuerze_plato'] ?? map['Stammwuerze_Plato']),
-      alkohol: parse(map['alkohol_vol_prozent'] ?? map['Alkohol_Vol_Prozent']),
-      ibu: parse(map['ibu'] ?? map['IBU']),
-      farbe: parse(map['farbe_ebc'] ?? map['Farbe_EBC']),
-    );
-  }
-}
-
-class _RecipeSummaryCard extends StatelessWidget {
-  const _RecipeSummaryCard({required this.summary});
-
-  final ParsedIngredientsSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFF111827),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Zielwerte',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _SummaryChip('Stammwürze',
-                    '${summary.target.stammwuerze.toStringAsFixed(1)} °P'),
-                _SummaryChip('Alkohol',
-                    '${summary.target.alkohol.toStringAsFixed(1)} % vol'),
-                _SummaryChip('IBU', summary.target.ibu.toStringAsFixed(1)),
-                _SummaryChip(
-                    'Farbe', '${summary.target.farbe.toStringAsFixed(1)} EBC'),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _IngredientList(title: 'Malz', entries: summary.malz),
-            _IngredientList(title: 'Hopfen', entries: summary.hopfen),
-            _IngredientList(title: 'Hefe', entries: summary.hefe),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _IngredientList extends StatelessWidget {
-  const _IngredientList({required this.title, required this.entries});
-
-  final String title;
-  final List<IngredientEntry> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          ...entries.map(
-            (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                  if ((item.amount ?? '').isNotEmpty)
-                    Text(item.amount!,
-                        style: const TextStyle(color: Colors.white70)),
-                  if ((item.extra ?? '').isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        item.extra!,
-                        style: const TextStyle(color: Colors.white54),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip(this.label, this.value);
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text('$label: $value'),
-    );
-  }
-}
-
-class _ErrorNotice extends StatelessWidget {
-  const _ErrorNotice({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.warning_amber_rounded,
-            size: 48, color: Colors.amber.shade300),
-        const SizedBox(height: 12),
-        Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        const SizedBox(height: 14),
-        OutlinedButton(
-          onPressed: onRetry,
-          child: const Text('Erneut versuchen'),
-        ),
-      ],
-    );
-  }
-}
 
 class _EntryButton extends StatelessWidget {
   const _EntryButton({required this.label, required this.onPressed});
@@ -6424,20 +6132,7 @@ class _Marker extends StatelessWidget {
   }
 }
 
-class _Placeholder extends StatelessWidget {
-  const _Placeholder();
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'Beschreibe dein Traum-Bier und lass den Assistenten ein komplettes Rezept entwerfen.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.72)),
-      ),
-    );
-  }
-}
 
 class MaltDepotManagerPage extends StatefulWidget {
   const MaltDepotManagerPage({super.key, required this.profileId});

@@ -126,4 +126,42 @@ class BrewfatherService {
        throw Exception('Fehler beim Update in Brewfather: ${response.statusCode} ${response.body}');
     }
   }
+  Future<void> updateFermentableInventory(String id, double inventoryAmount) async {
+    final uri = Uri.parse('$_baseUrl/inventory/fermentables/$id');
+    final response = await http.patch(
+      uri, 
+      headers: _headers, 
+      body: jsonEncode({'inventory': inventoryAmount})
+    );
+    
+    if (response.statusCode != 200) {
+       throw Exception('Fehler beim Update des Fermentable Inventars: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  // Get Hops specifically
+  Future<List<dynamic>> getHops() async {
+    final uri = Uri.parse('$_baseUrl/inventory/hops');
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode == 200) {
+       return jsonDecode(response.body) as List<dynamic>;
+    } else {
+       throw Exception('Fehler beim Laden der Hopfen: ${response.statusCode} ${response.body}');
+    }
+  }
+
+  // Update Hop inventory
+  Future<void> updateHopInventory(String id, double inventoryAmount) async {
+    final uri = Uri.parse('$_baseUrl/inventory/hops/$id');
+    final response = await http.patch(
+      uri, 
+      headers: _headers, 
+      body: jsonEncode({'inventory': inventoryAmount})
+    );
+    
+    if (response.statusCode != 200) {
+       throw Exception('Fehler beim Update des Hopfen Inventars: ${response.statusCode} ${response.body}');
+    }
+  }
 }

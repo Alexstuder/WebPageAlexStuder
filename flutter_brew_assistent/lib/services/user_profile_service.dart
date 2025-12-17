@@ -1,11 +1,23 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/hop.dart';
+import '../models/fermentable.dart';
 import '../models/user_profile.dart';
 
 abstract class UserProfileRepository {
   Future<void> saveProfile(UserProfile profile);
   Future<UserProfile?> fetchProfile(String id);
   Future<UserProfile?> fetchDefaultProfile({bool refresh = false});
+  
+  // Fermentables
+  Future<List<Fermentable>> getFermentables(String userProfileId);
+  Future<void> saveFermentables(List<Fermentable> fermentables);
+  Future<void> saveFermentable(Fermentable fermentable);
+
+  // Hops
+  Future<List<Hop>> getHops(String userProfileId);
+  Future<void> saveHops(List<Hop> hops);
+  Future<void> saveHop(Hop hop);
 }
 
 class UserProfileService implements UserProfileRepository {
@@ -48,6 +60,82 @@ class UserProfileService implements UserProfileRepository {
     return _cachedDefaultProfile!;
   }
 
+  @override
+  Future<List<Fermentable>> getFermentables(String userProfileId) async {
+    final data = await _tableFermentables().select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => Fermentable.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> saveFermentables(List<Fermentable> fermentables) async {
+    if (fermentables.isEmpty) return;
+    
+    // Convert to JSON and remove null ID so DB generates it for new inserts
+    final data = fermentables.map((e) {
+      final json = e.toJson();
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+
+    await _tableFermentables().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
+
+  @override
+  Future<void> saveFermentable(Fermentable item) async {
+    final json = item.toJson();
+    if (json['id'] == null) json.remove('id');
+    
+    // If we have an ID, we upsert on ID (default).
+    // If not, and no brewfather_id, we just insert.
+    if (item.id != null) {
+      await _tableFermentables().upsert(json);
+    } else {
+      await _tableFermentables().insert(json);
+    }
+  }
+
+  Future<void> deleteFermentable(String id) async {
+    await _tableFermentables().delete().eq('id', id);
+  }
+
+  @override
+  Future<List<Hop>> getHops(String userProfileId) async {
+    final data = await _tableHops().select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => Hop.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> saveHops(List<Hop> hops) async {
+    if (hops.isEmpty) return;
+    final data = hops.map((e) {
+      final json = e.toJson();
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+    await _tableHops().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
+
+  @override
+  Future<void> saveHop(Hop item) async {
+    final json = item.toJson();
+    if (json['id'] == null) json.remove('id');
+    if (item.id != null) {
+      await _tableHops().upsert(json);
+    } else {
+      await _tableHops().insert(json);
+    }
+  }
+
+  Future<void> deleteHop(String id) async {
+    await _tableHops().delete().eq('id', id);
+  }
+
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
+
+  SupabaseQueryBuilder _tableFermentables() =>
+      _client.schema(_schemaName).from('fermentables');
+
+  SupabaseQueryBuilder _tableHops() =>
+    _client.schema(_schemaName).from('hops');
 }
