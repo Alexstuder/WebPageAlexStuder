@@ -55,6 +55,9 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
 
       setState(() {
         _fermentables = fermentables;
+        if (_fermentables.isNotEmpty) {
+           print('DEBUG FERMENTABLE: ${_fermentables.first}');
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -118,11 +121,15 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
         final color = item['color'] ?? 0;
         final type = item['type'] ?? '';
 
+        final attenuation = item['attenuation'] ?? item['yield'] ?? 0;
+        // Approximation: SG = 1 + (attenuation * 0.46) / 1000
+        final sg = 1 + ((attenuation as num) * 0.46) / 1000;
+
         return ListTile(
           leading: const Icon(Icons.grain, color: Colors.amber),
           title: Text(name),
           subtitle: Text(
-            '$type${supplier.isNotEmpty ? ' • $supplier' : ''} • ${color.toString()} EBC',
+            '$type${supplier.isNotEmpty ? ' • $supplier' : ''} • ${color.toString()} EBC • ${sg.toStringAsFixed(3)} SG',
             style: const TextStyle(color: Colors.white70),
           ),
           trailing: Text(

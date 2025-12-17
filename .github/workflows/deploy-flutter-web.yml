@@ -82,12 +82,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
+            # Retrieve DB Password directly from running container
+            DB_PASS=$(docker exec supabase_db_supabase-instance printenv POSTGRES_PASSWORD)
+            
             # Container: supabase_db_supabase-instance
             # Running Init Schema (DANGER: Drops Schema!)
-            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
 
             # Running Seed
-            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
+            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
 
 
       - name: Deploy proxy to VPS
