@@ -84,10 +84,10 @@ jobs:
           script: |
             # Container: supabase_db_supabase-instance
             # Running Init Schema (DANGER: Drops Schema!)
-            sudo docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
 
             # Running Seed
-            sudo docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
+            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
 
 
       - name: Deploy proxy to VPS

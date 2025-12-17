@@ -27,6 +27,7 @@ import 'models/fermenter.dart';
 import 'models/yeast_bank_entry.dart';
 import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
+import 'pages/available_ingredients_page.dart';
 import 'models/packaging_profile.dart';
 import 'models/fining_agents.dart';
 import 'models/ai_recipe.dart';
@@ -608,6 +609,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openAvailableIngredientsManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AvailableIngredientsPage(profileId: _profileId),
+      ),
+    );
+  }
+
   void _openMaltDepotManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -827,6 +836,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
               icon: Icons.biotech_outlined,
               label: 'Hefedatenbank',
               onPressed: _openYeastBankManager,
+            ),
+            _managerButton(
+              icon: Icons.grain_outlined,
+              label: 'Verfügbare Zutaten',
+              onPressed: _openAvailableIngredientsManager,
             ),
           ],
         ),
