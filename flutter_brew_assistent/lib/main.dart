@@ -2485,9 +2485,23 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
           if (name.isEmpty) continue;
           
           YeastBankEntry? existingEntry;
-          try {
-            existingEntry = _entries.firstWhere((e) => e.strain.toLowerCase() == name.toLowerCase());
-          } catch (_) {}
+          final bfId = y['_id'] ?? y['id'];
+
+          // 1. Try match by brewfatherId
+          if (bfId != null) {
+            try {
+              existingEntry =
+                  _entries.firstWhere((e) => e.brewfatherId == bfId);
+            } catch (_) {}
+          }
+
+          // 2. Fallback to name match if not found
+          if (existingEntry == null) {
+            try {
+              existingEntry = _entries.firstWhere(
+                  (e) => e.strain.toLowerCase() == name.toLowerCase());
+            } catch (_) {}
+          }
 
           if (mounted) {
              setState(() {
@@ -2499,7 +2513,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
           final newEntry = YeastBankEntry(
             id: existingEntry?.id, // ID behalten für Update
             userProfileId: widget.profileId,
-            brewfatherId: y['_id'] ?? y['id'],
+            brewfatherId: bfId,
             brand: y['laboratory'] ?? y['lab'] ?? 'Brewfather',
             strain: name,
             style: y['type'],
@@ -2508,6 +2522,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             temperatureMin: (y['minTemp'] as num?)?.toDouble(),
             temperatureMax: (y['maxTemp'] as num?)?.toDouble(),
             notes: y['description'] ?? y['notes'],
+            // Map additional fields from Brewfather or preserve existing
+            productId: y['productId']?.toString() ?? existingEntry?.productId,
+            form: y['form']?.toString() ?? existingEntry?.form,
+            inventory: (y['inventory'] as num?)?.toDouble() ?? (y['amount'] as num?)?.toDouble(),
+            unit: y['unit']?.toString() ?? y['amountUnit']?.toString(),
+            url: existingEntry?.url, // Preserve local URL
           );
           
           final saved = await _service.saveEntry(newEntry);
@@ -2540,8 +2560,24 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Fehlende Zugangsdaten'),
-            content: const Text('Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key in den Einstellungen.'),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+            content: const Text(
+                'Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key in den Einstellungen.'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Abbrechen')),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => IntegrationsPage(profileId: widget.profileId),
+                    ),
+                  );
+                },
+                child: const Text('Zu den Einstellungen'),
+              ),
+            ],
           ),
         );
         return;
@@ -2658,7 +2694,22 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                   Text(
                     'Temp: ${_rangeString(entry.temperatureMin, entry.temperatureMax, suffix: '°C')}',
                   ),
-                if ((entry.url ?? '').isNotEmpty) Text('URL: ${entry.url}'),
+                if ((entry.url ?? '').isNotEmpty)
+                  InkWell(
+                    onTap: () async {
+                       final uri = Uri.parse(entry.url!);
+                       if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                       }
+                    },
+                    child: Text(
+                      'URL: ${entry.url}',
+                      style: const TextStyle(
+                        color: Colors.blueAccent,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
                 if ((entry.notes ?? '').isNotEmpty)
                   Text(
                     entry.notes!,
@@ -2851,18 +2902,11 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Tooltip(
-                          message: isSynced
-                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
-                              : '',
-                          child: TextField(
-                            controller: urlCtrl,
-                            readOnly: isSynced,
-                            decoration: InputDecoration(
-                              labelText: 'URL',
-                              filled: isSynced,
-                              fillColor: isSynced ? Colors.grey.withValues(alpha: 0.1) : null,
-                            ),
+
+                        TextField(
+                          controller: urlCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'URL (lokal)',
                           ),
                         ),
                         const SizedBox(height: 12),

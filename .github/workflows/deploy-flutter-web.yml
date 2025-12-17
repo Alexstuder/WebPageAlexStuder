@@ -66,6 +66,30 @@ jobs:
             --exclude 'README.md' \
             -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/../
 
+      - name: Deploy DB scripts to VPS
+        run: |
+          PORT=${SSH_PORT:-22}
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" \
+            db_scripts/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/db_scripts/
+
+      - name: Run DB Init and Seed
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Container: supabase_db_supabase-instance
+            # Running Init Schema (DANGER: Drops Schema!)
+            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+
+            # Running Seed
+            docker exec -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
+
+
       - name: Deploy proxy to VPS
         run: |
           PORT=${SSH_PORT:-22}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/user_profile_service.dart';
 import 'brewfather_data_page.dart';
+import 'integrations_page.dart';
 import '../models/user_profile.dart'; // Import BrewfatherDataPage
 
 class BrewfatherMenuPage extends StatelessWidget {
@@ -45,12 +46,29 @@ class BrewfatherMenuPage extends StatelessWidget {
                mainAxisAlignment: MainAxisAlignment.center,
                children: [
                  if (userId.isEmpty || apiKey.isEmpty)
-                   const Padding(
-                     padding: EdgeInsets.all(16.0),
-                     child: Text(
-                       'Warnung: Keine Zugangsdaten gefunden. Bitte unter "Integration" konfigurieren.',
-                       style: TextStyle(color: Colors.orange),
-                       textAlign: TextAlign.center,
+                   Padding(
+                     padding: const EdgeInsets.all(16.0),
+                     child: Column(
+                       children: [
+                         const Text(
+                           'Warnung: Keine Zugangsdaten gefunden. Bitte unter "Integration" konfigurieren.',
+                           style: TextStyle(color: Colors.orange),
+                           textAlign: TextAlign.center,
+                         ),
+                         const SizedBox(height: 12),
+                         FilledButton.icon(
+                           onPressed: () {
+                             Navigator.of(context).push(
+                               MaterialPageRoute(
+                                 builder: (_) =>
+                                     IntegrationsPage(profileId: profileId),
+                               ),
+                             );
+                           },
+                           icon: const Icon(Icons.settings),
+                           label: const Text('Jetzt konfigurieren'),
+                         ),
+                       ],
                      ),
                    ),
                  _MenuButton(

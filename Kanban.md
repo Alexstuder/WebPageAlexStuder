@@ -2,7 +2,11 @@
 
 ## Backlog
 
-### Brewfather API Integration
+### Brewfather : misc Sync
+
+  - defaultExpanded: false
+
+### Brewfather : Fermentables Sync
 
   - defaultExpanded: false
 
@@ -32,9 +36,24 @@
 
   - defaultExpanded: false
 
+### Eine Notitz oder Anleitungs
+
+  - defaultExpanded: false
+    ```md
+    Eine Seite in der zum Beispiel URL von Youtube Videos mit Anleitungen abgespeichert werden könne
+    ```
+
 ## In Progress
 
+### Brewfather : Hefe Sync
+
+  - defaultExpanded: false
+
 ## Test
+
+### Brewfather API Integration
+
+  - defaultExpanded: false
 
 ## Done
 
