@@ -74,24 +74,12 @@ Kurzanleitung (Landing Page):
    - `supabase start` (Docker & docker-compose erforderlich). Danach erreichst du die lokale Instanz über `http://localhost:54321`.
 2. **API Keys auslesen**  
    - Nach dem Start findest du im `.env` bzw. im Log den `anon` Schlüssel. Trage URL + Key in `flutter_brew_assistent/.env` ein (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
-3. **Tabelle für User-Profil anlegen**  
-   ```sql
-   create table public.user_profiles (
-     id text primary key,
-     name text,
-     avatar_url text,
-     kettle_brand text,
-     kettle_type text,
-     default_batch_liters float8,
-     fermenter_brand text,
-     fermenter_type text,
-     controller text,
-     controller_user text,
-     controller_api_key text,
-     yeast_entries jsonb default '[]'::jsonb
-   );
-   ```
-   Optional: Row-Level-Security aktivieren (`alter table user_profiles enable row level security;`) und eine Policy hinzufügen, falls du später Auth nutzt. Für den einfachen Selbsthost-Usecase ohne Auth kannst du RLS deaktiviert lassen.
+3. **Datenbankschema initialisieren**  
+   - Öffne das Supabase SQL Studio (lokal unter `http://localhost:54323` oder ähnlich).
+   - Kopiere den Inhalt von `db_scripts/full/001_init_schema.sql` in den SQL Editor.
+   - Führe das Skript aus ("Run").
+   - Dies erstellt das benötigte `aibrewgenius` Schema und alle Tabellen. **Wichtig:** Ohne diesen Schritt funktioniert die App nicht korrekt.
+   
 4. **Service deployment**  
    - Docker-Compose Setup dauerhaft laufen lassen (`supabase start -x` für Hintergrund).  
    - Von außen erreichbar machen (z.B. Reverse Proxy) oder Port-Forwarding konfigurieren.  

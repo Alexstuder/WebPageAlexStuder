@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mime/mime.dart';
+import 'package:image/image.dart' as img; // For image resizing
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -28,6 +29,11 @@ import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
 import 'models/packaging_profile.dart';
 import 'models/fining_agents.dart';
+import 'models/ai_recipe.dart';
+import 'pages/recipe_result_page.dart';
+import 'pages/integrations_page.dart';
+import 'pages/brewfather_menu_page.dart';
+import 'services/brewfather_service.dart';
 import 'widgets/card_actions.dart';
 
 Future<void> main() async {
@@ -122,8 +128,9 @@ class BrewEntryPage extends StatelessWidget {
               top: 20,
               right: 20,
               child: Image.asset(
-                'assets/icon.png',
-                height: 72,
+                'assets/icon_small.png',
+                height: 49,
+                filterQuality: FilterQuality.none,
                 semanticLabel: 'AiBrewGenius',
               ),
             ),
@@ -242,8 +249,9 @@ class _DiscoveryWelcomePageState extends State<DiscoveryWelcomePage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -323,6 +331,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   String? _loadError;
   static const String _profileId = UserProfileService.defaultProfileId;
   String? _userNameError;
+  UserProfile? _loadedProfile;
 
   bool get _isRaptSelected =>
       _selectedController == 'R.A.P.T Temperature Controller';
@@ -353,6 +362,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _loadProfile() async {
     try {
       final profile = await _profileRepository.fetchProfile(_profileId);
+      _loadedProfile = profile;
       if (profile != null) {
         _userNameCtrl.text = profile.name;
         _avatarUrlCtrl.text = profile.avatarUrl;
@@ -389,10 +399,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final double? defaultBatch =
         double.tryParse(_defaultBatchCtrl.text.replaceAll(',', '.'));
 
-    final List<YeastEntryModel> yeastEntries = const [];
-
-    const maltEntries = <MaltDepotEntry>[];
-
     final profile = UserProfile(
       id: _profileId,
       name: _userNameCtrl.text.trim(),
@@ -405,8 +411,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
       controller: _selectedController,
       controllerUser: _isRaptSelected ? _raptUserCtrl.text.trim() : null,
       controllerApiKey: _isRaptSelected ? _raptApiKeyCtrl.text.trim() : null,
-      yeastEntries: yeastEntries,
-      maltDepot: maltEntries,
+      raptUserId: _loadedProfile?.raptUserId,
+      raptApiKey: _loadedProfile?.raptApiKey,
+      brewfatherUserId: _loadedProfile?.brewfatherUserId,
+
+      brewfatherApiKey: _loadedProfile?.brewfatherApiKey,
+      brewfatherSyncEnabled: _loadedProfile?.brewfatherSyncEnabled ?? false,
+      yeastEntries: _loadedProfile?.yeastEntries ?? const [],
+      maltDepot: _loadedProfile?.maltDepot ?? const [],
     );
 
     setState(() {
@@ -416,6 +428,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     var success = false;
     try {
       await _profileRepository.saveProfile(profile);
+      _loadedProfile = profile;
       if (!mounted) return success;
       if (showFeedback) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -436,6 +449,66 @@ class _UserProfilePageState extends State<UserProfilePage> {
       }
     }
     return success;
+  }
+
+  Future<void> _uploadAvatar() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      Uint8List? fileBytes = file.bytes;
+
+      if (fileBytes == null) return;
+
+      setState(() => _isSaving = true);
+
+      // 1. Resize Image (Max 512x512)
+      final image = img.decodeImage(fileBytes);
+      if (image == null) throw Exception('Bild konnte nicht dekodiert werden');
+
+      img.Image resized = image;
+      if (image.width > 512 || image.height > 512) {
+        resized = img.copyResize(
+          image,
+          width: image.width >= image.height ? 512 : null,
+          height: image.height > image.width ? 512 : null,
+        );
+      }
+
+      // 2. Compress to JPG 80%
+      final jpgBytes = img.encodeJpg(resized, quality: 80);
+
+      // 3. Upload to Supabase
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final path = fileName;
+
+      await Supabase.instance.client.storage.from('avatars').uploadBinary(
+            path,
+            Uint8List.fromList(jpgBytes),
+            fileOptions:
+                const FileOptions(contentType: 'image/jpeg', upsert: true),
+          );
+
+      final publicUrl =
+          Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+
+      if (mounted) {
+        _avatarUrlCtrl.text = publicUrl;
+        // Automatically save the profile to persist the new avatar URL
+        await _saveProfile();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload fehlgeschlagen: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -578,6 +651,22 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openIntegrationsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => IntegrationsPage(profileId: _profileId),
+      ),
+    );
+  }
+
+  void _openBrewfatherMenu() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BrewfatherMenuPage(profileId: _profileId),
+      ),
+    );
+  }
+
   Widget _buildUserSection() {
     return Card(
       color: const Color(0xFF0F172A),
@@ -593,13 +682,41 @@ class _UserProfilePageState extends State<UserProfilePage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 42,
-                  backgroundColor: const Color(0xFF1D4ED8),
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 36,
-                    color: Colors.white.withValues(alpha: 0.9),
+                GestureDetector(
+                  onTap: _uploadAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 42,
+                        backgroundColor: const Color(0xFF1D4ED8),
+                        backgroundImage: _avatarUrlCtrl.text.isNotEmpty
+                            ? NetworkImage(_avatarUrlCtrl.text)
+                            : null,
+                        child: _avatarUrlCtrl.text.isEmpty
+                            ? Icon(
+                                Icons.person_outline,
+                                size: 36,
+                                color: Colors.white.withValues(alpha: 0.9),
+                              )
+                            : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Theme.of(context).scaffoldBackgroundColor,
+                                width: 1.5),
+                          ),
+                          child: const Icon(Icons.camera_alt,
+                              size: 12, color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -621,14 +738,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _avatarUrlCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Avatar URL',
-                hintText: 'https://…/avatar.png',
-              ),
-            ),
+
           ],
         ),
       ),
@@ -636,9 +746,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildResourceButtons() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return GridView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 60,
+      ),
       children: [
         _managerButton(
           icon: Icons.water_drop_outlined,
@@ -662,7 +778,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         ),
         _managerButton(
           icon: Icons.inventory_2_outlined,
-          label: 'Abfüllen & Lagern',
+          label: 'Zielmenge,Abfüllen und Lagern',
           onPressed: _openPackagingProfileManager,
         ),
         _managerButton(
@@ -680,6 +796,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
           label: 'Malzdepot',
           onPressed: _openMaltDepotManager,
         ),
+        _managerButton(
+          icon: Icons.extension_outlined,
+          label: 'Integration',
+          onPressed: _openIntegrationsPage,
+        ),
+        _managerButton(
+          icon: Icons.cloud_download_outlined,
+          label: 'Brewfather',
+          onPressed: _openBrewfatherMenu,
+        ),
       ],
     );
   }
@@ -689,17 +815,22 @@ class _UserProfilePageState extends State<UserProfilePage> {
     required String label,
     required VoidCallback onPressed,
   }) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 220),
-      child: OutlinedButton.icon(
-        onPressed: () async {
-          if (!_ensureUserName()) return;
-          final saved = await _saveProfileIfNeeded();
-          if (!saved) return;
-          onPressed();
-        },
-        icon: Icon(icon),
-        label: Text(label),
+    return OutlinedButton.icon(
+      onPressed: () async {
+        if (!_ensureUserName()) return;
+        final saved = await _saveProfileIfNeeded();
+        if (!saved) return;
+        onPressed();
+      },
+      icon: Icon(icon),
+      label: Text(
+        label,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
       ),
     );
   }
@@ -1022,6 +1153,7 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => _openEditor(editing: profile),
             leading: Icon(
               profile.isDefault ? Icons.star : Icons.star_border,
               color: profile.isDefault ? Colors.amber : Colors.white54,
@@ -1676,6 +1808,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => _openForm(editing: kettle),
             leading: Icon(
               kettle.isDefault ? Icons.star : Icons.star_border,
               color: kettle.isDefault ? Colors.amber : Colors.white54,
@@ -1690,6 +1823,11 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   Text(
                     kettle.notes!,
                     style: const TextStyle(color: Colors.white70),
+                  ),
+                if (kettle.hasCondenserHat)
+                  const Text(
+                    'Hat Kondensator Hut',
+                    style: TextStyle(color: Colors.lightBlueAccent),
                   ),
               ],
             ),
@@ -1714,6 +1852,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool isDefault = editing?.isDefault ?? false;
+    bool hasCondenserHat = editing?.hasCondenserHat ?? false;
     String? brandError;
 
     final result = await showDialog<bool>(
@@ -1759,6 +1898,14 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   ),
                 ),
                 CheckboxListTile(
+                  value: hasCondenserHat,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Kondensator Hut'),
+                  onChanged: (value) =>
+                      setState(() => hasCondenserHat = value ?? false),
+                ),
+                CheckboxListTile(
                   value: isDefault,
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
@@ -1798,6 +1945,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       model: modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
       isDefault: isDefault,
       volumeLiters: _parseDouble(volumeCtrl.text),
+      hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
 
@@ -2004,6 +2152,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => _openForm(editing: fermenter),
             leading: Icon(
               fermenter.isDefault ? Icons.star : Icons.star_border,
               color: fermenter.isDefault ? Colors.amber : Colors.white54,
@@ -2276,9 +2425,13 @@ class YeastBankManagerPage extends StatefulWidget {
 
 class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
   final YeastBankService _service = YeastBankService();
+  final UserProfileService _userService = UserProfileService();
   bool _isLoading = true;
   List<YeastBankEntry> _entries = [];
   String? _error;
+  bool _syncEnabled = false;
+  UserProfile? _userProfile;
+  final Map<String, String> _debugJsonMap = {};
 
   @override
   void initState() {
@@ -2292,22 +2445,140 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       _error = null;
     });
     try {
+      // 1. Erstmal lokale Daten laden und anzeigen
+      final profile = await _userService.fetchProfile(widget.profileId);
       final items = await _service.fetchEntries(widget.profileId);
+      
       if (!mounted) return;
+      
       setState(() {
+        _userProfile = profile;
+        _syncEnabled = profile?.brewfatherSyncEnabled ?? false;
         _entries = items;
+        _isLoading = false; // Ladeindikator frühzeitig entfernen
       });
+
+      // 2. Im Hintergrund synchronisieren (falls aktiv)
+      if (_syncEnabled) {
+         await _syncWithBrewfather();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _isLoading = false;
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+    }
+  }
+
+  Future<void> _syncWithBrewfather() async {
+     if (_userProfile?.brewfatherUserId == null || _userProfile?.brewfatherApiKey == null) return;
+     try {
+       final bfService = BrewfatherService(userId: _userProfile!.brewfatherUserId!, apiKey: _userProfile!.brewfatherApiKey!);
+       final inventory = await bfService.getInventory();
+       final yeasts = inventory['yeasts'] ?? [];
+       
+       bool changed = false;
+       for (var y in yeasts) {
+          // Check if exists
+          final name = y['name'] ?? '';
+          if (name.isEmpty) continue;
+          
+          YeastBankEntry? existingEntry;
+          try {
+            existingEntry = _entries.firstWhere((e) => e.strain.toLowerCase() == name.toLowerCase());
+          } catch (_) {}
+
+          if (mounted) {
+             setState(() {
+                _debugJsonMap[name] = jsonEncode(y);
+             });
+          }
+
+          // Update or Create
+          final newEntry = YeastBankEntry(
+            id: existingEntry?.id, // ID behalten für Update
+            userProfileId: widget.profileId,
+            brewfatherId: y['_id'] ?? y['id'],
+            brand: y['laboratory'] ?? y['lab'] ?? 'Brewfather',
+            strain: name,
+            style: y['type'],
+            attenuationMin: (y['minAttenuation'] as num?)?.toDouble() ?? (y['attenuation'] as num?)?.toDouble(),
+            attenuationMax: (y['maxAttenuation'] as num?)?.toDouble() ?? (y['attenuation'] as num?)?.toDouble(),
+            temperatureMin: (y['minTemp'] as num?)?.toDouble(),
+            temperatureMax: (y['maxTemp'] as num?)?.toDouble(),
+            notes: y['description'] ?? y['notes'],
+          );
+          
+          final saved = await _service.saveEntry(newEntry);
+          
+          if (existingEntry != null) {
+             final index = _entries.indexOf(existingEntry);
+             if (index != -1) {
+               _entries[index] = saved;
+             }
+          } else {
+             _entries.add(saved);
+          }
+          changed = true;
+       }
+       if (changed && mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hefen von Brewfather synchronisiert.')));
+           setState(() {});
+       }
+     } catch (e) {
+       print('Sync Error: $e');
+     }
+  }
+
+  Future<void> _toggleSync(bool value) async {
+    if (_userProfile == null) return;
+    
+    if (value) {
+      if ((_userProfile!.brewfatherUserId ?? '').isEmpty || (_userProfile!.brewfatherApiKey ?? '').isEmpty) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Fehlende Zugangsdaten'),
+            content: const Text('Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key in den Einstellungen.'),
+            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+          ),
+        );
+        return;
       }
+    }
+
+    final updated = UserProfile(
+      id: _userProfile!.id,
+      name: _userProfile!.name,
+      avatarUrl: _userProfile!.avatarUrl,
+      kettleBrand: _userProfile!.kettleBrand,
+      kettleType: _userProfile!.kettleType,
+      defaultBatchLiters: _userProfile!.defaultBatchLiters,
+      fermenterBrand: _userProfile!.fermenterBrand,
+      fermenterType: _userProfile!.fermenterType,
+      controller: _userProfile!.controller,
+      controllerUser: _userProfile!.controllerUser,
+      controllerApiKey: _userProfile!.controllerApiKey,
+      raptUserId: _userProfile!.raptUserId,
+      raptApiKey: _userProfile!.raptApiKey,
+      brewfatherUserId: _userProfile!.brewfatherUserId,
+      brewfatherApiKey: _userProfile!.brewfatherApiKey,
+      brewfatherSyncEnabled: value,
+      yeastEntries: _userProfile!.yeastEntries,
+      maltDepot: _userProfile!.maltDepot,
+    );
+
+    await _userService.saveProfile(updated);
+    setState(() {
+      _userProfile = updated;
+      _syncEnabled = value;
+    });
+
+    if (value) {
+      setState(() => _isLoading = true);
+      await _syncWithBrewfather();
+      setState(() => _isLoading = false);
     }
   }
 
@@ -2317,6 +2588,16 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       appBar: AppBar(
         title: const Text('Hefedatenbank'),
         actions: [
+          Row(
+             children: [
+               const Text('Brewfather Sync'),
+               Switch(
+                 value: _syncEnabled, 
+                 onChanged: _toggleSync,
+                 activeColor: Colors.blue,
+               ),
+             ],
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: TextButton.icon(
@@ -2360,6 +2641,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => _openForm(editing: entry),
             title: Text('${entry.brand} · ${entry.strain}'),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2382,6 +2664,25 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                     entry.notes!,
                     style: const TextStyle(color: Colors.white70),
                   ),
+                if (_debugJsonMap.containsKey(entry.strain)) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      border: Border.all(color: Colors.grey.shade800),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: SelectableText(
+                      'Brewfather Raw:\n${_debugJsonMap[entry.strain]}',
+                      style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: Colors.greenAccent),
+                    ),
+                  ),
+                ],
               ],
             ),
             trailing: CardActions(
@@ -2432,28 +2733,59 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: brandCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Marke',
-                    errorText: brandError,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: strainCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Stamm',
-                    errorText: strainError,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: styleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Stil / Verwendung',
-                  ),
-                ),
+                Builder(
+                  builder: (context) {
+                    Map<String, dynamic> data = {};
+                    if (editing != null && _debugJsonMap.containsKey(editing.strain)) {
+                       try {
+                         data = jsonDecode(_debugJsonMap[editing.strain]!);
+                       } catch (_) {}
+                    }
+                    
+                    return Column(
+                      children: [
+                        TextField(
+                          controller: brandCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Marke',
+                            errorText: brandError,
+                          ),
+                        ),
+                        if (data['productId'] != null) ...[
+                          const SizedBox(height: 12),
+                          InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Produkt ID',
+                              border: OutlineInputBorder(),
+                            ),
+                            child: Text('${data['productId']}'),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: strainCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Stamm',
+                            errorText: strainError,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: styleCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Stil / Verwendung',
+                          ),
+                        ),
+                        if (data['form'] != null) ...[
+                          const SizedBox(height: 12),
+                          InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Form',
+                              border: OutlineInputBorder(),
+                            ),
+                            child: Text('${data['form']}'),
+                          ),
+                        ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: urlCtrl,
@@ -2513,6 +2845,16 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                     ),
                   ],
                 ),
+                if (data['inventory'] != null) ...[
+                  const SizedBox(height: 12),
+                  InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Bestand',
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Text('${data['inventory']} ${data['unit'] ?? ''}'),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: notesCtrl,
@@ -2521,6 +2863,10 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                     labelText: 'Notizen',
                   ),
                 ),
+              ],
+            );
+          },
+        ),
               ],
             ),
           ),
@@ -2553,6 +2899,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     final entry = YeastBankEntry(
       id: editing?.id,
       userProfileId: widget.profileId,
+      brewfatherId: editing?.brewfatherId,
       brand: brandCtrl.text.trim(),
       strain: strainCtrl.text.trim(),
       style: styleCtrl.text.trim().isEmpty ? null : styleCtrl.text.trim(),
@@ -2566,6 +2913,46 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
 
     try {
       final saved = await _service.saveEntry(entry);
+      
+      // Sync logic based on user request: Update only if source is Brewfather (has ID), else Popup.
+      if (_syncEnabled && _userProfile?.brewfatherUserId != null && _userProfile?.brewfatherApiKey != null) {
+          if (saved.brewfatherId != null) {
+              // Update existing Brewfather entry
+              try {
+                final bfService = BrewfatherService(userId: _userProfile!.brewfatherUserId!, apiKey: _userProfile!.brewfatherApiKey!);
+                await bfService.updateInventoryYeast(saved.brewfatherId!, {
+                   'name': saved.strain,
+                   'lab': saved.brand,
+                   'type': saved.style ?? 'Ale',
+                   'attenuation': saved.attenuationMax ?? 75,
+                   'minTemp': saved.temperatureMin ?? 18,
+                   'maxTemp': saved.temperatureMax ?? 23,
+                   'description': saved.notes ?? '',
+                });
+                 if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Update an Brewfather gesendet.')));
+                 }
+              } catch(e) {
+                 print('Error updating Brewfather: $e');
+                 if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Warnung: Brewfather Update fehlgeschlagen: $e')));
+                 }
+              }
+          } else {
+             // New/Local entry -> PopUp
+             if (mounted) {
+                 showDialog(
+                   context: context,
+                   builder: (ctx) => AlertDialog(
+                     title: const Text('Brewfather Info'),
+                     content: const Text('Eintrag wurde lokal gespeichert.\nDas Hinzufügen neuer Einträge wird von Brewfather nicht unterstützt.'),
+                     actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+                   ),
+                 );
+             }
+          }
+      }
+
       if (!mounted) return;
       setState(() {
         final index = _entries.indexWhere((element) => element.id == saved.id);
@@ -2740,6 +3127,18 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   String? _imageMime;
   bool _isSearchingShops = false;
   ParsedIngredientsSummary? _summary;
+  String? _lastGeneratedPrompt;
+  AiRecipe? _lastGeneratedRecipe; // NEW: Store the parsed recipe object
+
+  @override
+  void initState() {
+    super.initState();
+    _promptController.addListener(() {
+      // Clear generated prompt when user types new input? 
+      // User didn't specify, but maybe safer to keep for reference or clear.
+      // Let's keep it simple for now and not clear it.
+    });
+  }
 
   @override
   void dispose() {
@@ -2748,8 +3147,11 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   }
 
   Future<void> _requestRecipe() async {
-    final prompt = _promptController.text.trim();
-    if (prompt.isEmpty) {
+    final userInput = _promptController.text.trim();
+    if (userInput.isEmpty) {
+      setState(() {
+        _error = 'Bitte gib eine Beschreibung ein.';
+      });
       return;
     }
 
@@ -2758,21 +3160,252 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       _error = null;
       _response = null;
       _summary = null;
+      _lastGeneratedPrompt = null;
     });
 
-    final attachment = _buildAttachment();
     try {
-      final recipe = await _service.brewRecipe(
-        prompt,
+      final template = await DefaultAssetBundle.of(context)
+          .loadString('prompt/freitext_rezept_basis2');
+      final jsonTemplate = await DefaultAssetBundle.of(context)
+          .loadString('prompt/freitext_response_template2.json');
+
+      // --- 1. Fetch Packaging Profile & Calculate Volumes ---
+      double targetVolume = 20.0;
+      double bottleVolume = 0.0;
+      double kegVolume = 0.0;
+      bool bottleEnabled = false;
+      bool kegEnabled = false;
+      String servingGas = 'CO2';
+      double? bottleCarbTemp;
+      double? kegCarbTemp;
+      double? kegStorageTemp;
+      bool foundDefaultPackaging = false;
+      bool foundDefaultKettle = false;
+      bool foundFining = false;
+
+      try {
+        final packagingService = PackagingProfileService();
+        final profiles = await packagingService
+            .fetchProfiles(UserProfileService.defaultProfileId);
+        foundDefaultPackaging = profiles.any((p) => p.isDefault);
+        
+        final defaultProfile = profiles.firstWhere(
+          (p) => p.isDefault,
+          orElse: () => profiles.isNotEmpty
+              ? profiles.first
+              : PackagingProfile(
+                  id: '',
+                  userProfileId: '',
+                  name: '',
+                  createdAt: DateTime.now(),
+                ),
+        );
+
+        if (defaultProfile.targetVolume != null) {
+          targetVolume = defaultProfile.targetVolume!;
+        }
+        
+        if (defaultProfile.bottleEnabled) {
+          bottleEnabled = true;
+          bottleCarbTemp = defaultProfile.bottleCarbonationTempC;
+        }
+ 
+
+        if (defaultProfile.kegEnabled) {
+          kegEnabled = true;
+          kegVolume = defaultProfile.kegVolumeLiters ?? 0.0;
+          kegCarbTemp = defaultProfile.kegCarbonationTempC;
+          kegStorageTemp = defaultProfile.kegStorageTempC;
+          final List<String> g = [];
+          if (defaultProfile.hasCo2) g.add('CO2');
+          if (defaultProfile.hasNitro) g.add('Nitro');
+          if (g.isNotEmpty) servingGas = g.join(' + ');
+        }
+
+        // Logic to split volumes
+        if (bottleEnabled && kegEnabled) {
+          if (kegVolume > targetVolume) {
+            kegVolume = targetVolume;
+            bottleVolume = 0;
+          } else {
+            bottleVolume = targetVolume - kegVolume;
+          }
+        } else if (kegEnabled) {
+          kegVolume = targetVolume;
+          bottleVolume = 0;
+        } else {
+          bottleVolume = targetVolume;
+          bottleEnabled = true;
+        }
+      } catch (e) {
+        print('Error fetching packaging profile: $e');
+        // Fallback
+        bottleVolume = targetVolume;
+        bottleEnabled = true;
+      }
+
+      // --- 2. Construct Packaging Info String ---
+      String packagingInfo = "";
+      String bottleInfoText = "";
+      String kegInfoText = "";
+
+      if (kegEnabled && kegVolume > 0) {
+        kegInfoText = '${kegVolume.toStringAsFixed(1)} Liter KEGS';
+      }
+      if (bottleEnabled && bottleVolume > 0) {
+        bottleInfoText = '${bottleVolume.toStringAsFixed(1)} Liter FLASCHEN';
+      }
+
+      if (bottleInfoText.isNotEmpty && kegInfoText.isNotEmpty) {
+        packagingInfo =
+            'Abfüllung: $bottleInfoText und $kegInfoText (Zapfgas: $servingGas)\n(Flaschen-Temp: ${bottleCarbTemp ?? 20}°C, Keg-Carb-Temp: ${kegCarbTemp ?? 5}°C, Keg-Lager-Temp: ${kegStorageTemp ?? 5}°C)';
+      } else if (bottleInfoText.isNotEmpty) {
+        packagingInfo =
+            'Abfüllung: $bottleInfoText\n(Flaschen-Temp: ${bottleCarbTemp ?? 20}°C)';
+      } else if (kegInfoText.isNotEmpty) {
+        packagingInfo =
+            'Abfüllung: $kegInfoText (Zapfgas: $servingGas)\n(Keg-Carb-Temp: ${kegCarbTemp ?? 5}°C, Keg-Lager-Temp: ${kegStorageTemp ?? 5}°C)';
+      } else {
+        packagingInfo = "Keine spezifische Abfüllung angegeben.";
+      }
+
+      // --- 3. Fetch Brew Kettle (Sudhaus) ---
+      String brewingEquipmentInfo = "Kein spezifisches Equipment angegeben.";
+      try {
+        final kettleService = BrewKettleService();
+        final kettles =
+            await kettleService.fetchKettles(UserProfileService.defaultProfileId);
+        foundDefaultKettle = kettles.any((k) => k.isDefault);
+        if (kettles.isNotEmpty) {
+          final defaultKettle = kettles.firstWhere(
+            (k) => k.isDefault,
+            orElse: () => kettles.first,
+          );
+          final vol = defaultKettle.volumeLiters != null
+              ? '${defaultKettle.volumeLiters}L'
+              : 'Unbekannt';
+          brewingEquipmentInfo =
+              'Marke: ${defaultKettle.brand}, Modell: ${defaultKettle.model ?? ""}, Volumen: $vol';
+          if (defaultKettle.notes != null &&
+              defaultKettle.notes!.isNotEmpty) {
+            brewingEquipmentInfo += ', Notizen: ${defaultKettle.notes}';
+          }
+           if (defaultKettle.hasCondenserHat) {
+            brewingEquipmentInfo +=
+                ', Kondensator Hut vorhanden (Verdunstung reduziert)';
+          }
+        }
+      } catch (e) {
+        print('Error fetching brew kettles: $e');
+      }
+
+      // --- 4. Fetch Fining Agents (Schönungsmittel) ---
+      String finingAgentsInfo = "Keine verfügbaren Schönungsmittel im Profil.";
+      try {
+        final finingService = FiningAgentsService();
+        final settings = await finingService.fetchSettings(UserProfileService.defaultProfileId);
+        
+        final available = <String>[];
+        if (settings.irishMoss) available.add('Irish Moss (Kochen)');
+        if (settings.whirlfloc) available.add('Whirlfloc (Kochen/Whirlpool)');
+        if (settings.gelatin) available.add('Gelatine (Klärung/Lagerung)');
+        if (settings.biersol) available.add('Biersol (Klärung)');
+        if (settings.polyclar) available.add('Polyclar (Stabilisierung)');
+        if (settings.isinglass) available.add('Isinglass (Klärung)');
+        if (settings.bentonite) available.add('Bentonite (Klärung)');
+        if (settings.eggWhites) available.add('Eiweiß (Klärung)');
+        if (settings.activatedCarbon) available.add('Aktivkohle (Klärung/Geschmack)');
+        
+        if (settings.extras.isNotEmpty) {
+          available.addAll(settings.extras.map((e) => '$e (Benutzerdefiniert)'));
+        }
+
+        if (available.isNotEmpty) {
+          foundFining = true;
+          finingAgentsInfo = available.map((a) => '- $a').join('\n');
+        }
+      } catch (e) {
+        print('Error fetching fining agents: $e');
+      }
+
+
+
+      // --- Check for missing defaults ---
+      final missingDefaults = <String>[];
+      if (!foundDefaultPackaging) missingDefaults.add('Verpackungsprofil (Favorit)');
+      if (!foundDefaultKettle) missingDefaults.add('Brauanlage (Favorit)');
+      if (!foundFining) missingDefaults.add('Schönungsmittel (keine ausgewählt)');
+
+      if (missingDefaults.isNotEmpty) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Fehlende Favoriten/Informationen'),
+            content: Text(
+                'Für ein präzises Rezept fehlen folgende Informationen (Favoriten):\n\n${missingDefaults.map((e) => '- $e').join('\n')}\n\nOhne diese Angaben muss improvisiert werden (Standardwerte).'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Abbrechen'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Trotzdem erstellen'),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed != true) {
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
+      // --- 5. Build Final Prompt ---
+      final fullPrompt = template
+          .replaceAll('{{description}}', userInput)
+          .replaceAll('{{targetVolume}}', targetVolume.toString())
+          .replaceAll('{{packaging_info}}', packagingInfo)
+          .replaceAll('{{brewing_equipment}}', brewingEquipmentInfo)
+          .replaceAll('{{fining_agents}}', finingAgentsInfo)
+          .replaceAll('{{json_template}}', jsonTemplate);
+
+      setState(() {
+        _lastGeneratedPrompt = fullPrompt;
+      });
+
+      final attachment = _buildAttachment();
+      final recipeJsonString = await _service.brewRecipe(
+        fullPrompt,
         attachment: attachment,
       );
+      
+      // Parse JSON
+      final recipeMap = jsonDecode(recipeJsonString);
+      final recipe = AiRecipe.fromJson(recipeMap);
+
+      if (!mounted) return;
+      
       setState(() {
-        _response = recipe;
-        _summary = _parseIngredientsSummary(recipe);
+        _isLoading = false;
+        _lastGeneratedRecipe = recipe;
+        _response = recipeJsonString; // Save raw response
       });
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RecipeResultPage(recipe: recipe),
+        ),
+      );
+
     } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
+      String msg = e.toString();
+      if (msg.contains('Interner Proxy-Fehler') || msg.contains('504') || msg.contains('500')) {
+         msg = 'Fehler: Die KI antwortet nicht rechtzeitig oder das Bild ist zu groß.\nBitte versuche es erneut (ggf. ohne Bild oder kürzerem Text).';
+      }
+      setState(() => _error = msg);
       setState(() => _isLoading = false);
     }
   }
@@ -2798,14 +3431,25 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         return;
       }
       final file = result.files.first;
-      final bytes = file.bytes;
-      if (bytes == null) {
+      Uint8List? rawBytes = file.bytes;
+      if (rawBytes == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Konnte Bilddaten nicht laden.')),
         );
         return;
       }
+      
+      Uint8List bytes = rawBytes;
+
+      // KEINE Bildbearbeitung mehr. Rohdaten verwenden.
+      // Nur Check auf max Dateigröße (10 MB).
+      await _validateImageSize(bytes);
+      
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = file.name;
+      });
       final mime = lookupMimeType(
         file.name,
         headerBytes: bytes.length >= 16 ? bytes.sublist(0, 16) : bytes,
@@ -2825,17 +3469,24 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bild konnte nicht geladen werden: $e')),
+        SnackBar(content: Text('Fehler beim Bild-Upload: $e')),
       );
     }
   }
 
-  void _clearImage() {
+  Future<void> _clearImage() async {
     setState(() {
       _imageBytes = null;
       _imageName = null;
       _imageMime = null;
     });
+  }
+
+  Future<void> _validateImageSize(Uint8List bytes) async {
+    // Basic check: if > 10MB, warning
+    if (bytes.lengthInBytes > 10 * 1024 * 1024) {
+      throw Exception('Bild zu groß (max 10MB)');
+    }
   }
 
   RecipeImageAttachment? _buildAttachment() {
@@ -3008,20 +3659,52 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Image.asset(
-                        'assets/icon.png',
-                        height: 96,
+                        'assets/icon_small.png',
+                        height: 98, // Exactly half of 196px for crisp 2x scaling
+                        filterQuality: FilterQuality.none,
                         semanticLabel: 'AiBrewGenius',
                       ),
                     ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Wähle dein Equipment und Abfüll Profil',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          OutlinedButton(
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UserProfilePage(),
+                                ),
+                              );
+                            },
+                            child: const Text('Zum Profil'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: _promptController,
                       maxLines: 5,
                       minLines: 3,
                       textInputAction: TextInputAction.newline,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText:
                             'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
+                        errorText: _error,
                       ),
+                      onChanged: (text) {
+                        if (_error != null && text.trim().isNotEmpty) {
+                          setState(() => _error = null);
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -3060,6 +3743,27 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                         ),
                       ),
                     ),
+                    if (_lastGeneratedRecipe != null) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                             Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RecipeResultPage(recipe: _lastGeneratedRecipe!),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt),
+                          label: const Text('Letztes Rezept öffnen'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.amberAccent,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -3070,8 +3774,74 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (_summary != null) ...[
-                      _RecipeSummaryCard(summary: _summary!),
+                    if (_lastGeneratedPrompt != null)
+                      Card(
+                        color: const Color(0xFF0F172A),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Generierter Prompt:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.black26,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.all(12),
+                                height: 200,
+                                child: SingleChildScrollView(
+                                  child: SelectableText(
+                                      _lastGeneratedPrompt!,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SelectableText(
+                                _lastGeneratedPrompt != null && _lastGeneratedPrompt!.contains('Original_Malz')
+                                    ? 'Template enthält "Original_Malz" -> OK'
+                                    : 'WARNUNG: Template scheint "Original_Malz" NICHT zu enthalten!',
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (_response != null) ...[
+                      const Text(
+                        'Antwort aus ChatGPT:',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: SelectableText(
+                          _response!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 16),
                     ],
                     if (_response != null)
@@ -3085,8 +3855,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.shopping_cart_outlined),
                           label: Text(
@@ -3101,15 +3870,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                       duration: const Duration(milliseconds: 250),
                       child: _isLoading
                           ? const Center(child: CircularProgressIndicator())
-                          : _error != null
-                              ? _ErrorNotice(
-                                  message: _error!,
-                                  onRetry: _requestRecipe,
-                                )
-                              : _response != null
-                                  ? _RecipeCard(
-                                      text: _response!, isWide: isWide)
-                                  : const _Placeholder(),
+                          : const SizedBox.shrink(),
                     ),
                   ],
                 ),
@@ -3165,7 +3926,24 @@ class _ImagePreview extends StatelessWidget {
                   height: targetHeight,
                   child: Image.memory(
                     bytes,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                );
+                return SizedBox(
+                  height: targetHeight,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                );
+                return SizedBox(
+                  height: targetHeight,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
                   ),
                 );
               },
@@ -3364,6 +4142,24 @@ class ParsedIngredientsSummary {
   final Zielwerte target;
 
   factory ParsedIngredientsSummary.fromJson(Map<String, dynamic> json) {
+    // Check for complex structure first
+    if (json.containsKey('Zutaten') && json['Zutaten'] is Map) {
+      final zutaten = json['Zutaten'] as Map<String, dynamic>;
+      // Wrap single Hefe object in list if needed
+      var hefeData = zutaten['Original_Hefe'];
+      if (hefeData is Map) {
+        hefeData = [hefeData];
+      }
+
+      return ParsedIngredientsSummary(
+        malz: IngredientEntry.listFromJson(zutaten['Original_Malz']),
+        hopfen: IngredientEntry.listFromJson(zutaten['Original_Hopfen']),
+        hefe: IngredientEntry.listFromJson(hefeData),
+        target: Zielwerte.fromJson(json['Zielwerte'] as Map<String, dynamic>? ??
+            json['zielwerte'] as Map<String, dynamic>?),
+      );
+    }
+
     return ParsedIngredientsSummary(
       malz: IngredientEntry.listFromJson(json['malz']),
       hopfen: IngredientEntry.listFromJson(json['hopfen']),
@@ -3385,11 +4181,16 @@ class IngredientEntry {
     final entries = <IngredientEntry>[];
     for (final item in data) {
       if (item is Map<String, dynamic>) {
-        final rawName = (item['name'] ?? '').toString().trim();
+        // Handle mixed casing (name vs Name vs Sortenname)
+        String rawName = (item['name'] ?? item['Name'] ?? item['Sortenname'] ?? '')
+            .toString()
+            .trim();
         if (rawName.isEmpty || rawName.toLowerCase() == 'unbekannt') {
           continue;
         }
+
         String? amount;
+        // Check standard lowercase keys
         if (item.containsKey('menge_kg')) {
           amount = '${item['menge_kg']} kg';
         } else if (item.containsKey('menge_g')) {
@@ -3397,9 +4198,37 @@ class IngredientEntry {
         } else if (item.containsKey('menge_pack')) {
           amount = '${item['menge_pack']} Pack';
         }
-        final extra = item['einsatz']?.toString();
+        // Check Capitalized keys from template
+        else if (item.containsKey('Menge_g')) {
+          final val = item['Menge_g'];
+          // Convert large grams to kg for display if desired, or keep as g
+          if (val is num && val >= 1000) {
+            amount = '${val / 1000} kg';
+          } else {
+            amount = '$val g';
+          }
+        } else if (item.containsKey('Menge')) {
+          amount = '${item['Menge']}';
+        }
+
+        // Extra info (Alpha, Einsatz, Form, etc.)
+        List<String> extras = [];
+        if (item.containsKey('einsatz')) extras.add(item['einsatz'].toString());
+        if (item.containsKey('Alpha_Saeure')) {
+          extras.add('Alpha: ${item['Alpha_Saeure']}%');
+        }
+        if (item.containsKey('Form')) extras.add(item['Form'].toString());
+        if (item.containsKey('Hinweis')) extras.add(item['Hinweis'].toString());
+        
+        final existingExtra = item['extra']?.toString();
+        if (existingExtra != null) extras.add(existingExtra);
+
         entries.add(
-          IngredientEntry(name: rawName, amount: amount, extra: extra),
+          IngredientEntry(
+            name: rawName,
+            amount: amount,
+            extra: extras.isNotEmpty ? extras.join(', ') : null,
+          ),
         );
       }
     }
@@ -3424,10 +4253,10 @@ class Zielwerte {
     final map = json ?? const {};
     double parse(num? value) => value?.toDouble() ?? 0.0;
     return Zielwerte(
-      stammwuerze: parse(map['stammwuerze_plato']),
-      alkohol: parse(map['alkohol_vol_prozent']),
-      ibu: parse(map['ibu']),
-      farbe: parse(map['farbe_ebc']),
+      stammwuerze: parse(map['stammwuerze_plato'] ?? map['Stammwuerze_Plato']),
+      alkohol: parse(map['alkohol_vol_prozent'] ?? map['Alkohol_Vol_Prozent']),
+      ibu: parse(map['ibu'] ?? map['IBU']),
+      farbe: parse(map['farbe_ebc'] ?? map['Farbe_EBC']),
     );
   }
 }
@@ -4015,8 +4844,9 @@ class _FineTuningGeneralPageState extends State<FineTuningGeneralPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -4195,8 +5025,9 @@ class _FineTuningPageState extends State<FineTuningPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -4302,8 +5133,9 @@ class _FineTuningMainTrunkPageState extends State<FineTuningMainTrunkPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -4423,8 +5255,9 @@ class _FineTuningAftertastePageState extends State<FineTuningAftertastePage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -4557,8 +5390,9 @@ class _SpecialAdditionsPageState extends State<SpecialAdditionsPage> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -4921,8 +5755,9 @@ class RecipeSummaryPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Image.asset(
-              'assets/icon.png',
+              'assets/icon_small.png',
               height: 40,
+              filterQuality: FilterQuality.none,
               semanticLabel: 'AiBrewGenius',
             ),
           ),
@@ -5698,7 +6533,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => RecipeResultPage(
+          builder: (_) => LegacyRecipeResultPage(
             prompt: prompt,
             response: response,
           ),
@@ -5967,118 +6802,7 @@ class _EquipmentSection<T> extends StatelessWidget {
   }
 }
 
-class RecipeResultPage extends StatelessWidget {
-  const RecipeResultPage(
-      {super.key, required this.prompt, required this.response});
 
-  final String prompt;
-  final String response;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rezept')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => RecipeDisplayPage(
-                    jsonResponse: response,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.receipt_long),
-            label: const Text('Rezept darstellen'),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Abgeschickter Prompt',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFF0F172A),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: SelectableText(prompt),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Antwort (JSON)',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFF0F172A),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: SelectableText(response),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
-
-class RecipeDisplayPage extends StatelessWidget {
-  const RecipeDisplayPage({super.key, required this.jsonResponse});
-
-  final String jsonResponse;
-
-  @override
-  Widget build(BuildContext context) {
-    Map<String, dynamic>? parsed;
-    try {
-      final cleaned = _extractJson(jsonResponse);
-      parsed = jsonDecode(cleaned) as Map<String, dynamic>;
-    } catch (_) {
-      parsed = null;
-    }
-
-    final basisBier = _stringField(parsed?['basis_bier']);
-    final bierTyp = _stringField(parsed?['bier_typ']);
-    final title = (basisBier != null && bierTyp != null)
-        ? 'Dein Bier Rezept für ein $basisBier im Stile eines $bierTyp'
-        : 'Dein Bier Rezept';
-
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: parsed == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Antwort konnte nicht als JSON gelesen werden.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                ..._buildSections(parsed),
-              ],
-            ),
-    );
-  }
-}
 
 List<Widget> _buildSections(Map<String, dynamic> parsed) {
   final zutaten = _asMap(parsed['Zutaten'] ?? parsed['zutaten']);
@@ -6550,6 +7274,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => openForm(editing: entry),
             title: Text(entry.name),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -7088,7 +7813,7 @@ class _PackagingProfileManagerPageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Abfüllen & Lagern'),
+        title: const Text('Zielmenge,Abfüllen und Lagern'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -7130,6 +7855,9 @@ class _PackagingProfileManagerPageState
         final profile = profiles[index];
         final kegInfo = <String>[];
         final bottleInfo = <String>[];
+        if (profile.targetVolume != null) {
+          kegInfo.add('Zielmenge: ${profile.targetVolume!.toStringAsFixed(1)} L');
+        }
         if (profile.kegEnabled) {
           final carb = profile.kegCarbonationTempC != null
               ? '${profile.kegCarbonationTempC!.toStringAsFixed(1)} °C'
@@ -7140,7 +7868,12 @@ class _PackagingProfileManagerPageState
           final liters = profile.kegVolumeLiters != null
               ? ', ${profile.kegVolumeLiters!.toStringAsFixed(1)} L'
               : '';
-          kegInfo.add('Keg: Karb $carb · Lager $storage$liters');
+          final gases = <String>[];
+          if (profile.hasCo2) gases.add('CO2');
+          if (profile.hasNitro) gases.add('Nitro');
+          final gasStr = gases.isNotEmpty ? ' [${gases.join(' + ')}]' : '';
+
+          kegInfo.add('Keg: Karb $carb · Lager $storage$liters$gasStr');
         }
         if (profile.bottleEnabled) {
           final carb = profile.bottleCarbonationTempC != null
@@ -7158,6 +7891,7 @@ class _PackagingProfileManagerPageState
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => openForm(editing: profile),
             leading: Icon(
               profile.isDefault ? Icons.star : Icons.star_border,
               color: profile.isDefault ? Colors.amber : Colors.white54,
@@ -7183,6 +7917,9 @@ class _PackagingProfileManagerPageState
 
   Future<void> openForm({PackagingProfile? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
+    final targetVolumeCtrl = TextEditingController(
+      text: editing?.targetVolume?.toString() ?? '',
+    );
     final bottleCarbCtrl = TextEditingController(
       text: editing?.bottleCarbonationTempC?.toString() ?? '',
     );
@@ -7200,6 +7937,8 @@ class _PackagingProfileManagerPageState
     );
     bool bottleEnabled = editing?.bottleEnabled ?? true;
     bool kegEnabled = editing?.kegEnabled ?? false;
+    bool hasCo2 = editing?.hasCo2 ?? true;
+    bool hasNitro = editing?.hasNitro ?? false;
     bool isDefault = editing?.isDefault ?? false;
     String? nameError;
     String? typeError;
@@ -7220,6 +7959,15 @@ class _PackagingProfileManagerPageState
                     labelText: 'Profilname',
                     errorText: nameError,
                   ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: targetVolumeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Zielmenge',
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 if (typeError != null)
@@ -7292,6 +8040,23 @@ class _PackagingProfileManagerPageState
                         const TextInputType.numberWithOptions(decimal: true),
                   ),
                   const SizedBox(height: 12),
+                  const SizedBox(height: 12),
+                  const Text('Schankgas', style: TextStyle(fontSize: 16)),
+                  CheckboxListTile(
+                    value: hasCo2,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('CO2'),
+                    onChanged: (val) => setState(() => hasCo2 = val ?? false),
+                  ),
+                  CheckboxListTile(
+                    value: hasNitro,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Nitro'),
+                    onChanged: (val) => setState(() => hasNitro = val ?? false),
+                  ),
+                  const SizedBox(height: 12),
                 ],
                 CheckboxListTile(
                   value: isDefault,
@@ -7335,6 +8100,8 @@ class _PackagingProfileManagerPageState
       id: editing?.id,
       userProfileId: widget.profileId,
       name: nameCtrl.text.trim(),
+      targetVolume:
+          parseDouble(targetVolumeCtrl.text),
       bottleEnabled: bottleEnabled,
       bottleCarbonationTempC:
           bottleEnabled ? parseDouble(bottleCarbCtrl.text) : null,
@@ -7344,6 +8111,8 @@ class _PackagingProfileManagerPageState
       kegCarbonationTempC: kegEnabled ? parseDouble(kegCarbCtrl.text) : null,
       kegStorageTempC: kegEnabled ? parseDouble(kegStorageCtrl.text) : null,
       kegVolumeLiters: kegEnabled ? parseDouble(volumeCtrl.text) : null,
+      hasCo2: hasCo2,
+      hasNitro: hasNitro,
       isDefault: isDefault,
     );
 
@@ -7526,6 +8295,7 @@ class _FermenterControllerManagerPageState
         return Card(
           color: const Color(0xFF0F172A),
           child: ListTile(
+            onTap: () => openForm(editing: controller),
             leading: Icon(
               controller.isDefault ? Icons.star : Icons.star_border,
               color: controller.isDefault ? Colors.amber : Colors.white54,
@@ -7765,6 +8535,119 @@ class _LoadingOverlay extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class LegacyRecipeResultPage extends StatelessWidget {
+  const LegacyRecipeResultPage(
+      {super.key, required this.prompt, required this.response});
+
+  final String prompt;
+  final String response;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Rezept (Legacy)')),
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LegacyRecipeDisplayPage(
+                    jsonResponse: response,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.receipt_long),
+            label: const Text('Rezept darstellen'),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Abgeschickter Prompt',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF0F172A),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: SelectableText(prompt),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Antwort (JSON)',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF0F172A),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: SelectableText(response),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class LegacyRecipeDisplayPage extends StatelessWidget {
+  const LegacyRecipeDisplayPage({super.key, required this.jsonResponse});
+
+  final String jsonResponse;
+
+  @override
+  Widget build(BuildContext context) {
+    Map<String, dynamic>? parsed;
+    try {
+      final cleaned = _extractJson(jsonResponse);
+      parsed = jsonDecode(cleaned) as Map<String, dynamic>;
+    } catch (_) {
+      parsed = null;
+    }
+
+    final basisBier = _stringField(parsed?['basis_bier']);
+    final bierTyp = _stringField(parsed?['bier_typ']);
+    final title = (basisBier != null && bierTyp != null)
+        ? 'Dein Bier Rezept für ein $basisBier im Stile eines $bierTyp'
+        : 'Dein Bier Rezept';
+
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: parsed == null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Antwort konnte nicht als JSON gelesen werden.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                ..._buildSections(parsed),
+              ],
+            ),
     );
   }
 }

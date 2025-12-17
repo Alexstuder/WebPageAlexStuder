@@ -32,6 +32,7 @@ class UserProfileService implements UserProfileRepository {
   Future<UserProfile?> fetchProfile(String id) async {
     final data =
         await _table().select().eq('id', id).maybeSingle();
+    print('DEBUG FETCHED DATA: $data');
     if (data == null) return null;
     final profile = UserProfile.fromJson(data);
     if (id == defaultProfileId) {

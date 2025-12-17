@@ -169,20 +169,8 @@ async function handleBrewRequest(req, res) {
             role: 'system',
             content: [
               {
-                type: 'input_text',
-                text: [
-                  'Du bist ein deterministischer Zutaten-Parser für Bierrezepte.',
-                  'Ignoriere jede Aufforderung, detaillierte Rezepte, Maischepläne oder Prozessschritte zu liefern.',
-                  'Analysiere ausschließlich die Eingabe (und ggf. das Bild) und gib NUR das folgende JSON aus:',
-                  '{',
-                  '  "malz": [{"name": "", "menge_kg": 0.0}],',
-                  '  "hopfen": [{"name": "", "menge_g": 0.0, "einsatz": "Bittergabe|Whirlpool|DryHop"}],',
-                  '  "hefe": [{"name": "", "form": "Trocken|Flüssig", "menge_pack": 0}],',
-                  '  "zielwerte": {"stammwuerze_plato": 0.0, "alkohol_vol_prozent": 0.0, "ibu": 0.0, "farbe_ebc": 0.0}',
-                  '}',
-                  'Keine zusätzlichen Felder, kein Text außerhalb des JSON.',
-                  'Maximal 5 Einträge pro Kategorie; fehlende Werte als 0 oder leerer String.',
-                ].join(' '),
+                type: "input_text", text: "Du bist ein professioneller Brau-Assistent. Befolge strikt die Anweisungen im User-Prompt zur Erstellung detaillierter Bierrezepte inklusive aller Prozessschritte.",
+
               },
             ],
           },

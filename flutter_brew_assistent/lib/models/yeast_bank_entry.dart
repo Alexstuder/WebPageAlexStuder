@@ -2,6 +2,7 @@ class YeastBankEntry {
   const YeastBankEntry({
     this.id,
     required this.userProfileId,
+    this.brewfatherId,
     required this.brand,
     required this.strain,
     this.style,
@@ -17,6 +18,7 @@ class YeastBankEntry {
 
   final String? id;
   final String userProfileId;
+  final String? brewfatherId;
   final String brand;
   final String strain;
   final String? style;
@@ -32,6 +34,7 @@ class YeastBankEntry {
   YeastBankEntry copyWith({
     String? id,
     String? userProfileId,
+    String? brewfatherId,
     String? brand,
     String? strain,
     String? style,
@@ -47,6 +50,7 @@ class YeastBankEntry {
     return YeastBankEntry(
       id: id ?? this.id,
       userProfileId: userProfileId ?? this.userProfileId,
+      brewfatherId: brewfatherId ?? this.brewfatherId,
       brand: brand ?? this.brand,
       strain: strain ?? this.strain,
       style: style ?? this.style,
@@ -67,6 +71,7 @@ class YeastBankEntry {
     return YeastBankEntry(
       id: json['id'] as String?,
       userProfileId: json['user_profile_id'] as String? ?? '',
+      brewfatherId: json['brewfather_id'] as String?,
       brand: json['brand'] as String? ?? '',
       strain: json['strain'] as String? ?? '',
       style: json['style'] as String?,
@@ -85,6 +90,7 @@ class YeastBankEntry {
     return {
       if (id != null) 'id': id,
       'user_profile_id': userProfileId,
+      if (brewfatherId != null) 'brewfather_id': brewfatherId,
       'brand': brand,
       'strain': strain,
       'style': style,

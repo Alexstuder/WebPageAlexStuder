@@ -84,8 +84,8 @@ self_hosted_profile	Alex				\N			Kein Controller	\N	\N	[]	[]
 -- Data for Name: brew_kettles; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
 --
 
-COPY aibrewgenius.brew_kettles (id, user_profile_id, brand, model, is_default, volume_liters, notes, created_at, updated_at) FROM stdin;
-04914a2f-0b73-40a5-80e0-37515c190478	self_hosted_profile	Brewtools	B40	t	40	\N	2025-11-17 15:32:03.603097+00	2025-11-17 15:32:03.603097+00
+COPY aibrewgenius.brew_kettles (id, user_profile_id, brand, model, is_default, volume_liters, has_condenser_hat, notes, created_at, updated_at) FROM stdin;
+04914a2f-0b73-40a5-80e0-37515c190478	self_hosted_profile	Brewtools	B40	t	40	t	\N	2025-11-17 15:32:03.603097+00	2025-11-17 15:32:03.603097+00
 \.
 
 
@@ -129,10 +129,10 @@ COPY aibrewgenius.malt_depots (id, user_profile_id, name, url, notes, created_at
 -- Data for Name: packaging_profiles; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
 --
 
-COPY aibrewgenius.packaging_profiles (id, user_profile_id, name, bottle_enabled, bottle_carbonation_temp_c, bottle_storage_temp_c, keg_enabled, keg_carbonation_temp_c, keg_storage_temp_c, keg_volume_l, is_default, created_at, updated_at) FROM stdin;
-735a5dab-c206-40d0-9e68-8994464437b3	self_hosted_profile	Schtudi Bräu 1	t	14	14	t	6	14	17	t	2025-11-17 15:33:07.100159+00	2025-11-17 15:33:07.100159+00
-7aadf939-8864-400b-96a2-aaddce8587f8	self_hosted_profile	Schtudi Bräu Flaschen	t	14	14	f	\N	\N	\N	f	2025-11-17 15:33:20.693999+00	2025-11-17 15:33:20.693999+00
-12691a84-c14e-4add-ac1c-04884ab72519	self_hosted_profile	Studi Bräu Kegs	f	\N	\N	t	6	14	17	f	2025-11-17 15:33:40.702743+00	2025-11-17 15:33:40.702743+00
+COPY aibrewgenius.packaging_profiles (id, user_profile_id, name, bottle_enabled, bottle_carbonation_temp_c, bottle_storage_temp_c, keg_enabled, keg_carbonation_temp_c, keg_storage_temp_c, keg_volume_l, has_co2, has_nitro, is_default, created_at, updated_at) FROM stdin;
+735a5dab-c206-40d0-9e68-8994464437b3	self_hosted_profile	Schtudi Bräu 1	t	14	14	t	6	14	17	t	t	t	2025-11-17 15:33:07.100159+00	2025-11-17 15:33:07.100159+00
+7aadf939-8864-400b-96a2-aaddce8587f8	self_hosted_profile	Schtudi Bräu Flaschen	t	14	14	f	\N	\N	\N	t	f	f	2025-11-17 15:33:20.693999+00	2025-11-17 15:33:20.693999+00
+12691a84-c14e-4add-ac1c-04884ab72519	self_hosted_profile	Studi Bräu Kegs	f	\N	\N	t	6	14	17	f	t	f	2025-11-17 15:33:40.702743+00	2025-11-17 15:33:40.702743+00
 \.
 
 

@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.0
+  http: ^1.6.0
   flutter_dotenv: ^6.0.0
   url_launcher: ^6.3.0
   supabase_flutter: ^2.7.1
@@ -27,7 +27,12 @@ flutter:
   assets:
     - .env
     - assets/icon.png
+    - assets/icon_small.png
     - prompt/rezept_basis
+    - prompt/freitext_rezept_basis
+    - prompt/freitext_response_template.json
+    - prompt/freitext_rezept_basis2
+    - prompt/freitext_response_template2.json
 
 flutter_launcher_icons:
   image_path: "assets/icon.png"

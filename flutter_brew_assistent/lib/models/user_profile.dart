@@ -50,6 +50,11 @@ class UserProfile {
     required this.controller,
     this.controllerUser,
     this.controllerApiKey,
+    this.raptUserId,
+    this.raptApiKey,
+    this.brewfatherUserId,
+    this.brewfatherApiKey,
+    this.brewfatherSyncEnabled = false,
     required this.yeastEntries,
     required this.maltDepot,
   });
@@ -65,6 +70,11 @@ class UserProfile {
   final String controller;
   final String? controllerUser;
   final String? controllerApiKey;
+  final String? raptUserId;
+  final String? raptApiKey;
+  final String? brewfatherUserId;
+  final String? brewfatherApiKey;
+  final bool brewfatherSyncEnabled;
   final List<YeastEntryModel> yeastEntries;
   final List<MaltDepotEntry> maltDepot;
 
@@ -80,6 +90,11 @@ class UserProfile {
         'controller': controller,
         'controller_user': controllerUser,
         'controller_api_key': controllerApiKey,
+        'rapt_user_id': raptUserId,
+        'rapt_api_key': raptApiKey,
+        'brewfather_user_id': brewfatherUserId,
+        'brewfather_api_key': brewfatherApiKey,
+        'brewfather_sync_enabled': brewfatherSyncEnabled,
         'yeast_entries': yeastEntries.map((e) => e.toJson()).toList(),
         'malt_depot': maltDepot.map((e) => e.toJson()).toList(),
       };
@@ -97,6 +112,11 @@ class UserProfile {
         controller: json['controller'] as String? ?? '',
         controllerUser: json['controller_user'] as String?,
         controllerApiKey: json['controller_api_key'] as String?,
+        raptUserId: json['rapt_user_id'] as String?,
+        raptApiKey: json['rapt_api_key'] as String?,
+        brewfatherUserId: json['brewfather_user_id'] as String?,
+        brewfatherApiKey: json['brewfather_api_key'] as String?,
+        brewfatherSyncEnabled: json['brewfather_sync_enabled'] as bool? ?? false,
         yeastEntries: (json['yeast_entries'] as List<dynamic>? ?? [])
             .whereType<Map<String, dynamic>>()
             .map(YeastEntryModel.fromJson)
