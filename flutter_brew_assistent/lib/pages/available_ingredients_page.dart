@@ -48,9 +48,8 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
         apiKey: profile.brewfatherApiKey!,
       );
 
-      // Wir holen das gesamte Inventar, aber extrahieren nur die Fermentables
-      final inventory = await bfService.getInventory();
-      final fermentables = inventory['fermentables'] ?? [];
+      // Wir holen nur die Fermentables
+      final fermentables = await bfService.getFermentables();
 
       if (!mounted) return;
 

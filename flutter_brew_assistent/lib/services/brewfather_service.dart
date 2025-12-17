@@ -45,6 +45,18 @@ class BrewfatherService {
     }
   }
 
+  // Nur Fermentables abrufen
+  Future<List<dynamic>> getFermentables() async {
+    final uri = Uri.parse('$_baseUrl/inventory/fermentables');
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode == 200) {
+       return jsonDecode(response.body) as List<dynamic>;
+    } else {
+       throw Exception('Fehler beim Laden der Fermentables: ${response.statusCode} ${response.body}');
+    }
+  }
+
   // Inventory abrufen (wir rufen exemplarisch Fermentables, Hops, Miscs und Yeasts ab und kombinieren sie)
   Future<Map<String, List<dynamic>>> getInventory() async {
     final endpoints = {

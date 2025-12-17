@@ -827,7 +827,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               label: 'Brewfather',
               onPressed: _openBrewfatherMenu,
               customIcon: Image.asset(
-                'assets/brewfather.avif',
+                'assets/Brewfather_logo.png',
                 width: 24,
                 height: 24,
               ),

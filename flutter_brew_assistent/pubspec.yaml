@@ -28,6 +28,7 @@ flutter:
     - .env
     - assets/icon.png
     - assets/icon_small.png
+    - assets/Brewfather_logo.png
     - prompt/rezept_basis
     - prompt/freitext_rezept_basis
     - prompt/freitext_response_template.json
