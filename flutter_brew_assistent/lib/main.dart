@@ -746,65 +746,89 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildResourceButtons() {
-    return GridView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        mainAxisExtent: 60,
-      ),
+    return Column(
       children: [
-        _managerButton(
-          icon: Icons.water_drop_outlined,
-          label: 'Wasserprofile',
-          onPressed: _openWaterProfileManager,
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 60,
+          ),
+          children: [
+            _managerButton(
+              icon: Icons.water_drop_outlined,
+              label: 'Wasserprofile',
+              onPressed: _openWaterProfileManager,
+            ),
+            _managerButton(
+              icon: Icons.kitchen_outlined,
+              label: 'Braukessel',
+              onPressed: _openBrewKettleManager,
+            ),
+            _managerButton(
+              icon: Icons.science_outlined,
+              label: 'Fermentierer',
+              onPressed: _openFermenterManager,
+            ),
+            _managerButton(
+              icon: Icons.developer_board_outlined,
+              label: 'Fermentierer-Kontroller',
+              onPressed: _openFermenterControllerManager,
+            ),
+            _managerButton(
+              icon: Icons.inventory_2_outlined,
+              label: 'Zielmenge,Abfüllen und Lagern',
+              onPressed: _openPackagingProfileManager,
+            ),
+            _managerButton(
+              icon: Icons.filter_alt_outlined,
+              label: 'Klärmittel / Schönungsmittel',
+              onPressed: _openFiningAgentsManager,
+            ),
+            _managerButton(
+              icon: Icons.warehouse_outlined,
+              label: 'Malzdepot',
+              onPressed: _openMaltDepotManager,
+            ),
+          ],
         ),
-        _managerButton(
-          icon: Icons.kitchen_outlined,
-          label: 'Braukessel',
-          onPressed: _openBrewKettleManager,
-        ),
-        _managerButton(
-          icon: Icons.science_outlined,
-          label: 'Fermentierer',
-          onPressed: _openFermenterManager,
-        ),
-        _managerButton(
-          icon: Icons.developer_board_outlined,
-          label: 'Fermentierer-Kontroller',
-          onPressed: _openFermenterControllerManager,
-        ),
-        _managerButton(
-          icon: Icons.inventory_2_outlined,
-          label: 'Zielmenge,Abfüllen und Lagern',
-          onPressed: _openPackagingProfileManager,
-        ),
-        _managerButton(
-          icon: Icons.filter_alt_outlined,
-          label: 'Klärmittel / Schönungsmittel',
-          onPressed: _openFiningAgentsManager,
-        ),
-        _managerButton(
-          icon: Icons.biotech_outlined,
-          label: 'Hefedatenbank',
-          onPressed: _openYeastBankManager,
-        ),
-        _managerButton(
-          icon: Icons.warehouse_outlined,
-          label: 'Malzdepot',
-          onPressed: _openMaltDepotManager,
-        ),
-        _managerButton(
-          icon: Icons.extension_outlined,
-          label: 'Integration',
-          onPressed: _openIntegrationsPage,
-        ),
-        _managerButton(
-          icon: Icons.cloud_download_outlined,
-          label: 'Brewfather',
-          onPressed: _openBrewfatherMenu,
+        const SizedBox(height: 24),
+        const Divider(color: Colors.white24),
+        const SizedBox(height: 24),
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 60,
+          ),
+          children: [
+            _managerButton(
+              icon: Icons.extension_outlined,
+              label: 'Integration',
+              onPressed: _openIntegrationsPage,
+            ),
+            _managerButton(
+              icon: Icons.cloud_download_outlined,
+              label: 'Brewfather',
+              onPressed: _openBrewfatherMenu,
+              customIcon: Image.asset(
+                'assets/brewfather.avif',
+                width: 24,
+                height: 24,
+              ),
+            ),
+            _managerButton(
+              icon: Icons.biotech_outlined,
+              label: 'Hefedatenbank',
+              onPressed: _openYeastBankManager,
+            ),
+          ],
         ),
       ],
     );
@@ -814,6 +838,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    Widget? customIcon,
   }) {
     return OutlinedButton.icon(
       onPressed: () async {
@@ -822,7 +847,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         if (!saved) return;
         onPressed();
       },
-      icon: Icon(icon),
+      icon: customIcon ?? Icon(icon),
       label: Text(
         label,
         textAlign: TextAlign.center,
