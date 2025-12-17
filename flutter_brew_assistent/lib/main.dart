@@ -310,7 +310,7 @@ class UserProfilePage extends StatefulWidget {
 class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _userNameCtrl = TextEditingController();
   final FocusNode _userNameFocusNode = FocusNode();
-  final TextEditingController _avatarUrlCtrl = TextEditingController();
+
   final TextEditingController _kettleBrandCtrl = TextEditingController();
   final TextEditingController _kettleTypeCtrl = TextEditingController();
   final TextEditingController _defaultBatchCtrl = TextEditingController();
@@ -318,6 +318,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _fermenterTypeCtrl = TextEditingController();
   final TextEditingController _raptUserCtrl = TextEditingController();
   final TextEditingController _raptApiKeyCtrl = TextEditingController();
+
+  String? _newAvatarBase64;
   late final UserProfileRepository _profileRepository;
 
   static const List<String> _controllerOptions = [
@@ -349,7 +351,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void dispose() {
     _userNameCtrl.dispose();
     _userNameFocusNode.dispose();
-    _avatarUrlCtrl.dispose();
+
     _kettleBrandCtrl.dispose();
     _kettleTypeCtrl.dispose();
     _defaultBatchCtrl.dispose();
@@ -366,7 +368,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       _loadedProfile = profile;
       if (profile != null) {
         _userNameCtrl.text = profile.name;
-        _avatarUrlCtrl.text = profile.avatarUrl;
+
         _kettleBrandCtrl.text = profile.kettleBrand;
         _kettleTypeCtrl.text = profile.kettleType;
         _defaultBatchCtrl.text = profile.defaultBatchLiters?.toString() ?? '';
@@ -403,7 +405,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final profile = UserProfile(
       id: _profileId,
       name: _userNameCtrl.text.trim(),
-      avatarUrl: _avatarUrlCtrl.text.trim(),
+
+      avatarBlob: _newAvatarBase64 ?? _loadedProfile?.avatarBlob,
       kettleBrand: _kettleBrandCtrl.text.trim(),
       kettleType: _kettleTypeCtrl.text.trim(),
       defaultBatchLiters: defaultBatch,
@@ -483,25 +486,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
       // 2. Compress to JPG 80%
       final jpgBytes = img.encodeJpg(resized, quality: 80);
 
-      // 3. Upload to Supabase
-      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = fileName;
+      // 3. Encode to Base64 (BLOB)
+      final base64Image = base64Encode(jpgBytes);
 
-      await Supabase.instance.client.storage.from('avatars').uploadBinary(
-            path,
-            Uint8List.fromList(jpgBytes),
-            fileOptions:
-                const FileOptions(contentType: 'image/jpeg', upsert: true),
-          );
+      setState(() {
+        _newAvatarBase64 = base64Image;
+        // Optional: Keep URL if you want fallback, or clear it. 
+        // Clearing it makes it clear we are using the BLOB.
+        // _avatarUrlCtrl.clear(); 
+      });
 
-      final publicUrl =
-          Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+      // Automatically save profile to persist BLOB
+      await _saveProfile();
 
-      if (mounted) {
-        _avatarUrlCtrl.text = publicUrl;
-        // Automatically save the profile to persist the new avatar URL
-        await _saveProfile();
-      }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -511,6 +508,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -677,6 +675,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildUserSection() {
+    ImageProvider? avatarImage;
+    if (_newAvatarBase64 != null) {
+      avatarImage = MemoryImage(base64Decode(_newAvatarBase64!));
+    } else if (_loadedProfile?.avatarBlob != null &&
+        _loadedProfile!.avatarBlob!.isNotEmpty) {
+      avatarImage = MemoryImage(base64Decode(_loadedProfile!.avatarBlob!));
+
+
+    }
+
     return Card(
       color: const Color(0xFF0F172A),
       child: Padding(
@@ -698,10 +706,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       CircleAvatar(
                         radius: 42,
                         backgroundColor: const Color(0xFF1D4ED8),
-                        backgroundImage: _avatarUrlCtrl.text.isNotEmpty
-                            ? NetworkImage(_avatarUrlCtrl.text)
-                            : null,
-                        child: _avatarUrlCtrl.text.isEmpty
+                        backgroundImage: avatarImage,
+                        child: avatarImage == null
                             ? Icon(
                                 Icons.person_outline,
                                 size: 36,
@@ -2626,7 +2632,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     final updated = UserProfile(
       id: _userProfile!.id,
       name: _userProfile!.name,
-      avatarUrl: _userProfile!.avatarUrl,
+      avatarBlob: _userProfile!.avatarBlob,
       kettleBrand: _userProfile!.kettleBrand,
       kettleType: _userProfile!.kettleType,
       defaultBatchLiters: _userProfile!.defaultBatchLiters,

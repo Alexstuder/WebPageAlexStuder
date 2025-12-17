@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE aibrewgenius.user_profiles (
   id TEXT PRIMARY KEY,
   name TEXT,
-  avatar_url TEXT,
+  avatar_blob TEXT,
   kettle_brand TEXT,
   kettle_type TEXT,
   default_batch_liters DOUBLE PRECISION,

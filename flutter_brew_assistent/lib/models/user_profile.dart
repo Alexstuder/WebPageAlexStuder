@@ -41,7 +41,7 @@ class UserProfile {
   const UserProfile({
     required this.id,
     required this.name,
-    required this.avatarUrl,
+    this.avatarBlob,
     required this.kettleBrand,
     required this.kettleType,
     required this.defaultBatchLiters,
@@ -61,7 +61,7 @@ class UserProfile {
 
   final String id;
   final String name;
-  final String avatarUrl;
+  final String? avatarBlob;
   final String kettleBrand;
   final String kettleType;
   final double? defaultBatchLiters;
@@ -81,7 +81,7 @@ class UserProfile {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'avatar_url': avatarUrl,
+        'avatar_blob': avatarBlob,
         'kettle_brand': kettleBrand,
         'kettle_type': kettleType,
         'default_batch_liters': defaultBatchLiters,
@@ -102,7 +102,7 @@ class UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
         id: json['id'] as String? ?? '',
         name: json['name'] as String? ?? '',
-        avatarUrl: json['avatar_url'] as String? ?? '',
+        avatarBlob: json['avatar_blob'] as String?,
         kettleBrand: json['kettle_brand'] as String? ?? '',
         kettleType: json['kettle_type'] as String? ?? '',
         defaultBatchLiters:

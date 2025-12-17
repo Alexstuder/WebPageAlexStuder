@@ -67,7 +67,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     final updatedProfile = UserProfile(
       id: _profile!.id,
       name: _profile!.name,
-      avatarUrl: _profile!.avatarUrl,
+      avatarBlob: _profile!.avatarBlob,
       kettleBrand: _profile!.kettleBrand,
       kettleType: _profile!.kettleType,
       defaultBatchLiters: _profile!.defaultBatchLiters,

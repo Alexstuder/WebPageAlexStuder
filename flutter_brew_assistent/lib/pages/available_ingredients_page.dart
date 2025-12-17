@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/user_profile.dart';
 import '../services/brewfather_service.dart';
 import '../services/user_profile_service.dart';
 
@@ -17,7 +16,6 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
   bool _isLoading = true;
   String? _error;
   List<dynamic> _fermentables = [];
-  UserProfile? _userProfile;
 
   @override
   void initState() {
@@ -34,8 +32,6 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
     try {
       final profile = await _userService.fetchProfile(widget.profileId);
       if (profile == null) throw Exception('Profil nicht gefunden');
-
-      _userProfile = profile;
 
       if ((profile.brewfatherUserId ?? '').isEmpty ||
           (profile.brewfatherApiKey ?? '').isEmpty) {
@@ -55,9 +51,6 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
 
       setState(() {
         _fermentables = fermentables;
-        if (_fermentables.isNotEmpty) {
-           print('DEBUG FERMENTABLE: ${_fermentables.first}');
-        }
         _isLoading = false;
       });
     } catch (e) {
@@ -103,17 +96,19 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
       );
     }
 
-    if (_fermentables.isEmpty) {
+    final validItems = _fermentables.where((i) => (i['name'] ?? '').isNotEmpty).toList();
+
+    if (validItems.isEmpty) {
       return const Center(
         child: Text('Keine fermentierbaren Zutaten in Brewfather gefunden.'),
       );
     }
 
     return ListView.separated(
-      itemCount: _fermentables.length,
+      itemCount: validItems.length,
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final item = _fermentables[index];
+        final item = validItems[index];
         final name = item['name'] ?? 'Unbekannt';
         final supplier = item['supplier'] ?? '';
         final amount = item['inventory'] ?? item['amount'] ?? 0;
@@ -121,9 +116,17 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
         final color = item['color'] ?? 0;
         final type = item['type'] ?? '';
 
-        final attenuation = item['attenuation'] ?? item['yield'] ?? 0;
-        // Approximation: SG = 1 + (attenuation * 0.46) / 1000
-        final sg = 1 + ((attenuation as num) * 0.46) / 1000;
+        // Priority: potential (explicit SG) -> yield (calculated) -> attenuation (fallback)
+        double sg = 1.0;
+        if (item['potential'] != null) {
+           sg = (item['potential'] as num).toDouble();
+        } else if (item['yield'] != null) {
+           // Yield is typically percentage e.g. 80
+           // ~0.46 points per percent yield is a standard approximation for sucrose equivalent
+           sg = 1 + ((item['yield'] as num) * 0.46) / 1000;
+        } else if (item['attenuation'] != null) {
+             sg = 1 + ((item['attenuation'] as num) * 0.46) / 1000;
+        }
 
         return ListTile(
           leading: const Icon(Icons.grain, color: Colors.amber),
