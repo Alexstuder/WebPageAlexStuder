@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mime/mime.dart';
+import 'pages/rapt_dashboard_page.dart';
 import 'package:image/image.dart' as img; // For image resizing
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -83,6 +84,7 @@ class BrewMateApp extends StatelessWidget {
         UserProfilePage.routeName: (_) => const UserProfilePage(),
         DiscoveryWelcomePage.routeName: (_) => const DiscoveryWelcomePage(),
         RecipePromptPage.routeName: (_) => const RecipePromptPage(),
+        RaptDashboardPage.routeName: (_) => const RaptDashboardPage(),
       },
       builder: (context, child) {
         final Widget safeChild = child ?? const SizedBox.shrink();
@@ -142,13 +144,20 @@ class BrewEntryPage extends StatelessWidget {
               ),
             ),
             Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   _EntryButton(
                     label: 'Users profil',
                     onPressed: () =>
                         _openRoute(context, UserProfilePage.routeName),
+                  ),
+                  const SizedBox(height: 18),
+                  _EntryButton(
+                    label: 'Currently Brewing',
+                    onPressed: () => _openRoute(context, RaptDashboardPage.routeName),
                   ),
                   const SizedBox(height: 18),
                   _EntryButton(
@@ -172,6 +181,7 @@ class BrewEntryPage extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ],
         ),
       ),
