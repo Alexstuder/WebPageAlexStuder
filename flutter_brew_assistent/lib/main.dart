@@ -2652,7 +2652,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
            setState(() {});
        }
      } catch (e) {
-       print('Sync Error: $e');
+       debugPrint('Sync Error: $e');
      }
   }
 
@@ -3229,7 +3229,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Update an Brewfather gesendet.')));
                  }
               } catch(e) {
-                 print('Error updating Brewfather: $e');
+                 debugPrint('Error updating Brewfather: $e');
                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Warnung: Brewfather Update fehlgeschlagen: $e')));
                  }
@@ -3456,10 +3456,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     });
 
     try {
-      final template = await DefaultAssetBundle.of(context)
-          .loadString('prompt/freitext_rezept_basis2');
-      final jsonTemplate = await DefaultAssetBundle.of(context)
-          .loadString('prompt/freitext_response_template2.json');
+      final bundle = DefaultAssetBundle.of(context);
+      final template = await bundle.loadString('prompt/freitext_rezept_basis2');
+      final jsonTemplate = await bundle.loadString('prompt/freitext_response_template2.json');
 
       // --- 1. Fetch Packaging Profile & Calculate Volumes ---
       double targetVolume = 20.0;
@@ -3530,7 +3529,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           bottleEnabled = true;
         }
       } catch (e) {
-        print('Error fetching packaging profile: $e');
+        debugPrint('Error fetching packaging profile: $e');
         // Fallback
         bottleVolume = targetVolume;
         bottleEnabled = true;
@@ -3588,7 +3587,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           }
         }
       } catch (e) {
-        print('Error fetching brew kettles: $e');
+        debugPrint('Error fetching brew kettles: $e');
       }
 
       // --- 4. Fetch Fining Agents (Schönungsmittel) ---
@@ -3617,7 +3616,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           finingAgentsInfo = available.map((a) => '- $a').join('\n');
         }
       } catch (e) {
-        print('Error fetching fining agents: $e');
+        debugPrint('Error fetching fining agents: $e');
       }
 
 
@@ -3629,6 +3628,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       if (!foundFining) missingDefaults.add('Schönungsmittel (keine ausgewählt)');
 
       if (missingDefaults.isNotEmpty) {
+        if (!mounted) return;
         final proceed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
