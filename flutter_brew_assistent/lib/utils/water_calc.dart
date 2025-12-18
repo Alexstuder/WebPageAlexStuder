@@ -56,11 +56,11 @@ class WaterCalculator {
     List<SaltAddition> additions = [];
 
     if (treatMash) {
-      additions.addAll(_calcForVolume(source, target, mashVolumeL, "Maischen"));
+      additions.addAll(_calcForVolume(source, target, mashVolumeL, 'Maischen'));
     }
     
     if (treatSparge) {
-      String label = strategy.toLowerCase().contains('nachguss') ? "Nachguss" : "Kochen";
+      String label = strategy.toLowerCase().contains('nachguss') ? 'Nachguss' : 'Kochen';
       additions.addAll(_calcForVolume(source, target, spargeVolumeL, label));
     }
 
@@ -70,7 +70,7 @@ class WaterCalculator {
         // Let's use Sum of Mash+Sparge for safety if preBoil not available, but 'calculate' doesn't have preboil.
         // We'll use mash + sparge as total water processed.
         double totalL = mashVolumeL + spargeVolumeL;
-        additions.addAll(_calcForVolume(source, target, totalL, "Kochen"));
+        additions.addAll(_calcForVolume(source, target, totalL, 'Kochen'));
     }
 
     return additions;

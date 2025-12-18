@@ -30,13 +30,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    // Determine status color
-    Color statusColor = Colors.grey;
-    String status = widget.batch.status ?? 'Unknown';
-    if (status == 'Planning') statusColor = Colors.blue;
-    if (status == 'Brewing') statusColor = Colors.orange;
-    if (status == 'Fermenting') statusColor = Colors.green;
-    if (status == 'Completed') statusColor = Colors.grey[800]!;
+
 
     return Scaffold(
       appBar: AppBar(
@@ -47,12 +41,12 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           labelColor: const Color(0xFF66B342),
           unselectedLabelColor: Colors.grey,
           tabs: const [
-            Tab(text: "IN PLANUNG"),
-            Tab(text: "BRAUEN"),
-            Tab(text: "IN GÄRUNG"),
-            Tab(text: "ABGESCHLOSSEN"),
-            Tab(text: "JSON"),
-            Tab(text: "JSON ROH"),
+            Tab(text: 'IN PLANUNG'),
+            Tab(text: 'BRAUEN'),
+            Tab(text: 'IN GÄRUNG'),
+            Tab(text: 'ABGESCHLOSSEN'),
+            Tab(text: 'JSON'),
+            Tab(text: 'JSON ROH'),
           ],
         ),
       ),
@@ -95,7 +89,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
     final mashVolume = rData['mashVolume']; // Use specific field for mash volume (water + grain)
     
     // Formatting helper
-    String fmtVal(dynamic v, {String suffix = ''}) => v != null ? "$v$suffix" : "-";
+    String fmtVal(dynamic v, {String suffix = ''}) => v != null ? '$v$suffix' : '-';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -107,14 +101,14 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           Widget leftColumn = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-               _buildPlanningIngredientSection("MALZ & GÄRBARES", fermentables, (item) {
+               _buildPlanningIngredientSection('MALZ & GÄRBARES', fermentables, (item) {
                  return _buildPlanningRow(
                     item['name'], 
                     "${item['color']} EBC", 
                     "${item['amount']} kg"
                  );
                }),
-               _buildPlanningIngredientSection("HOPFEN", hops, (item) {
+               _buildPlanningIngredientSection('HOPFEN', hops, (item) {
                  // Hops formatting logic
                  double amountRaw = (item['amount'] as num? ?? 0).toDouble();
                  double amount = (amountRaw < 2.0 && (item['unit'] == 'kg' || item['unit'] == null)) ? amountRaw * 1000 : amountRaw;
@@ -122,10 +116,10 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                  return _buildPlanningRow(
                     item['name'], 
                     "${item['alpha']}% AA @ ${item['time']} min (${item['use']})", 
-                    "${amount.toStringAsFixed(1)} g" // Display as int if possible or 1 decimal
+                    '${amount.toStringAsFixed(1)} g' // Display as int if possible or 1 decimal
                  );
                }),
-               _buildPlanningIngredientSection("HEFE", yeast, (item) {
+               _buildPlanningIngredientSection('HEFE', yeast, (item) {
                  return _buildPlanningRow(
                     item['name'], 
                     "Typ: ${item['type']}", 
@@ -133,7 +127,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                  );
                }),
                if (miscs.isNotEmpty)
-                  _buildPlanningIngredientSection("SONSTIGES", miscs, (item) {
+                  _buildPlanningIngredientSection('SONSTIGES', miscs, (item) {
                      return _buildPlanningRow(
                         item['name'], 
                         "${item['type']} @ ${item['time'] ?? '-'} ${item['timeUnit'] ?? ''}", 
@@ -147,7 +141,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
                // Brew Date
-               Text("Braudatum", style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+               Text('Braudatum', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
                Text(
                    widget.batch.brewDate != null 
                     ? DateFormat('dd.MM.yyyy').format(DateTime.fromMillisecondsSinceEpoch(widget.batch.brewDate!)) 
@@ -178,7 +172,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                            crossAxisAlignment: CrossAxisAlignment.start,
                            children: [
                              Text(recipe['name'] ?? 'Rezept', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                             const Text("Maischesud", style: TextStyle(color: Colors.grey, fontSize: 12)), // Hardcoded per screenshot or derived
+                             const Text('Maischesud', style: TextStyle(color: Colors.grey, fontSize: 12)), // Hardcoded per screenshot or derived
                              Text(
                                "STW ${recipe['og'] ?? '-'}  IBU ${recipe['ibu'] ?? '-'}  EBC ${recipe['color'] ?? '-'}",
                                style: TextStyle(color: Colors.grey[400], fontSize: 11)
@@ -202,7 +196,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                Row(children: [
                   Icon(Icons.water_drop, size: 16, color: Colors.blue[300]),
                   const SizedBox(width: 8),
-                  const Text("Wasser", style: TextStyle(color: Colors.grey)),
+                  const Text('Wasser', style: TextStyle(color: Colors.grey)),
                   const Spacer(),
                   // Optional pH value per screenshot
                   if (waterData['ph'] != null) Text("pH ${waterData['ph']}", style: TextStyle(color: Colors.green[300], fontSize: 12)),
@@ -219,7 +213,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                Row(children: [
                   const Icon(Icons.edit_note, size: 16, color: Colors.grey),
                   const SizedBox(width: 8),
-                  const Text("Protokoll", style: TextStyle(color: Colors.grey)),
+                  const Text('Protokoll', style: TextStyle(color: Colors.grey)),
                   const Spacer(),
                   OutlinedButton(
                     onPressed: (){}, 
@@ -228,7 +222,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                         minimumSize: const Size(0, 24)
                     ),
-                    child: const Text("+ HINZUFÜGEN", style: TextStyle(fontSize: 10, color: Colors.white))
+                    child: const Text('+ HINZUFÜGEN', style: TextStyle(fontSize: 10, color: Colors.white))
                   )
                ]),
                const SizedBox(height: 8),
@@ -239,7 +233,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                Builder(builder: (c) {
                    var events = widget.batch.data['events'] as List?;
                    if (events == null || events.isEmpty) {
-                       return const Text("Keine Einträge", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic, fontSize: 12));
+                       return const Text('Keine Einträge', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic, fontSize: 12));
                    }
                    return Column(
                        children: events.map((e) => Padding(
@@ -259,7 +253,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                const SizedBox(height: 24),
                
                // Notes
-               const Text("Sud Notizen", style: TextStyle(color: Colors.grey, fontSize: 12)),
+               const Text('Sud Notizen', style: TextStyle(color: Colors.grey, fontSize: 12)),
                const SizedBox(height: 4),
                Text(widget.batch.data['notes'] is String ? widget.batch.data['notes'] : '', style: const TextStyle(fontSize: 12)),
             ],
@@ -424,11 +418,11 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                 if (mashWater != null || totalWater != null) {
                     return Column(
                         children: [
-                             if (mashWater != null) Text("Maischwasser: $mashWater L", style: textStyle),
-                             if (spargeWater != null) Text("Nachgusswasser: $spargeWater L @ $spargeTemp °C", style: textStyle),
-                             if (totalWater != null) Text("Wasser gesamt: $totalWater L", style: textStyle),
-                             if (kochVol != null) Text("Kochvolumen: $kochVol L", style: textStyle),
-                             if (preBoilOg != null) Text("Stammwürze vor Kochen: $preBoilOg", style: textStyle),
+                             if (mashWater != null) Text('Maischwasser: $mashWater L', style: textStyle),
+                             if (spargeWater != null) Text('Nachgusswasser: $spargeWater L @ $spargeTemp °C', style: textStyle),
+                             if (totalWater != null) Text('Wasser gesamt: $totalWater L', style: textStyle),
+                             if (kochVol != null) Text('Kochvolumen: $kochVol L', style: textStyle),
+                             if (preBoilOg != null) Text('Stammwürze vor Kochen: $preBoilOg', style: textStyle),
                              const SizedBox(height: 16),
                         ]
                     );
@@ -439,16 +433,16 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           ),
           
           // 4. Eckdaten (Benchmarks)
-          Text("Eckdaten", style: headerStyle),
-          Text("Stammwürze: ${recipe['og'] ?? '-'} SG", style: textStyle),
+          Text('Eckdaten', style: headerStyle),
+          Text("Stammwürze: ${recipe['og'] ?? recipe['preBoilGravity'] ?? '-'} SG", style: textStyle),
           Text("Restextrakt: ${recipe['fg'] ?? '-'} SG", style: textStyle),
-          Text("IBU (Tinseth): ${recipe['ibu'] ?? '-'}", style: textStyle),
+          Text("IBU (Tinseth): ${recipe['ibu'] == 0 ? '-' : (recipe['ibu'] ?? '-')}", style: textStyle),
           Text("Farbe: ${recipe['color'] ?? '-'} EBC", style: textStyle),
           const SizedBox(height: 24),
 
           // 5. Maischen
-          Text("Maischen", style: headerStyle),
-          if (mashSteps.isEmpty) Text("-", style: textStyle),
+          Text('Maischen', style: headerStyle),
+          if (mashSteps.isEmpty) Text('-', style: textStyle),
           ...mashSteps.map((step) => Text(
              "${step['name'] ?? 'Schritt'} — ${step['stepTemp']} °C — ${step['stepTime']} min",
              style: textStyle
@@ -456,8 +450,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           const SizedBox(height: 24),
           
           // 6. Malze
-          Text("Malze (${totalFermentables.toStringAsFixed(2)} kg)", style: headerStyle),
-          if (fermentables == null || fermentables.isEmpty) Text("-", style: textStyle),
+          Text('Malze (${totalFermentables.toStringAsFixed(2)} kg)', style: headerStyle),
+          if (fermentables == null || fermentables.isEmpty) Text('-', style: textStyle),
           if (fermentables != null) ...fermentables.map((f) {
              double amount = (f['amount'] as num? ?? 0).toDouble();
              double percent = totalFermentables > 0 ? (amount / totalFermentables * 100) : 0;
@@ -468,8 +462,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                  text: TextSpan(
                    style: textStyle,
                    children: [
-                     TextSpan(text: "${amount.toStringAsFixed(2)} kg ", style: boldText),
-                     TextSpan(text: "(${percent.toStringAsFixed(1)}%) — "),
+                     TextSpan(text: '${amount.toStringAsFixed(2)} kg ', style: boldText),
+                     TextSpan(text: '(${percent.toStringAsFixed(1)}%) — '),
                      TextSpan(text: "${f['name']} "),
                      TextSpan(text: "— ${f['supplier'] ?? ''} — "),
                      TextSpan(text: "${f['color']} EBC"),
@@ -481,8 +475,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           const SizedBox(height: 24),
 
           // 7. Hopfen
-          Text("Hopfen (${totalHops.toStringAsFixed(1)} g)", style: headerStyle), // Showing g is safer if converted
-          if (hops == null || hops.isEmpty) Text("-", style: textStyle),
+          Text('Hopfen (${totalHops.toStringAsFixed(1)} g)', style: headerStyle), // Showing g is safer if converted
+          if (hops == null || hops.isEmpty) Text('-', style: textStyle),
           if (hops != null) ...hops.map((h) {
              // Brewfather API usually returns hops in grams (e.g. 25 for 25g) despite displaying 'g' unit.
              // However, some internal representations might be kg.
@@ -505,7 +499,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                  text: TextSpan(
                    style: textStyle,
                    children: [
-                     TextSpan(text: "${amountG.toStringAsFixed(0)} g ", style: boldText),
+                     TextSpan(text: '${amountG.toStringAsFixed(0)} g ', style: boldText),
                      TextSpan(text: "— ${h['name']} ${h['alpha']}% — "),
                      TextSpan(text: "${h['use']} — ", style: const TextStyle(color: Colors.redAccent)), // Highlight usage like screenshot
                      TextSpan(text: "${h['time']} min"),
@@ -517,8 +511,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           const SizedBox(height: 24),
 
           // 8. Hefe
-          Text("Hefe", style: headerStyle),
-          if (yeasts == null || yeasts.isEmpty) Text("-", style: textStyle),
+          Text('Hefe', style: headerStyle),
+          if (yeasts == null || yeasts.isEmpty) Text('-', style: textStyle),
           if (yeasts != null) ...yeasts.map((y) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0),
             child: RichText(
@@ -535,8 +529,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           const SizedBox(height: 24),
 
           // 9. Gärung
-          Text("Gärung", style: headerStyle),
-           if (fermSteps == null || fermSteps.isEmpty) Text("-", style: textStyle),
+          Text('Gärung', style: headerStyle),
+           if (fermSteps == null || fermSteps.isEmpty) Text('-', style: textStyle),
            if (fermSteps != null) ...fermSteps.map((s) => Text(
              "${s['type'] ?? 'Step'} — ${s['stepTemp']} °C — ${s['stepTime']} Tage",
              style: textStyle
@@ -544,7 +538,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           const SizedBox(height: 24),
 
           // 10. Wasserprofil
-          Text("Wasserprofil", style: headerStyle),
+          Text('Wasserprofil', style: headerStyle),
           Builder(
             builder: (context) {
                 // Try to find the ion profile. usually in water['totalAdjustments'] or water['meta']
@@ -557,18 +551,18 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                         Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                                _buildWaterIon("Ca²⁺", adjustments['calcium'] ?? adjustments['Ca']),
-                                _buildWaterIon("Mg²⁺", adjustments['magnesium'] ?? adjustments['Mg']),
-                                _buildWaterIon("Na⁺", adjustments['sodium'] ?? adjustments['Na']),
-                                _buildWaterIon("Cl⁻", adjustments['chloride'] ?? adjustments['Cl']),
-                                _buildWaterIon("SO₄²⁻", adjustments['sulfate'] ?? adjustments['SO4']),
-                                _buildWaterIon("HCO₃⁻", adjustments['bicarbonate'] ?? adjustments['HCO3']),
+                                _buildWaterIon('Ca²⁺', adjustments['calcium'] ?? adjustments['Ca']),
+                                _buildWaterIon('Mg²⁺', adjustments['magnesium'] ?? adjustments['Mg']),
+                                _buildWaterIon('Na⁺', adjustments['sodium'] ?? adjustments['Na']),
+                                _buildWaterIon('Cl⁻', adjustments['chloride'] ?? adjustments['Cl']),
+                                _buildWaterIon('SO₄²⁻', adjustments['sulfate'] ?? adjustments['SO4']),
+                                _buildWaterIon('HCO₃⁻', adjustments['bicarbonate'] ?? adjustments['HCO3']),
                             ],
                         ),
                       ],
                     );
                 } else {
-                    return const Text("Kein Wasserprofil", style: TextStyle(color: Colors.grey));
+                    return const Text('Kein Wasserprofil', style: TextStyle(color: Colors.grey));
                 }
             }
           ),
@@ -613,210 +607,418 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
     final fermentation = recipe['fermentation'] ?? {};
     final steps = (fermentation['steps'] as List?) ?? [];
     
-    // -- Data Parsing for Chart (Target Temperature) --
-    List<FlSpot> targetTempSpots = [];
-    double currentDay = 0;
+    // -- Data Parsing --
+    final yeasts = widget.batch.data['batchYeastsLocal'] ?? recipe['yeasts'] ?? [];
+    final miscs = widget.batch.data['batchMiscsLocal'] ?? []; 
     
-    // Initial point
-    if (steps.isNotEmpty) {
-      double startTemp = (steps.first['stepTemp'] as num).toDouble();
-      targetTempSpots.add(FlSpot(0, startTemp));
-    }
-
-    for (var step in steps) {
-      double temp = (step['stepTemp'] as num).toDouble();
-      double days = (step['stepTime'] as num).toDouble();
-      
-      // Horizontal line for the duration of the step
-      targetTempSpots.add(FlSpot(currentDay + days, temp));
-      
-      currentDay += days;
-    }
-
-    // -- Stats Data --
-    // Measured Values
-    final measuredOg = widget.batch.data['measuredOg'];
-    final fermenterVol = recipe['equipment']?['fermenterVolume'];
-    final bottlingVol = recipe['equipment']?['bottlingVolume'];
-    
-    // Carbonation
-    final carbType = widget.batch.data['carbonationType'] ?? '-';
-    final carbVol = recipe['carbonation']?.toString() ?? '-';
-    final carbPressure = widget.batch.data['carbonationForce']?.toString() ?? '-';
-
     // Dates
-    final brewDateMs = widget.batch.data['brewDate'];
+    final brewDateMs = widget.batch.data['fermentationStartDate'] ?? widget.batch.data['brewDate'];
     final bottlingDateMs = widget.batch.data['bottlingDate'];
     final dateFormat = DateFormat('dd.MM.yyyy');
     
-    String brewDateStr = brewDateMs != null ? dateFormat.format(DateTime.fromMillisecondsSinceEpoch(brewDateMs)) : '-';
-    String bottlingDateStr = bottlingDateMs != null ? dateFormat.format(DateTime.fromMillisecondsSinceEpoch(bottlingDateMs)) : '-';
-
+    final startDateStr = brewDateMs != null ? dateFormat.format(DateTime.fromMillisecondsSinceEpoch(brewDateMs)) : '-';
+    final bottlingDateStr = bottlingDateMs != null ? dateFormat.format(DateTime.fromMillisecondsSinceEpoch(bottlingDateMs)) : '-';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Layout: Left (Chart + Profile) | Right (Stats)
-          // Using LayoutBuilder to handle responsiveness if needed, but for now simple Row/Column
-          LayoutBuilder(
-            builder: (context, constraints) {
-              bool isWide = constraints.maxWidth > 800;
-              
-              Widget leftColumn = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- Result Chart ---
-                  _buildSectionHeader("Gärverlauf (Soll-Temperatur)"),
-                  Container(
-                    height: 350,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E1E), // Dark background for chart
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: targetTempSpots.isEmpty 
-                      ? const Center(child: Text("Kein Gärprofil vorhanden", style: TextStyle(color: Colors.white54)))
-                      : LineChart(
-                          LineChartData(
-                            gridData: FlGridData(
-                              show: true,
-                              getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 1),
-                              getDrawingVerticalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 1),
-                            ),
-                            titlesData: FlTitlesData(
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true, 
-                                    reservedSize: 30,
-                                    getTitlesWidget: (value, meta) => Text("${value.toInt()}d", style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                                  )
-                                ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true, 
-                                    reservedSize: 40,
-                                    getTitlesWidget: (value, meta) => Text("${value.toInt()}°", style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                                  )
-                                ),
-                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: targetTempSpots,
-                                isCurved: false, // Step layout usually preferred for temperature schedules, but Brewfather uses line
-                                color: Colors.greenAccent,
-                                barWidth: 2,
-                                dotData: const FlDotData(show: true),
-                                belowBarData: BarAreaData(show: true, color: Colors.greenAccent.withValues(alpha: 0.1)),
-                              ),
-                            ],
-                            // Add Touch data later
-                          ),
-                        ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // --- Gärprofil Steps ---
-                  _buildSectionHeader("Gärprofil"),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white10),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        ...steps.map((step) => ListTile(
-                          title: Text("${step['name'] ?? step['type'] ?? 'Schritt'}"),
-                          subtitle: Text("${step['stepTemp']} °C  —  ${step['stepTime']} Tage"),
-                          leading: const Icon(Icons.thermostat, color: Colors.orangeAccent),
-                        )),
-                        const Divider(height: 1),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text("Gärung Start", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  Text(brewDateStr, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  const Text("Datum Abfüllung", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                  const SizedBox(height: 4),
-                                  Text(bottlingDateStr, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              );
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isWide = constraints.maxWidth > 900;
+          
+          Widget leftColumn = Column(
+             crossAxisAlignment: CrossAxisAlignment.stretch,
+             children: [
+               _buildMesswerteSection(),
+               const SizedBox(height: 16),
+               _buildGatProfilSection(steps, startDateStr, bottlingDateStr, brewDateMs),
+               const SizedBox(height: 16),
+               _buildBeigabenSection(yeasts, miscs),
+             ],
+          );
 
-              Widget rightColumn = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   // --- Gemessene Werte ---
-                   _buildCardSection("Gemessene Werte", [
-                     _buildDetailRow("Stammwürze", "${measuredOg ?? '-'} SG", highlight: true),
-                     _buildDetailRow("Gärtank-Vol", "${fermenterVol ?? '-'} L"),
-                     _buildDetailRow("Abfüllmenge", "${bottlingVol ?? '-'} L"),
-                   ]),
-                   const SizedBox(height: 16),
-                   
-                   // --- Karbonisierung ---
-                   _buildCardSection("Karbonisierung", [
-                      _buildDetailRow("Typ", carbType),
-                      const SizedBox(height: 8),
-                      Text("$carbPressure Bar (Force Carbonation)", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text("um $carbVol vol CO2 zu erreichen", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                   ]),
-                   const SizedBox(height: 16),
-                   
-                   // --- Statistiken ---
-                   _buildCardSection("Statistiken", [
-                      _buildDetailRow("Vvergärungsgrad", "${widget.batch.data['measuredAttenuation'] ?? '-'} %"),
-                      _buildDetailRow("Maische Effizienz", "${widget.batch.data['measuredMashEfficiency'] ?? '-'} %"),
-                   ]),
-                ],
-              );
+          Widget rightColumn = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildGemesseneWerteSection(),
+              const SizedBox(height: 16),
+              _buildKarbonisierungSection(),
+               const SizedBox(height: 16),
+              _buildStatistikenSection(),
+              const SizedBox(height: 16),
+              _buildZusammenfassungSection(),
+               const SizedBox(height: 16),
+              _buildEreignisseSection(),
+            ],
+          );
 
-              if (isWide) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 2, child: leftColumn),
-                    const SizedBox(width: 20),
-                    Expanded(flex: 1, child: rightColumn),
-                  ],
-                );
-              } else {
-                return Column(
-                  children: [
-                    leftColumn,
-                    const SizedBox(height: 20),
-                    rightColumn
-                  ],
-                );
-              }
-            }
-          ),
-        ],
+          if (isWide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: leftColumn),
+                const SizedBox(width: 16),
+                Expanded(flex: 2, child: rightColumn),
+              ],
+            );
+          } else {
+            return Column(
+              children: [
+                leftColumn,
+                const SizedBox(height: 16),
+                rightColumn,
+              ],
+            );
+          }
+        }
       ),
     );
+  }
+
+  // --- Sections for Fermenting Tab ---
+
+  Widget _buildMesswerteSection() {
+     final recipe = widget.batch.data['recipe'] ?? {};
+     final steps = (recipe['fermentation']?['steps'] as List?) ?? [];
+     List<FlSpot> targetTempSpots = [];
+     double currentDay = 0;
+     if (steps.isNotEmpty) {
+      double startTemp = (steps.first['stepTemp'] as num).toDouble();
+      targetTempSpots.add(FlSpot(0, startTemp));
+     }
+     for (var step in steps) {
+      double temp = (step['stepTemp'] as num).toDouble();
+      double days = (step['stepTime'] as num).toDouble();
+      targetTempSpots.add(FlSpot(currentDay + days, temp));
+      currentDay += days;
+     }
+
+     return _buildCardSection('Messwerte', [
+         Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+             const Text('Keine Messwerte gefunden...', style: TextStyle(fontSize: 12, color: Colors.grey)), 
+             OutlinedButton.icon(
+                onPressed: () {}, 
+                icon: const Icon(Icons.add, size: 14), 
+                label: const Text('GERÄTE', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  minimumSize: const Size(0, 30)
+                ),
+             )
+           ],
+         ),
+         const SizedBox(height: 12),
+         AspectRatio(
+             aspectRatio: 1.7,
+             child: LineChart(
+               LineChartData(
+                 gridData: FlGridData(
+                    show: true, 
+                    drawVerticalLine: false, 
+                    getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 1)
+                 ),
+                 titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, getTitlesWidget: (val, meta) => Text(val.toInt().toString(), style: const TextStyle(fontSize: 10, color: Colors.grey)))),
+                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 2, getTitlesWidget: (val, meta) => Text('${val.toInt()}d', style: const TextStyle(fontSize: 10, color: Colors.grey)))),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                 ),
+                 borderData: FlBorderData(show: false),
+                 lineBarsData: [
+                   LineChartBarData(
+                     spots: targetTempSpots,
+                     isCurved: false,
+                     color: Colors.greenAccent,
+                     barWidth: 2,
+                     dotData: const FlDotData(show: false),
+                     belowBarData: BarAreaData(show: true, color: Colors.greenAccent.withValues(alpha: 0.1)), 
+                   )
+                 ]
+               )
+             ),
+         )
+     ]);
+  }
+
+  Widget _buildGatProfilSection(List steps, String startDate, String bottlingDate, int? brewDateMs) {
+      final dateFormat = DateFormat('dd. MMM. yyyy');
+      
+      List<Widget> stepWidgets = [];
+      int accumulatedDays = 0;
+      DateTime startDt = brewDateMs != null ? DateTime.fromMillisecondsSinceEpoch(brewDateMs) : DateTime.now();
+      
+      for(var step in steps) {
+          String name = step['name'] ?? '';
+          num temp = step['stepTemp'] ?? 0;
+          num days = step['stepTime'] ?? 0;
+          
+          DateTime stepDate = startDt.add(Duration(days: accumulatedDays));
+          accumulatedDays += days.toInt();
+
+          stepWidgets.add(
+              Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                      '${dateFormat.format(stepDate)} - $name - $temp °C - $days Tage', 
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      textAlign: TextAlign.center,
+                  ),
+              )
+          );
+      }
+
+      return _buildCardSection('Gärprofil', [
+         Align(alignment: Alignment.center, child: Column(children: stepWidgets)),
+         const SizedBox(height: 20),
+         const Divider(color: Colors.white12),
+         const SizedBox(height: 12),
+         Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+                 Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                         const Text('Gärung Start', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                         const SizedBox(height: 4),
+                         Row(children: [const Icon(Icons.calendar_today, size: 14, color: Colors.white), const SizedBox(width: 6), Text(startDate, style: const TextStyle(fontWeight: FontWeight.bold))]),
+                         const SizedBox(height: 4),
+                         Container(height: 1, width: 120, color: Colors.white24)
+                     ],
+                 ),
+                 Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                         const Text('Datum Abfüllung', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                         const SizedBox(height: 4),
+                         Row(children: [const Icon(Icons.calendar_today, size: 14, color: Colors.white), const SizedBox(width: 6), Text(bottlingDate, style: const TextStyle(fontWeight: FontWeight.bold))]),
+                         const SizedBox(height: 4),
+                         Container(height: 1, width: 120, color: Colors.white24)
+                     ],
+                 )
+             ],
+         )
+      ]);
+  }
+
+  Widget _buildBeigabenSection(List yeasts, List miscs) {
+      List<Widget> items = [];
+      for(var y in yeasts) {
+         dynamic amount = y is Map ? y['amount'] : y.amount;
+         String unit = y is Map ? (y['unit'] ?? '') : (y.unit ?? '');
+         String name = y is Map ? (y['name'] ?? '') : y.name;
+         items.add(_buildBeigabenRow('$amount $unit', name));
+      }
+      for(var m in miscs) {
+          dynamic amount = m is Map ? m['amount'] : m.amount;
+          String unit = m is Map ? (m['unit'] ?? '') : (m.unit ?? '');
+          String name = m is Map ? (m['name'] ?? '') : m.name;
+          items.add(_buildBeigabenRow('$amount $unit', name));
+      }
+      if (items.isEmpty) items.add(const Text('Keine Beigaben', style: TextStyle(color: Colors.grey)));
+
+      return _buildCardSection('Beigaben', items);
+  }
+
+  Widget _buildBeigabenRow(String amount, String name) {
+      return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+              children: [
+                  Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(' - ', style: TextStyle(color: Colors.grey)),
+                  Expanded(child: Text(name, style: const TextStyle(color: Colors.white70))),
+              ],
+          ),
+      );
+  }
+
+  Widget _buildGemesseneWerteSection() {
+     final data = widget.batch.data;
+     final recipe = data['recipe'] ?? {};
+     
+     return _buildCardSection('Gemessene Werte', [
+         _buildDottedRow('Stammwürze', data['measuredOg']?.toString() ?? 'Infinity', 'SG'),
+         _buildDottedRow('Gärtank-Vol', recipe['equipment']?['fermenterVolume']?.toString() ?? '0', 'L'),
+         _buildDottedRow('Abfüllmenge', recipe['equipment']?['bottlingVolume']?.toString() ?? '0', 'L'),
+         const SizedBox(height: 12),
+         Row(
+             children: [
+                 Expanded(child: _buildDottedRow('Auffüllmenge Gärtank', '0', 'L')),
+                 const SizedBox(width: 16),
+                 Expanded(child: _buildDottedRow('Restextrakt', data['measuredFg']?.toString() ?? 'Infinity', 'SG')),
+             ],
+         ),
+          const SizedBox(height: 8),
+         _buildDottedRow('Temperatur Karbonisierung', '4', '°C'),
+     ]);
+  }
+  
+  Widget _buildDottedRow(String label, String value, String unit) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: CustomPaint(
+                   painter: DottedLinePainter(),
+                ),
+              ),
+            ),
+             Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+             const SizedBox(width: 4),
+             Text(unit, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ],
+        ),
+      );
+  }
+
+  Widget _buildKarbonisierungSection() {
+      final carb = widget.batch.data['recipe']?['carbonation'] ?? {};
+      String method = widget.batch.data['carbonationType'] ?? carb['method'] ?? 'Keg';
+      String info = "-1.05 Bar bei 4 °C\nfür etwa 1 Wochen\num ${carb['vols'] ?? 0} Vol CO₂ zu erreichen"; 
+
+      return _buildCardSection('Karbonisierung', [
+          const Text('Typ', style: TextStyle(color: Colors.grey, fontSize: 12)),
+          Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                  Text(method, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Icon(Icons.arrow_drop_down, color: Colors.grey)
+              ],
+          ),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 8),
+          Center(
+             child: Text(info, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          )
+      ]);
+  }
+
+  Widget _buildStatistikenSection() {
+      final r = widget.batch.data['recipe'] ?? {};
+      final abv = r['abv'] ?? 0;
+      final att = r['attenuation'] ?? 0;
+      final mashEff = r['mashEfficiency'] ?? 0;
+      final totEff = r['efficiency'] ?? 0;
+
+      return _buildCardSection('Statistiken', [
+           Row(
+               children: [
+                   Expanded(child: _buildStatItem('ALK', '$abv', '%')),
+                   Expanded(child: _buildStatItem('Vergärungsgrad', '$att', '%')),
+               ],
+           ),
+           const SizedBox(height: 16),
+            Row(
+               children: [
+                   Expanded(child: _buildStatItem('Maische Effizienz', '$mashEff', '%')),
+                   Expanded(child: _buildStatItem('Gesamteffizienz', '$totEff', '%')),
+               ],
+           ),
+      ]);
+  }
+  
+  Widget _buildStatItem(String label, String value, String unit) {
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 4),
+              Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                       Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                       Text(unit, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+              )
+          ],
+      );
+  }
+
+  Widget _buildZusammenfassungSection() {
+     final r = widget.batch.data['recipe'] ?? {};
+     final d = r['data'] ?? {};
+     
+     return _buildCardSection('Zusammenfassung', [
+         const Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+                 Text('Messung', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                 Row( children: [
+                    Text('Rezept', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    SizedBox(width: 32),
+                    Text('Sud', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                 ])
+             ],
+         ),
+         const SizedBox(height: 8),
+         const Divider(color: Colors.white24),
+         _buildSummaryRow('Volumen vor Kochen (Heiß)', "${r['boilSize'] ?? '-'}", "${r['boilSize'] ?? '-'}"),
+         _buildSummaryRow('Verdampfung pro Stunde', "${r['equipment']?['boilOffPerHr'] ?? '-'}", "${r['equipment']?['boilOffPerHr'] ?? '-'}"),
+         _buildSummaryRow('Sudgröße', "${r['batchSize'] ?? '-'}", "${r['batchSize'] ?? '-'}"),
+         _buildSummaryRow('Stammwürze vor Kochen', "${r['preBoilGravity'] ?? '-'}", "${r['preBoilGravity'] ?? '-'}"), 
+       _buildSummaryRow('Stammwürze nach dem Kochen', "${r['og'] ?? '-'}", "${widget.batch.data['measuredOg'] ?? '-'}"),
+       _buildSummaryRow('Stammwürze', "${r['og'] ?? '-'}", "${widget.batch.data['measuredOg'] ?? '-'}"),
+       _buildSummaryRow('Restextrakt', "${r['fg'] ?? '-'}", "${widget.batch.data['measuredFg'] ?? '-'}"),
+       _buildSummaryRow('Gesamteffizienz', "${r['efficiency'] ?? '-'}%", "${r['efficiency'] ?? '-'}%"),
+       _buildSummaryRow('Farbe', "${r['color'] ?? '-'} EBC", "${r['color'] ?? '-'} EBC"),
+       _buildSummaryRow('Maische pH', "${d['mashPh'] ?? '-'}", "${widget.batch.data['measuredMashPh'] ?? '-'}"),
+     ]);
+  }
+  
+  Widget _buildSummaryRow(String label, String target, String actual) {
+      bool isDiff = target != actual && actual != '-' && actual != 'Infinity' && actual != 'null EBC';
+      return Container(
+          decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.white10))
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                  Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+                  SizedBox(
+                      width: 120, 
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                              Text(target, style: const TextStyle(fontSize: 12)),
+                              Text(actual, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDiff ? Colors.redAccent : Colors.greenAccent)),
+                          ],
+                      ),
+                  )
+              ],
+          ),
+      );
+  }
+
+  Widget _buildEreignisseSection() {
+     final events = (widget.batch.data['events'] as List?) ?? [];
+     final dateFormat = DateFormat('EEEE, d. MMMM yyyy HH:mm', 'de_DE'); 
+     
+     return _buildCardSection('Ereignisse', [
+         ...events.map((e) {
+             DateTime dt = DateTime.fromMillisecondsSinceEpoch(e['time']);
+             return Padding(
+                 padding: const EdgeInsets.symmetric(vertical: 8),
+                 child: Row(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                         Expanded(flex: 4, child: Text(dateFormat.format(dt), style: const TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic))), 
+                         Expanded(flex: 6, child: Text(e['title'] ?? e['eventType'] ?? '', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic))),
+                         const Icon(Icons.edit, size: 14, color: Colors.grey)
+                     ],
+                 ),
+             );
+         })
+     ]);
   }
 
   Widget _buildCardSection(String title, List<Widget> children) {
@@ -845,22 +1047,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
     );
   }
   
-  Widget _buildDetailRow(String label, String value, {bool highlight = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            fontSize: highlight ? 18 : 14,
-            color: highlight ? Colors.white : Colors.white70
-          )),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildCompletedTab() {
     final measured = widget.batch.data['measuredValues'] ?? {};
@@ -871,23 +1058,23 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader("Zusammenfassung"),
+          _buildSectionHeader('Zusammenfassung'),
           _buildStatGrid({
-            "Abfüllmenge": "${measured['bottlingVolume'] ?? '-'} L",
-            "FG Gemessen": "${measured['fg'] ?? '-'} SG",
-            "Alkohol (ABV)": "${measured['abv'] ?? '-'} %",
-            "Effizienz": "${measured['efficiency'] ?? '-'} %",
-            "Karbonisierung": "${recipe['carbonation'] ?? '-'} vol CO2",
+            'Abfüllmenge': "${measured['bottlingVolume'] ?? '-'} L",
+            'FG Gemessen': "${measured['fg'] ?? '-'} SG",
+            'Alkohol (ABV)': "${measured['abv'] ?? '-'} %",
+            'Effizienz': "${measured['efficiency'] ?? '-'} %",
+            'Karbonisierung': "${recipe['carbonation'] ?? '-'} vol CO2",
           }),
           const SizedBox(height: 20),
-          _buildSectionHeader("Notizen"),
+          _buildSectionHeader('Notizen'),
            ...((widget.batch.data['notes'] as List? ?? []).map((n) => Card(
              child: Padding(
                padding: const EdgeInsets.all(8.0),
                child: Text(n['note'] ?? ''),
              ),
            ))),
-           if((widget.batch.data['notes'] as List? ?? []).isEmpty) const Text("Keine Notizen"),
+           if((widget.batch.data['notes'] as List? ?? []).isEmpty) const Text('Keine Notizen'),
         ],
       ),
     );
@@ -940,7 +1127,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
     if (value is Map) {
       if (value.isEmpty) {
         return ListTile(
-            title: Text("$key: {}", style: const TextStyle(fontFamily: 'monospace')),
+            title: Text('$key: {}', style: const TextStyle(fontFamily: 'monospace')),
             dense: true,
             contentPadding: EdgeInsets.zero,
         );
@@ -959,7 +1146,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
     } else if (value is List) {
       if (value.isEmpty) {
         return ListTile(
-            title: Text("$key: []", style: const TextStyle(fontFamily: 'monospace')),
+            title: Text('$key: []', style: const TextStyle(fontFamily: 'monospace')),
             dense: true,
             contentPadding: EdgeInsets.zero,
         );
@@ -981,7 +1168,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SelectableText("$key: ", style: const TextStyle(color: Colors.grey)),
+            SelectableText('$key: ', style: const TextStyle(color: Colors.grey)),
             Expanded(
               child: SelectableText(
                 value.toString(),
@@ -1004,4 +1191,24 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
       ),
     );
   }
+}
+
+class DottedLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    var paint = Paint()
+      ..color = Colors.white24
+      ..strokeWidth = 1;
+    var max = size.width;
+    var dashWidth = 3;
+    var dashSpace = 3;
+    double startX = 0;
+    while (startX < max) {
+      canvas.drawLine(Offset(startX, size.height / 2), Offset(startX + dashWidth, size.height / 2), paint);
+      startX += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

@@ -39,10 +39,12 @@ import 'pages/recipe_result_page.dart';
 import 'pages/integrations_page.dart';
 import 'pages/brewfather_menu_page.dart';
 import 'services/brewfather_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'widgets/card_actions.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('de_DE', null);
   await dotenv.load(fileName: '.env');
   final supabaseUrl = dotenv.env['SUPABASE_URL'];
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
@@ -2733,7 +2735,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                Switch(
                  value: _syncEnabled, 
                  onChanged: _toggleSync,
-                 activeColor: Colors.blue,
+                 activeThumbColor: Colors.blue,
                ),
              ],
           ),
@@ -3535,9 +3537,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       }
 
       // --- 2. Construct Packaging Info String ---
-      String packagingInfo = "";
-      String bottleInfoText = "";
-      String kegInfoText = "";
+      String packagingInfo = '';
+      String bottleInfoText = '';
+      String kegInfoText = '';
 
       if (kegEnabled && kegVolume > 0) {
         kegInfoText = '${kegVolume.toStringAsFixed(1)} Liter KEGS';
@@ -3556,11 +3558,11 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         packagingInfo =
             'Abfüllung: $kegInfoText (Zapfgas: $servingGas)\n(Keg-Carb-Temp: ${kegCarbTemp ?? 5}°C, Keg-Lager-Temp: ${kegStorageTemp ?? 5}°C)';
       } else {
-        packagingInfo = "Keine spezifische Abfüllung angegeben.";
+        packagingInfo = 'Keine spezifische Abfüllung angegeben.';
       }
 
       // --- 3. Fetch Brew Kettle (Sudhaus) ---
-      String brewingEquipmentInfo = "Kein spezifisches Equipment angegeben.";
+      String brewingEquipmentInfo = 'Kein spezifisches Equipment angegeben.';
       try {
         final kettleService = BrewKettleService();
         final kettles =
@@ -3590,7 +3592,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       }
 
       // --- 4. Fetch Fining Agents (Schönungsmittel) ---
-      String finingAgentsInfo = "Keine verfügbaren Schönungsmittel im Profil.";
+      String finingAgentsInfo = 'Keine verfügbaren Schönungsmittel im Profil.';
       try {
         final finingService = FiningAgentsService();
         final settings = await finingService.fetchSettings(UserProfileService.defaultProfileId);

@@ -249,7 +249,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: selectedUnit,
+                        initialValue: selectedUnit,
                         decoration: const InputDecoration(labelText: 'Einheit'),
                         items: unitOptions.map((String val) {
                           return DropdownMenuItem<String>(
