@@ -29,6 +29,9 @@ import 'models/malt_depot_entry.dart';
 import 'models/fermenter_controller.dart';
 import 'pages/available_ingredients_page.dart';
 import 'pages/hops_manager_page.dart';
+import 'pages/miscs_manager_page.dart';
+import 'pages/recipes_list_page.dart';
+import 'pages/batches_list_page.dart';
 import 'models/packaging_profile.dart';
 import 'models/fining_agents.dart';
 import 'models/ai_recipe.dart';
@@ -618,6 +621,30 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openMiscsManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MiscsManagerPage(profileId: _profileId),
+      ),
+    );
+  }
+
+  void _openRecipesList() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RecipesListPage(profileId: _profileId),
+      ),
+    );
+  }
+
+  void _openBatchesList() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BatchesListPage(profileId: _profileId),
+      ),
+    );
+  }
+
   void _openAvailableIngredientsManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -816,7 +843,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             _managerButton(
               icon: Icons.warehouse_outlined,
-              label: 'Malzdepot',
+              label: 'Brauerei Shops',
               onPressed: _openMaltDepotManager,
             ),
           ],
@@ -863,6 +890,21 @@ class _UserProfilePageState extends State<UserProfilePage> {
               icon: Icons.grass_outlined,
               label: 'Hopfen',
               onPressed: _openHopsManager,
+            ),
+             _managerButton(
+              icon: Icons.category_outlined,
+              label: 'Sonstiges',
+              onPressed: _openMiscsManager,
+            ),
+             _managerButton(
+              icon: Icons.menu_book,
+              label: 'Rezepte',
+              onPressed: _openRecipesList,
+            ),
+             _managerButton(
+              icon: Icons.history_edu,
+              label: 'Sud',
+              onPressed: _openBatchesList,
             ),
           ],
         ),
@@ -6388,7 +6430,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                       ),
                       const SizedBox(height: 18),
                       _EquipmentSection<MaltDepotEntryModel>(
-                        title: 'Malzdepot',
+                        title: 'Brauerei Shops',
                         items: maltDepots,
                         selected: selectedMaltDepot,
                         onSelected: (entry) {
@@ -7155,7 +7197,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Malzdepot'),
+        title: const Text('Brauerei Shops'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -7182,7 +7224,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     if (error != null) {
       return Center(
         child: Text(
-          'Konnte Malzdepot nicht laden:\n$error',
+          'Konnte Brauerei Shops nicht laden:\n$error',
           textAlign: TextAlign.center,
         ),
       );

@@ -267,6 +267,87 @@ CREATE POLICY "Allow full access" ON aibrewgenius.hops FOR ALL TO anon USING (tr
 
 GRANT ALL ON TABLE aibrewgenius.hops TO anon, authenticated, service_role;
 
+CREATE TABLE aibrewgenius.miscs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  brewfather_id TEXT,
+  name TEXT NOT NULL,
+  amount DOUBLE PRECISION,
+  unit TEXT,
+  type TEXT,
+  "use" TEXT,
+  time DOUBLE PRECISION,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TRIGGER miscs_set_updated_at
+BEFORE UPDATE ON aibrewgenius.miscs
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
+CREATE UNIQUE INDEX miscs_user_brewfather_unique
+  ON aibrewgenius.miscs(user_profile_id, brewfather_id);
+
+ALTER TABLE aibrewgenius.miscs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access" ON aibrewgenius.miscs FOR ALL TO anon USING (true) WITH CHECK (true);
+
+GRANT ALL ON TABLE aibrewgenius.miscs TO anon, authenticated, service_role;
+
+CREATE TABLE aibrewgenius.recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  brewfather_id TEXT,
+  name TEXT NOT NULL,
+  style TEXT,
+  abv DOUBLE PRECISION,
+  ibu DOUBLE PRECISION,
+  color DOUBLE PRECISION,
+  data JSONB,
+  image BYTEA,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TRIGGER recipes_set_updated_at
+BEFORE UPDATE ON aibrewgenius.recipes
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
+CREATE UNIQUE INDEX recipes_user_brewfather_unique
+  ON aibrewgenius.recipes(user_profile_id, brewfather_id);
+
+ALTER TABLE aibrewgenius.recipes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access" ON aibrewgenius.recipes FOR ALL TO anon USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE aibrewgenius.recipes TO anon, authenticated, service_role;
+
+CREATE TABLE aibrewgenius.batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
+  brewfather_id TEXT,
+  name TEXT NOT NULL,
+  batch_no INTEGER,
+  status TEXT,
+  brew_date BIGINT,
+  recipe_name TEXT,
+  data JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE TRIGGER batches_set_updated_at
+BEFORE UPDATE ON aibrewgenius.batches
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
+CREATE UNIQUE INDEX batches_user_brewfather_unique
+  ON aibrewgenius.batches(user_profile_id, brewfather_id);
+
+ALTER TABLE aibrewgenius.batches ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access" ON aibrewgenius.batches FOR ALL TO anon USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE aibrewgenius.batches TO anon, authenticated, service_role;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON aibrewgenius.fermentables TO service_role;

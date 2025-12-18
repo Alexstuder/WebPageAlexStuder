@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../models/bf_recipe.dart';
+import '../models/bf_batch.dart';
+import '../models/misc.dart';
 import '../models/hop.dart';
 import '../models/fermentable.dart';
 import '../models/user_profile.dart';
@@ -18,6 +20,19 @@ abstract class UserProfileRepository {
   Future<List<Hop>> getHops(String userProfileId);
   Future<void> saveHops(List<Hop> hops);
   Future<void> saveHop(Hop hop);
+
+  // Miscs
+  Future<List<Misc>> getMiscs(String userProfileId);
+  Future<void> saveMiscs(List<Misc> miscs);
+  Future<void> saveMisc(Misc misc);
+
+  // Recipes
+  Future<List<BfRecipe>> getRecipes(String userProfileId);
+  Future<void> saveRecipes(List<BfRecipe> recipes);
+
+  // Batches
+  Future<List<BfBatch>> getBatches(String userProfileId);
+  Future<void> saveBatches(List<BfBatch> batches);
 }
 
 class UserProfileService implements UserProfileRepository {
@@ -130,6 +145,79 @@ class UserProfileService implements UserProfileRepository {
     await _tableHops().delete().eq('id', id);
   }
 
+  @override
+  Future<List<Misc>> getMiscs(String userProfileId) async {
+    final data = await _tableMiscs().select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => Misc.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> saveMiscs(List<Misc> miscs) async {
+    if (miscs.isEmpty) return;
+    final data = miscs.map((e) {
+      final json = e.toJson();
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+    await _tableMiscs().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
+
+  @override
+  Future<void> saveMisc(Misc item) async {
+    final json = item.toJson();
+    if (json['id'] == null) json.remove('id');
+    if (item.id != null) {
+      await _tableMiscs().upsert(json);
+    } else {
+      await _tableMiscs().insert(json);
+    }
+  }
+
+  Future<void> deleteMisc(String id) async {
+    await _tableMiscs().delete().eq('id', id);
+  }
+
+  @override
+  Future<List<BfRecipe>> getRecipes(String userProfileId) async {
+    final data = await _tableRecipes().select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => BfRecipe.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> saveRecipes(List<BfRecipe> recipes) async {
+    if (recipes.isEmpty) return;
+    final data = recipes.map((e) {
+      final json = e.toDbJson();
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+    await _tableRecipes().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
+
+  // Helper to save a single recipe (with image for example)
+  Future<void> saveRecipe(BfRecipe recipe) async {
+     final json = recipe.toDbJson();
+      if (json['id'] == null) json.remove('id');
+      await _tableRecipes().upsert(json, onConflict: 'user_profile_id, brewfather_id');
+  }
+
+  @override
+  Future<List<BfBatch>> getBatches(String userProfileId) async {
+    final data = await _tableBatches().select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => BfBatch.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> saveBatches(List<BfBatch> batches) async {
+    if (batches.isEmpty) return;
+    final data = batches.map((e) {
+      final json = e.toJson();
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+    await _tableBatches().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
+
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
@@ -138,4 +226,13 @@ class UserProfileService implements UserProfileRepository {
 
   SupabaseQueryBuilder _tableHops() =>
     _client.schema(_schemaName).from('hops');
+
+  SupabaseQueryBuilder _tableMiscs() =>
+    _client.schema(_schemaName).from('miscs');
+
+  SupabaseQueryBuilder _tableRecipes() =>
+    _client.schema(_schemaName).from('recipes');
+
+  SupabaseQueryBuilder _tableBatches() =>
+    _client.schema(_schemaName).from('batches');
 }

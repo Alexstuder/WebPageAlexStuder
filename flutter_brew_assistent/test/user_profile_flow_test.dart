@@ -6,6 +6,9 @@ import 'package:brew_genius/services/user_profile_service.dart';
 import 'package:brew_genius/services/water_profile_service.dart';
 import 'package:brew_genius/models/fermentable.dart';
 import 'package:brew_genius/models/hop.dart';
+import 'package:brew_genius/models/misc.dart';
+import 'package:brew_genius/models/bf_recipe.dart';
+import 'package:brew_genius/models/bf_batch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -158,6 +161,41 @@ class FakeUserProfileRepository implements UserProfileRepository {
 
   @override
   Future<void> saveHop(Hop hop) async {
+    // no-op
+  }
+  
+  @override
+  Future<List<Misc>> getMiscs(String userProfileId) async {
+    return [];
+  }
+
+  @override
+  Future<void> saveMiscs(List<Misc> miscs) async {
+    // no-op
+  }
+
+  @override
+  Future<void> saveMisc(Misc misc) async {
+    // no-op
+  }
+  
+  @override
+  Future<List<BfRecipe>> getRecipes(String userProfileId) async {
+    return [];
+  }
+
+  @override
+  Future<void> saveRecipes(List<BfRecipe> recipes) async {
+    // no-op
+  }
+
+  @override
+  Future<List<BfBatch>> getBatches(String userProfileId) async {
+    return [];
+  }
+
+  @override
+  Future<void> saveBatches(List<BfBatch> batches) async {
     // no-op
   }
 }

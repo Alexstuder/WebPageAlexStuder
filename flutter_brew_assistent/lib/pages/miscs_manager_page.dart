@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import '../services/brewfather_service.dart';
 import '../services/user_profile_service.dart';
-import '../models/hop.dart';
+import '../models/misc.dart';
 
-class HopsManagerPage extends StatefulWidget {
-  const HopsManagerPage({super.key, required this.profileId});
+class MiscsManagerPage extends StatefulWidget {
+  const MiscsManagerPage({super.key, required this.profileId});
 
   final String profileId;
 
   @override
-  State<HopsManagerPage> createState() => _HopsManagerPageState();
+  State<MiscsManagerPage> createState() => _MiscsManagerPageState();
 }
 
-class _HopsManagerPageState extends State<HopsManagerPage> {
+class _MiscsManagerPageState extends State<MiscsManagerPage> {
   final UserProfileService _userService = UserProfileService();
   bool _isLoading = true;
   String? _error;
-  List<Hop> _hops = [];
+  List<Misc> _miscs = [];
 
   @override
   void initState() {
@@ -35,23 +35,22 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       if (profile == null) throw Exception('Profil nicht gefunden');
 
       // 1. Load from DB first
-      var localItems = await _userService.getHops(widget.profileId);
+      var localItems = await _userService.getMiscs(widget.profileId);
       if (mounted && localItems.isNotEmpty) {
         setState(() {
-          _hops = localItems;
+          _miscs = localItems;
           _isLoading = false;
         });
       }
 
       if ((profile.brewfatherUserId ?? '').isEmpty ||
           (profile.brewfatherApiKey ?? '').isEmpty) {
-        if (localItems.isEmpty) {
-          throw Exception(
-            'Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key in den Einstellungen.');
-        } else {
+         if (localItems.isEmpty) {
+           throw Exception('Bitte hinterlegen Sie erst Ihre Brewfather User ID und API Key.');
+         } else {
              if (mounted) setState(() => _isLoading = false);
              return;
-        }
+         }
       }
 
       final bfService = BrewfatherService(
@@ -60,27 +59,27 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       );
 
       // 2. Fetch from Brewfather
-      final bfData = await bfService.getHops();
-      
+      final bfData = await bfService.getMiscs();
+
       // 3. Filter and Convert
-      final List<Hop> newItems = [];
+      final List<Misc> newItems = [];
       for (var item in bfData) {
         final inventory = item['inventory'];
         if (inventory == null || (inventory is num && inventory == 0)) continue; 
         
-        newItems.add(Hop.fromBrewfather(item, widget.profileId));
+        newItems.add(Misc.fromBrewfather(item, widget.profileId));
       }
 
       // 4. Upsert to DB
-      await _userService.saveHops(newItems);
+      await _userService.saveMiscs(newItems);
 
       // 5. Reload completely from DB
-      localItems = await _userService.getHops(widget.profileId);
+      localItems = await _userService.getMiscs(widget.profileId);
 
       if (!mounted) return;
 
       setState(() {
-        _hops = localItems;
+        _miscs = localItems;
         _isLoading = false;
       });
     } catch (e) {
@@ -96,7 +95,7 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hopfen (Brewfather)'),
+        title: const Text('Sonstiges (Brewfather)'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -135,11 +134,11 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       );
     }
 
-    final validItems = _hops.where((i) => i.name.isNotEmpty).toList();
+    final validItems = _miscs.where((i) => i.name.isNotEmpty).toList();
 
     if (validItems.isEmpty) {
       return const Center(
-        child: Text('Kein Hopfen in Brewfather gefunden.'),
+        child: Text('Keine Einträge in Brewfather gefunden.'),
       );
     }
 
@@ -148,21 +147,24 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final item = validItems[index];
-        final name = item.name;
-        final alpha = item.alpha ?? 0.0;
-        final year = item.year ?? '';
-        final origin = item.origin ?? '';
         final amount = item.amount;
-        final unit = item.unit ?? 'g';
+        final unit = item.unit ?? '';
         final type = item.type ?? '';
+        final use = item.use ?? '';
+        
+        // Example subtitle: "Spice • Boil • 10 min"
+        final List<String> details = [];
+        if (type.isNotEmpty) details.add(type);
+        if (use.isNotEmpty) details.add(use);
+        if (item.time != null && item.time! > 0) details.add('${item.time} min');
 
         return ListTile(
           leading: (item.brewfatherId != null && item.brewfatherId!.isNotEmpty)
               ? Image.asset('assets/Brewfather_logo.png', width: 24, height: 24)
               : Image.asset('assets/icon_small.png', width: 24, height: 24),
-          title: Text(name),
+          title: Text(item.name),
           subtitle: Text(
-            '$type $year $origin • ${alpha.toStringAsFixed(1)}% Alpha',
+            details.join(' • '),
             style: const TextStyle(color: Colors.white70),
           ),
           trailing: Row(
@@ -183,7 +185,7 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
     );
   }
 
-  void _onEditItem(Hop item) {
+  void _onEditItem(Misc item) {
     if (item.brewfatherId != null && item.brewfatherId!.isNotEmpty) {
       _editBFInventory(item);
     } else {
@@ -191,107 +193,139 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
     }
   }
 
-  Future<void> _openManualForm({Hop? editing}) async {
+  Future<void> _openManualForm({Misc? editing}) async {
     final nameCtrl = TextEditingController(text: editing?.name ?? '');
-    final originCtrl = TextEditingController(text: editing?.origin ?? '');
-    final yearCtrl = TextEditingController(text: editing?.year ?? '');
     final amountCtrl = TextEditingController(text: editing?.amount.toString() ?? '0.0');
-    final alphaCtrl = TextEditingController(text: editing?.alpha?.toString() ?? '');
-    
-    String selectedUnit = editing?.unit ?? 'g';
-    const List<String> unitOptions = ['g', 'kg', 'oz', 'lbs'];
-    
-    // Type options for Hops
-    final typeCtrl = TextEditingController(text: editing?.type ?? 'Pellets');
-    // We could make type a dropdown too if needed, but text is fine for now or stick to standard BF types (Pellet, Leaf, Cryo)
-    
+    final timeCtrl = TextEditingController(text: editing?.time?.toString() ?? '');
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+
+    String selectedUnit = editing?.unit ?? 'g';
+    const List<String> unitOptions = ['g', 'kg', 'ml', 'L', 'each', 'tsp', 'tbsp'];
+
+    String selectedType = editing?.type ?? 'Spice';
+    final List<String> typeOptions = ['Spice', 'Fining', 'Water Agent', 'Herb', 'Flavor', 'Other'];
+    
+    String selectedUse = editing?.use ?? 'Boil';
+    final List<String> useOptions = ['Boil', 'Mash', 'Bottling', 'Primary', 'Secondary', 'Sparge'];
 
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(editing == null ? 'Hopfen hinzufügen' : 'Hopfen bearbeiten'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                Row(
+        // We use StatefulBuilder to update dropdowns inside Dialog if needed, 
+        // essentially the Dialog builder rebuilds so simple vars work if we set them in the closure scope of _openManualForm... 
+        // but to update UI we need the builder context's state. 
+        // Actually, variables defined in _openManualForm are static for the builder unless we wrap content in StatefulBuilder.
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(editing == null ? 'Eintrag hinzufügen' : 'Eintrag bearbeiten'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                     Expanded(child: TextField(controller: originCtrl, decoration: const InputDecoration(labelText: 'Herkunft'))),
-                     const SizedBox(width: 8),
-                     Expanded(child: TextField(controller: yearCtrl, decoration: const InputDecoration(labelText: 'Jahr'))),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: amountCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: 'Menge'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                         Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: selectedUnit,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Einheit'),
+                            items: unitOptions.map((String val) {
+                              return DropdownMenuItem<String>(
+                                value: val,
+                                child: Text(val),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => selectedUnit = val);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: selectedType,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Typ'),
+                            items: typeOptions.map((String val) {
+                              return DropdownMenuItem<String>(
+                                value: val,
+                                child: Text(val),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => selectedType = val);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: selectedUse,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Verwendung'),
+                            items: useOptions.map((String val) {
+                              return DropdownMenuItem<String>(
+                                value: val,
+                                child: Text(val),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => selectedUse = val);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextField(
+                      controller: timeCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: 'Zeit (Minuten)'),
+                    ),
+                    TextField(
+                      controller: notesCtrl,
+                      decoration: const InputDecoration(labelText: 'Notizen'),
+                      maxLines: 2,
+                    ),
                   ],
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: amountCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Menge'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: selectedUnit,
-                        decoration: const InputDecoration(labelText: 'Einheit'),
-                        items: unitOptions.map((String val) {
-                          return DropdownMenuItem<String>(
-                            value: val,
-                            child: Text(val),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                             selectedUnit = val;
-                          }
-                        },
-                      ),
-                    ),
-                  ],
+              ),
+              actions: [
+                if (editing != null)
+                  TextButton(
+                    onPressed: () {
+                       Navigator.of(context).pop(false);
+                       _deleteItem(editing);
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                    child: const Text('Löschen'),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Abbrechen'),
                 ),
-                TextField(
-                  controller: alphaCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Alpha Säure (%)'),
-                ),
-                TextField(
-                  controller: typeCtrl,
-                  decoration: const InputDecoration(labelText: 'Typ (Pellets, Leaf, Cryo)'),
-                ),
-                TextField(
-                  controller: notesCtrl,
-                  decoration: const InputDecoration(labelText: 'Notizen'),
-                  maxLines: 2,
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Speichern'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            if (editing != null)
-              TextButton(
-                onPressed: () {
-                   Navigator.of(context).pop(false);
-                   _deleteItem(editing);
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-                child: const Text('Löschen'),
-              ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Speichern'),
-            ),
-          ],
+            );
+          }
         );
       },
     );
@@ -300,28 +334,27 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       setState(() => _isLoading = true);
       try {
         final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
-        final alpha = double.tryParse(alphaCtrl.text.replaceAll(',', '.'));
+        final time = double.tryParse(timeCtrl.text.replaceAll(',', '.'));
 
-        final newItem = Hop(
+        final newItem = Misc(
           id: editing?.id,
           userProfileId: widget.profileId,
           brewfatherId: null,
           name: nameCtrl.text.trim(),
-          origin: originCtrl.text.trim(),
-          year: yearCtrl.text.trim(),
           amount: amount,
           unit: selectedUnit,
-          type: typeCtrl.text.trim(),
-          alpha: alpha,
+          type: selectedType,
+          use: selectedUse,
+          time: time,
           notes: notesCtrl.text.trim(),
         );
 
-        await _userService.saveHop(newItem);
+        await _userService.saveMisc(newItem);
         await _load();
 
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Hopfen gespeichert.')),
+             const SnackBar(content: Text('Eintrag gespeichert.')),
            );
         }
       } catch (e) {
@@ -334,11 +367,11 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
     }
   }
 
-  Future<void> _deleteItem(Hop item) async {
+  Future<void> _deleteItem(Misc item) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hopfen löschen?'),
+        title: const Text('Eintrag löschen?'),
         content: Text('Möchten Sie "${item.name}" wirklich löschen?'),
         actions: [
           TextButton(
@@ -358,11 +391,11 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
       if (item.id == null) return;
       setState(() => _isLoading = true);
       try {
-        await _userService.deleteHop(item.id!);
+        await _userService.deleteMisc(item.id!);
         await _load();
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Hopfen gelöscht.')),
+             const SnackBar(content: Text('Eintrag gelöscht.')),
            );
         }
       } catch (e) {
@@ -375,7 +408,7 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
     }
   }
 
-  Future<void> _editBFInventory(Hop item) async {
+  Future<void> _editBFInventory(Misc item) async {
     final TextEditingController amountCtrl = TextEditingController(
       text: item.amount.toString(),
     );
@@ -392,7 +425,7 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Menge (${item.unit ?? "g"})',
+                  labelText: 'Menge (${item.unit})',
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -431,7 +464,7 @@ class _HopsManagerPageState extends State<HopsManagerPage> {
 
         if (item.brewfatherId == null) throw Exception('Keine Brewfather ID vorhanden.');
 
-        await bfService.updateHopInventory(item.brewfatherId!, newAmount);
+        await bfService.updateMiscInventory(item.brewfatherId!, newAmount);
         await _load();
 
         if (mounted) {

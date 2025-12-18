@@ -35,11 +35,27 @@ class BrewfatherService {
 
   // Batches abrufen
   Future<List<dynamic>> getBatches() async {
-    final uri = Uri.parse('$_baseUrl/batches?complete=true&limit=50');
+    final uri = Uri.parse('$_baseUrl/batches?complete=true&limit=20');
     final response = await http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
+      var batches = jsonDecode(response.body) as List<dynamic>;
+
+      // Fetch full details for each batch to ensure we have the complete JSON (readings, detailed steps, etc.)
+      // The list endpoint provides a summary, but the user requested the FULL JSON.
+      batches = await Future.wait(batches.map((batch) async {
+        final id = batch['_id'] ?? batch['id'];
+        if (id != null) {
+          final detailUri = Uri.parse('$_baseUrl/batches/$id');
+          final detailRes = await http.get(detailUri, headers: _headers);
+          if (detailRes.statusCode == 200) {
+            return jsonDecode(detailRes.body);
+          }
+        }
+        return batch;
+      }));
+
+      return batches;
     } else {
       throw Exception('Fehler beim Laden der Batches: ${response.statusCode} ${response.body}');
     }
@@ -162,6 +178,31 @@ class BrewfatherService {
     
     if (response.statusCode != 200) {
        throw Exception('Fehler beim Update des Hopfen Inventars: ${response.statusCode} ${response.body}');
+    }
+  }
+  // Get Miscs specifically
+  Future<List<dynamic>> getMiscs() async {
+    final uri = Uri.parse('$_baseUrl/inventory/miscs');
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode == 200) {
+       return jsonDecode(response.body) as List<dynamic>;
+    } else {
+       throw Exception('Fehler beim Laden von Sonstiges (Miscs): ${response.statusCode} ${response.body}');
+    }
+  }
+
+  // Update Misc inventory
+  Future<void> updateMiscInventory(String id, double inventoryAmount) async {
+    final uri = Uri.parse('$_baseUrl/inventory/miscs/$id');
+    final response = await http.patch(
+      uri, 
+      headers: _headers, 
+      body: jsonEncode({'inventory': inventoryAmount})
+    );
+    
+    if (response.statusCode != 200) {
+       throw Exception('Fehler beim Update des Misc Inventars: ${response.statusCode} ${response.body}');
     }
   }
 }
