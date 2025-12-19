@@ -327,24 +327,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _userNameCtrl = TextEditingController();
   final FocusNode _userNameFocusNode = FocusNode();
 
-  final TextEditingController _kettleBrandCtrl = TextEditingController();
-  final TextEditingController _kettleTypeCtrl = TextEditingController();
+
   final TextEditingController _defaultBatchCtrl = TextEditingController();
-  final TextEditingController _fermenterBrandCtrl = TextEditingController();
-  final TextEditingController _fermenterTypeCtrl = TextEditingController();
-  final TextEditingController _raptUserCtrl = TextEditingController();
-  final TextEditingController _raptApiKeyCtrl = TextEditingController();
 
   String? _newAvatarBase64;
   late final UserProfileRepository _profileRepository;
 
-  static const List<String> _controllerOptions = [
-    'Kein Controller',
-    'R.A.P.T Temperature Controller',
-    'Inkbird ITC-308',
-  ];
 
-  late String _selectedController;
+
+
   bool _isSaving = false;
   bool _isLoadingProfile = true;
   String? _loadError;
@@ -352,14 +343,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
   String? _userNameError;
   UserProfile? _loadedProfile;
 
-  bool get _isRaptSelected =>
-      _selectedController == 'R.A.P.T Temperature Controller';
+
 
   @override
   void initState() {
     super.initState();
     _profileRepository = widget.profileRepository ?? UserProfileService();
-    _selectedController = _controllerOptions.first;
     _loadProfile();
   }
 
@@ -368,13 +357,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     _userNameCtrl.dispose();
     _userNameFocusNode.dispose();
 
-    _kettleBrandCtrl.dispose();
-    _kettleTypeCtrl.dispose();
     _defaultBatchCtrl.dispose();
-    _fermenterBrandCtrl.dispose();
-    _fermenterTypeCtrl.dispose();
-    _raptUserCtrl.dispose();
-    _raptApiKeyCtrl.dispose();
     super.dispose();
   }
 
@@ -385,21 +368,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (profile != null) {
         _userNameCtrl.text = profile.name;
 
-        _kettleBrandCtrl.text = profile.kettleBrand;
-        _kettleTypeCtrl.text = profile.kettleType;
         _defaultBatchCtrl.text = profile.defaultBatchLiters?.toString() ?? '';
-        _fermenterBrandCtrl.text = profile.fermenterBrand;
-        _fermenterTypeCtrl.text = profile.fermenterType;
-        _selectedController = _controllerOptions.contains(profile.controller)
-            ? profile.controller
-            : _controllerOptions.first;
-        if (_isRaptSelected) {
-          _raptUserCtrl.text = profile.controllerUser ?? '';
-          _raptApiKeyCtrl.text = profile.controllerApiKey ?? '';
-        } else {
-          _raptUserCtrl.clear();
-          _raptApiKeyCtrl.clear();
-        }
       }
       setState(() {
         _isLoadingProfile = false;
@@ -423,22 +392,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
       name: _userNameCtrl.text.trim(),
 
       avatarBlob: _newAvatarBase64 ?? _loadedProfile?.avatarBlob,
-      kettleBrand: _kettleBrandCtrl.text.trim(),
-      kettleType: _kettleTypeCtrl.text.trim(),
       defaultBatchLiters: defaultBatch,
-      fermenterBrand: _fermenterBrandCtrl.text.trim(),
-      fermenterType: _fermenterTypeCtrl.text.trim(),
-      controller: _selectedController,
-      controllerUser: _isRaptSelected ? _raptUserCtrl.text.trim() : null,
-      controllerApiKey: _isRaptSelected ? _raptApiKeyCtrl.text.trim() : null,
       raptUserId: _loadedProfile?.raptUserId,
       raptApiKey: _loadedProfile?.raptApiKey,
       brewfatherUserId: _loadedProfile?.brewfatherUserId,
 
       brewfatherApiKey: _loadedProfile?.brewfatherApiKey,
       brewfatherSyncEnabled: _loadedProfile?.brewfatherSyncEnabled ?? false,
-      yeastEntries: _loadedProfile?.yeastEntries ?? const [],
-      maltDepot: _loadedProfile?.maltDepot ?? const [],
     );
 
     setState(() {
@@ -2703,21 +2663,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       id: _userProfile!.id,
       name: _userProfile!.name,
       avatarBlob: _userProfile!.avatarBlob,
-      kettleBrand: _userProfile!.kettleBrand,
-      kettleType: _userProfile!.kettleType,
       defaultBatchLiters: _userProfile!.defaultBatchLiters,
-      fermenterBrand: _userProfile!.fermenterBrand,
-      fermenterType: _userProfile!.fermenterType,
-      controller: _userProfile!.controller,
-      controllerUser: _userProfile!.controllerUser,
-      controllerApiKey: _userProfile!.controllerApiKey,
       raptUserId: _userProfile!.raptUserId,
       raptApiKey: _userProfile!.raptApiKey,
       brewfatherUserId: _userProfile!.brewfatherUserId,
       brewfatherApiKey: _userProfile!.brewfatherApiKey,
       brewfatherSyncEnabled: value,
-      yeastEntries: _userProfile!.yeastEntries,
-      maltDepot: _userProfile!.maltDepot,
     );
 
     await _userService.saveProfile(updated);

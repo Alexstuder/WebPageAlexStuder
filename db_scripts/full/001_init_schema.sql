@@ -6,21 +6,12 @@ CREATE TABLE aibrewgenius.user_profiles (
   id TEXT PRIMARY KEY,
   name TEXT,
   avatar_blob TEXT,
-  kettle_brand TEXT,
-  kettle_type TEXT,
   default_batch_liters DOUBLE PRECISION,
-  fermenter_brand TEXT,
-  fermenter_type TEXT,
-  controller TEXT,
-  controller_user TEXT,
-  controller_api_key TEXT,
   rapt_user_id TEXT,
   rapt_api_key TEXT,
   brewfather_user_id TEXT,
   brewfather_api_key TEXT,
-  brewfather_sync_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  yeast_entries JSONB NOT NULL DEFAULT '[]'::jsonb,
-  malt_depot JSONB NOT NULL DEFAULT '[]'::jsonb
+  brewfather_sync_enabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE TABLE aibrewgenius.water_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

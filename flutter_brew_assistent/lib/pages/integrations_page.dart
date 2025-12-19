@@ -68,20 +68,12 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       id: _profile!.id,
       name: _profile!.name,
       avatarBlob: _profile!.avatarBlob,
-      kettleBrand: _profile!.kettleBrand,
-      kettleType: _profile!.kettleType,
       defaultBatchLiters: _profile!.defaultBatchLiters,
-      fermenterBrand: _profile!.fermenterBrand,
-      fermenterType: _profile!.fermenterType,
-      controller: _profile!.controller,
-      controllerUser: _profile!.controllerUser,
-      controllerApiKey: _profile!.controllerApiKey,
       raptUserId: _raptUserIdCtrl.text.trim().isEmpty ? null : _raptUserIdCtrl.text.trim(),
       raptApiKey: _raptApiKeyCtrl.text.trim().isEmpty ? null : _raptApiKeyCtrl.text.trim(),
       brewfatherUserId: _brewfatherUserIdCtrl.text.trim().isEmpty ? null : _brewfatherUserIdCtrl.text.trim(),
       brewfatherApiKey: _brewfatherApiKeyCtrl.text.trim().isEmpty ? null : _brewfatherApiKeyCtrl.text.trim(),
-      yeastEntries: _profile!.yeastEntries,
-      maltDepot: _profile!.maltDepot,
+      brewfatherSyncEnabled: _profile!.brewfatherSyncEnabled,
     );
 
     try {

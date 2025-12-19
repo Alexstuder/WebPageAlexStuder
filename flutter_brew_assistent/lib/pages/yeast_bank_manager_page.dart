@@ -183,21 +183,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       id: _userProfile!.id,
       name: _userProfile!.name,
       avatarBlob: _userProfile!.avatarBlob,
-      kettleBrand: _userProfile!.kettleBrand,
-      kettleType: _userProfile!.kettleType,
       defaultBatchLiters: _userProfile!.defaultBatchLiters,
-      fermenterBrand: _userProfile!.fermenterBrand,
-      fermenterType: _userProfile!.fermenterType,
-      controller: _userProfile!.controller,
-      controllerUser: _userProfile!.controllerUser,
-      controllerApiKey: _userProfile!.controllerApiKey,
       raptUserId: _userProfile!.raptUserId,
       raptApiKey: _userProfile!.raptApiKey,
       brewfatherUserId: _userProfile!.brewfatherUserId,
       brewfatherApiKey: _userProfile!.brewfatherApiKey,
       brewfatherSyncEnabled: value,
-      yeastEntries: _userProfile!.yeastEntries,
-      maltDepot: _userProfile!.maltDepot,
     );
 
     await _userService.saveProfile(updated);

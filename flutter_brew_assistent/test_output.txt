@@ -1,0 +1,62 @@
+00:00 +0: loading /Users/alex/Git/WebPage/WebPageAlexStuder/flutter_brew_assistent/test/smoke_test.dart                                                                                                00:01 +0: loading /Users/alex/Git/WebPage/WebPageAlexStuder/flutter_brew_assistent/test/smoke_test.dart                                                                                                00:01 +0: (setUpAll)                                                                                                                                                                                   00:01 +0: (setUpAll)                                                                                                                                                                                   
+supabase.supabase_flutter: INFO: ***** Supabase init completed ***** 
+00:01 +0: Smoke Test: App starts and shows main menu                                                                                                                                                   00:01 +0 -1: (setUpAll) [E]                                                                                                                                                                            
+  MissingPluginException(No implementation found for method getAll on channel plugins.flutter.io/shared_preferences)
+  dart:async                                                           _Completer.completeError
+  package:shared_preferences/src/shared_preferences_legacy.dart 90:19  SharedPreferences.getInstance
+  ===== asynchronous gap ===========================
+  dart:async                                                           _CustomZone.registerBinaryCallback
+  package:shared_preferences/src/shared_preferences_legacy.dart 85:13  SharedPreferences.getInstance
+  package:supabase_flutter/src/local_storage.dart 129:38               SharedPreferencesGotrueAsyncStorage._initialize
+  package:supabase_flutter/src/local_storage.dart 120:5                new SharedPreferencesGotrueAsyncStorage
+  package:supabase_flutter/src/supabase.dart 110:27                    Supabase.initialize
+  test/smoke_test.dart 104:22                                          main.<fn>
+  
+Warning: At least one test in this suite creates an HttpClient. When running a test suite that uses
+TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no network request
+will actually be made. Any test expecting a real network connection and status code will fail.
+To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
+test, so that your test can consistently provide a testable response to the code under test.
+  This test failed after it had already completed.
+  Make sure to use a matching library which informs the test runner
+  of pending async work.
+  dart:async                                                           _Completer.completeError
+  package:shared_preferences/src/shared_preferences_legacy.dart 90:19  SharedPreferences.getInstance
+  ===== asynchronous gap ===========================
+  dart:async                                                           _CustomZone.registerBinaryCallback
+  package:shared_preferences/src/shared_preferences_legacy.dart 85:13  SharedPreferences.getInstance
+  package:supabase_flutter/src/local_storage.dart 129:38               SharedPreferencesGotrueAsyncStorage._initialize
+  package:supabase_flutter/src/local_storage.dart 120:5                new SharedPreferencesGotrueAsyncStorage
+  package:supabase_flutter/src/supabase.dart 110:27                    Supabase.initialize
+  test/smoke_test.dart 104:22                                          main.<fn>
+  
+00:02 +1 -1: Smoke Test: App starts and shows main menu                                                                                                                                                00:02 +1 -1: Smoke Test: UserProfilePage buttons navigate correctly                                                                                                                                    00:02 +1 -1: Smoke Test: UserProfilePage buttons navigate correctly                                                                                                                                    
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: Too many elements
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:696:24)
+#1      WidgetController.widget (package:flutter_test/src/controller.dart:808:30)
+#2      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2345:15)
+#5      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#6      WidgetController.scrollUntilVisible (package:flutter_test/src/controller.dart:2343:27)
+#7      main.<anonymous closure> (file:///Users/alex/Git/WebPage/WebPageAlexStuder/flutter_brew_assistent/test/smoke_test.dart:163:20)
+<asynchronous suspension>
+#8      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#9      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 3 frames from dart:async and package:stack_trace)
+
+The test description was:
+  Smoke Test: UserProfilePage buttons navigate correctly
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +1 -2: Smoke Test: UserProfilePage buttons navigate correctly [E]                                                                                                                                
+  Test failed. See exception logs above.
+  The test description was: Smoke Test: UserProfilePage buttons navigate correctly
+  
+
+To run this test again: /Users/alex/developement/flutter/bin/cache/dart-sdk/bin/dart test /Users/alex/Git/WebPage/WebPageAlexStuder/flutter_brew_assistent/test/smoke_test.dart -p vm --plain-name 'Smoke Test: UserProfilePage buttons navigate correctly'
+00:02 +1 -2: (tearDownAll)                                                                                                                                                                             00:02 +1 -2: Some tests failed.                                                                                                                                                                        
