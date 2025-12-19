@@ -411,18 +411,44 @@ function tryServeFallback() {
 }
 
 async function handleControllerCacheResponse(res) {
-  if (!controllersCache) {
+  let dataToSend = controllersCache;
+
+  if (!dataToSend) {
     try {
       await ensureTelemetryCache({ force: false });
+      dataToSend = controllersCache;
     } catch (error) {
       console.warn('Unable to refresh controller cache:', error.message || error);
     }
   }
-  if (!controllersCache) {
+
+  // Fallback Logic for Controllers
+  if (!dataToSend && isFallbackModeOrNoActiveSession()) {
+    try {
+      if (fs.existsSync(LAST_CONTROLLER_CACHE_FILE)) {
+        const raw = fs.readFileSync(LAST_CONTROLLER_CACHE_FILE, 'utf8');
+        const diskData = JSON.parse(raw);
+        // Ensure correct structure
+        const potentialControllers = diskData.controllers || diskData;
+        if (Array.isArray(potentialControllers)) {
+          console.log(`[Proxy] Serving fallback controllers (${potentialControllers.length}).`);
+          dataToSend = { controllers: potentialControllers, isFallback: true };
+        }
+      }
+    } catch (err) {
+      console.warn('[Proxy] Controller fallback failed:', err.message);
+    }
+  }
+
+  if (!dataToSend) {
     respondJson(res, 404, { error: 'Controller cache unavailable.' });
     return;
   }
-  respondJson(res, 200, controllersCache);
+  respondJson(res, 200, dataToSend);
+}
+
+function isFallbackModeOrNoActiveSession() {
+  return !hasActiveSessionInCache();
 }
 
 async function handleRaptStartOverrideRequest(req, res) {
