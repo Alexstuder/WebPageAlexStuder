@@ -780,11 +780,17 @@
 
       updateRangeInfo(start, end, isActive);
 
-      let displayName = info.profileName || cachedTelemetryData.profileName || rows.find(r => r?.profileName)?.profileName || '';
-      if (!isActive && displayName) {
-        displayName = `Last brew: ${displayName}`;
+      let dataProfileName = cachedTelemetryData.profileName || rows.find(r => r?.profileName)?.profileName;
+      let sessionName = info.profileName;
+
+      let displayName = '';
+      if (!isActive) {
+        const name = dataProfileName || sessionName;
+        displayName = `Last brew: ${name}`;
+      } else {
+        displayName = sessionName || dataProfileName;
       }
-      updateProfileHeading(displayName);
+      updateProfileHeading(displayName || '');
 
       renderChart(rows);
       updateSummary(rows);
