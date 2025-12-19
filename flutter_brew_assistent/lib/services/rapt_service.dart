@@ -3,11 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class RaptService {
-  static const String directBaseUrl = 'https://api.rapt.io/api';
-  // Use localhost:3000 for local Dev, but production URL for Release
-  static const String proxyBaseUrl = kReleaseMode 
-      ? 'https://alexstuder.ch/api' 
-      : 'http://localhost:3000/api';
+  // Use PROXY_URL from build environment (passed via --dart-define in CI/CD)
+  // Fallback to localhost:3000 for local development if not set.
+  static const String proxyBaseUrl = String.fromEnvironment(
+    'PROXY_URL', 
+    defaultValue: 'http://localhost:3000/api'
+  );
   
   final String userId;
   final String apiKey;
