@@ -270,6 +270,8 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+             Text('Pill Batterie', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+             const SizedBox(width: 6),
              Icon(Icons.battery_std, color: color, size: 16),
              const SizedBox(width: 4),
              Text('${percent.toStringAsFixed(0)}%', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold))
