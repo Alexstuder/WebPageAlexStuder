@@ -4,9 +4,10 @@ import 'package:http/http.dart' as http;
 
 class RaptService {
   static const String directBaseUrl = 'https://api.rapt.io/api';
-  // Use localhost:3000 for Web (Proxy) to avoid CORS
-  // You must run 'node proxy/server.js' locally!
-  static const String proxyBaseUrl = 'http://localhost:3000/api';
+  // Use localhost:3000 for local Dev, but production URL for Release
+  static const String proxyBaseUrl = kReleaseMode 
+      ? 'https://alexstuder.ch/api' 
+      : 'http://localhost:3000/api';
   
   final String userId;
   final String apiKey;
