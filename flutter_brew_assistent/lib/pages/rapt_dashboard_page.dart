@@ -34,6 +34,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
   double? _latestGravity;
   double? _latestAbv;
   double? _og;
+  double? _latestBattery;
   double? _delta24h;
   String? _generatedAt;
   
@@ -44,16 +45,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     _loadProfileAndControllers();
   }
 
-  // ... (unchanged)
-
   Future<void> _loadProfileAndControllers() async {
-    // ... same content as existing method, just ensuring I don't break it by context ...
-    // Actually, I can leave this method alone if I target the right range.
-    // But since I am replacing a huge chunk, let's keep it safe. 
-    // Wait, the tool 'replacement' works by finding TargetContent. 
-    // I will target the State variable declaration first, then _loadTelemetry, then build.
-    // Since tool only allows CONTINUOUS block, and these are separated...
-    // I MUST use multi_replace.
     setState(() => _isLoading = true);
     try {
       final profile = await UserProfileService().fetchDefaultProfile();
@@ -156,6 +148,10 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      }
   }
 
+
+
+// ... (existing code omitted)
+
   void _processTelemetry(List<dynamic> rows) {
     if (rows.isEmpty) {
       setState(() {
@@ -163,6 +159,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         _latestTemp = null;
         _latestGravity = null;
         _latestAbv = null;
+        _latestBattery = null;
         _og = null;
         _delta24h = null;
       });
@@ -176,8 +173,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       return da.compareTo(db);
     });
     
-    // Compute Metrics
-    // Helper to normalize gravity (some APIs return 1000x, e.g. 1040 instead of 1.040)
+    // Helper
     double normalize(double? val) {
       if (val == null) return 0.0;
       if (val > 500) return val / 1000.0;
@@ -189,17 +185,17 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     double? gravity = (last['gravity'] as num?)?.toDouble();
     if (gravity != null) gravity = normalize(gravity);
     
-    // OG: Max gravity in set? Or first?
-    // JS used max gravity.
+    // Battery
+    final battery = (last['battery'] as num?)?.toDouble();
+    
+    // OG
     final gravities = rows.map((r) => normalize((r['gravity'] as num?)?.toDouble())).where((g) => g > 0).toList();
     final og = gravities.isNotEmpty ? gravities.reduce(max) : null;
     
     // ABV
-    // Formula: (OG - FG) * 131.25, but strictly increasing (matching Chart logic)
     double? abv;
     if (og != null && gravities.isNotEmpty) {
        double lastAbv = 0.0;
-       // We need to iterate in time order. 'rows' is strictly sorted by date above.
        for (final r in rows) {
           double? g = (r['gravity'] as num?)?.toDouble();
           if (g != null) {
@@ -217,15 +213,13 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     }
     
     // Delta 24h
-    // Find point ~24h ago
     double? delta;
     if (gravity != null) {
        final now = DateTime.tryParse(last['createdOn'] ?? '');
        if (now != null) {
          final target = now.subtract(const Duration(hours: 24));
-         // Find closest row
-         Map<String, dynamic>? closest;
          int minDiff = 999999999;
+         Map<String, dynamic>? closest;
          
          for (final r in rows) {
             final t = DateTime.tryParse(r['createdOn'] ?? '');
@@ -237,7 +231,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
             }
          }
          
-         if (closest != null && minDiff < 3600 * 2) { // Within 2 hours
+         if (closest != null && minDiff < 3600 * 2) {
              double? oldG = (closest['gravity'] as num?)?.toDouble();
              if (oldG != null) {
                oldG = normalize(oldG);
@@ -252,9 +246,36 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       _latestTemp = temp;
       _latestGravity = gravity;
       _latestAbv = abv;
+      _latestBattery = battery;
       _og = og;
       _delta24h = delta;
     });
+  }
+
+  Widget _buildBatteryBadge(double percent) {
+     Color color = Colors.green;
+     if (percent < 30) {
+       color = Colors.red;
+     } else if (percent < 60) {
+       color = Colors.yellow;
+     }
+     
+     return Container(
+       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+       decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.5))
+       ),
+       child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+             Icon(Icons.battery_std, color: color, size: 16),
+             const SizedBox(width: 4),
+             Text('${percent.toStringAsFixed(0)}%', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold))
+          ]
+       )
+     );
   }
 
   @override
@@ -272,7 +293,14 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('RAPT Dashboard'),
-        // No auto-refresh action here anymore, handled by UI controls
+        centerTitle: true,
+        actions: [
+           if (_latestBattery != null)
+             Padding(
+                padding: const EdgeInsets.only(right: 16), 
+                child: Center(child: _buildBatteryBadge(_latestBattery!))
+             ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
