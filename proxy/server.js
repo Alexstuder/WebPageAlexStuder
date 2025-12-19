@@ -8,7 +8,9 @@ const BASE_PATH = __dirname;
 const LOCAL_ENV = process.env.PROXY_ENV ?? path.join(BASE_PATH, '.env');
 const CACHE_DIR = path.join(BASE_PATH, 'cache');
 const TELEMETRY_CACHE_FILE = path.join(CACHE_DIR, 'telemetry-cache.json');
+const LAST_TELEMETRY_CACHE_FILE = path.join(CACHE_DIR, 'last-telemetry-cache.json');
 const CONTROLLER_CACHE_FILE = path.join(CACHE_DIR, 'controllers-cache.json');
+const LAST_CONTROLLER_CACHE_FILE = path.join(CACHE_DIR, 'last-controllers-cache.json');
 
 loadEnvFile(LOCAL_ENV);
 fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -953,8 +955,6 @@ function getLastKnownStartDate() {
   return persistedRaptStartDate || lastEffectiveStartDate || telemetryCache?.startDate || null;
 }
 
-const LAST_TELEMETRY_CACHE_FILE = path.join(CACHE_DIR, 'last-telemetry-cache.json');
-const LAST_CONTROLLER_CACHE_FILE = path.join(CACHE_DIR, 'last-controllers-cache.json');
 
 function scheduleHourlyTelemetryRefresh() {
   const scheduleNext = () => {
