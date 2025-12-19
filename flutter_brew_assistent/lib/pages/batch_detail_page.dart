@@ -882,9 +882,21 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
   }
 
   Widget _buildKarbonisierungSection() {
-      final carb = widget.batch.data['recipe']?['carbonation'] ?? {};
-      String method = widget.batch.data['carbonationType'] ?? carb['method'] ?? 'Keg';
-      String info = "-1.05 Bar bei 4 °C\nfür etwa 1 Wochen\num ${carb['vols'] ?? 0} Vol CO₂ zu erreichen"; 
+      final recipe = widget.batch.data['recipe'] ?? {};
+      final dynamic carbonationField = recipe['carbonation'];
+
+      double? carbonationVolumes;
+      String? carbonationMethod;
+
+      if (carbonationField is Map) {
+         carbonationVolumes = (carbonationField['vols'] as num?)?.toDouble();
+         carbonationMethod = carbonationField['method']?.toString();
+      } else if (carbonationField is num) {
+         carbonationVolumes = carbonationField.toDouble();
+      }
+
+      String method = widget.batch.data['carbonationType'] ?? carbonationMethod ?? 'Keg';
+      String info = "-1.05 Bar bei 4 °C\nfür etwa 1 Wochen\num ${carbonationVolumes ?? 0} Vol CO₂ zu erreichen"; 
 
       return _buildCardSection('Karbonisierung', [
           const Text('Typ', style: TextStyle(color: Colors.grey, fontSize: 12)),
