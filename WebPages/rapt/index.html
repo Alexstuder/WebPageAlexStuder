@@ -450,6 +450,7 @@
           <div>
             <div class="gpt-badge gpt-badge--brew" id="brewing-badge">Currently Brewing</div>
             <h1 id="page-title">Gesammelte Telemetrie</h1>
+            <div id="page-subtitle" style="color:#94a3b8; margin-top:4px; font-size:15px; display:none;"></div>
           </div>
           <img src="../../images/aibrewgenius-icon.png" alt="AiBrewGenius"
             style="width:68px;height:68px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.45);object-fit:cover;">
@@ -605,6 +606,7 @@
     const chartCanvas = document.getElementById('telemetry-chart');
     const profileTitle = document.getElementById('profile-title');
     const pageTitle = document.getElementById('page-title');
+    const pageSubtitle = document.getElementById('page-subtitle');
     const summaryTemp = document.getElementById('summary-temp');
     const summaryGravity = document.getElementById('summary-gravity');
     const summaryAbv = document.getElementById('summary-abv');
@@ -1422,17 +1424,29 @@
     }
 
     function updateRangeInfo(start, end, isActive) {
-      if (!telemetryRange) return;
-      if (!start && !end) {
-        telemetryRange.textContent = 'Zeitraum unbekannt.';
-        return;
+      const startLabel = start ? formatRangeDate(start) : null;
+      const endLabel = end ? formatRangeDate(end) : null;
+      const actuallyActive = isActive !== false;
+
+      if (telemetryRange) {
+        if (!startLabel && !endLabel) {
+          telemetryRange.textContent = 'Zeitraum unbekannt.';
+        } else {
+          if (!actuallyActive) {
+            telemetryRange.textContent = `Brewed from ${startLabel || '–'} to ${endLabel || '–'}`;
+          } else {
+            telemetryRange.textContent = `Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
+          }
+        }
       }
-      const startLabel = formatRangeDate(start);
-      const endLabel = formatRangeDate(end);
-      if (isActive === false) {
-        telemetryRange.textContent = `Brewed from ${startLabel || '–'} to ${endLabel || '–'}`;
-      } else {
-        telemetryRange.textContent = `Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
+
+      if (pageSubtitle) {
+        if (!actuallyActive && (startLabel || endLabel)) {
+          pageSubtitle.textContent = `Brewed from ${startLabel || '?'} to ${endLabel || '?'}`;
+          pageSubtitle.style.display = 'block';
+        } else {
+          pageSubtitle.style.display = 'none';
+        }
       }
     }
 
