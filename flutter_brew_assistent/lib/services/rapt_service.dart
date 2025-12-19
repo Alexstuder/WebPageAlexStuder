@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class RaptService {
+  static const String directBaseUrl = 'https://api.rapt.io/api';
+
   // Use PROXY_URL from build environment (passed via --dart-define in CI/CD)
   // Fallback to localhost:3000 for local development if not set.
   static const String proxyBaseUrl = String.fromEnvironment(
