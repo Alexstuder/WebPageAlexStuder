@@ -1,157 +1,523 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AiBrewGenius · RAPT Dashboard</title>
   <link rel="stylesheet" href="../../css/styles.css?v=4" />
   <style>
-    html,body {min-height:100%;overflow:auto;}
-    body {background:#020617;color:#f1f5f9;}
-    .rapt-stack {display:flex;flex-direction:column;gap:20px;}
-    .page-panel{position:relative;background:rgba(3,6,16,0.92);padding:56px 64px 72px;border-radius:56px;box-shadow:0 40px 110px rgba(0,0,0,0.6);}
-    .page-panel>.panel-label{display:none;}
-    .rapt-panel {position:relative;width:calc(100% - 96px);margin:48px auto 0 auto;background: rgba(4,6,15,0.94);padding: 48px;border-radius: 40px;box-shadow: inset 0 0 0 1px rgba(59,130,246,0.12);}
-    .panel-label{display:none;}
-    .rapt-meta {font-size:13px;color:#cbd5f5;margin-bottom:16px;}
-    .rapt-meta span {display:inline-flex;align-items:center;margin-right:18px;gap:6px;}
-    .rapt-status {margin-bottom:8px;color:#fbbf24;}
-    .rapt-range {margin-bottom:16px;font-size:14px;color:#cbd5f5;}
-    .btn.ghost {background:transparent;border:1px solid rgba(148,163,184,0.4);}
-    .btn.ghost:hover {background:rgba(148,163,184,0.08);}
-    .btn.icon {padding:0;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-    .gpt-badge.gpt-badge--idle{background:rgba(239,68,68,0.22);color:#f87171;border-color:rgba(248,113,113,0.45);}
-    .chart-actions{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:6px 0 0;}
-    .chart-actions__group{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-    .chart-actions__info{font-size:12px;color:#94a3b8;}
-    .chart-actions__label{font-size:14px;color:#cbd5f5;}
-    .start-override-control{flex:1 1 320px;min-width:220px;display:flex;flex-direction:column;gap:6px;}
-    .start-override-control label{font-size:13px;color:#94a3b8;}
-    .start-override-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-    .start-override-field{position:relative;flex:none;min-width:220px;margin-right:24px;}
-    .start-override-input{width:100%;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,163,184,0.4);background:rgba(15,23,42,0.6);color:#f1f5f9;}
-    .start-override-actions{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap;}
-    .reload-controls{display:flex;align-items:center;gap:8px;}
-    .start-override-input::-webkit-calendar-picker-indicator{filter:invert(100%);}
-    .start-override-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
-    .links-footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:22px;}
-    .loading-cursor{cursor:progress!important;}
-    .chart-card {position:relative;background:#0b1120;padding:24px;border-radius:24px;border:1px solid rgba(59,130,246,0.25);width:calc(100% - 54px);margin:24px auto 0 auto;}
-    .chart-card .panel-label{top:16px;left:24px;}
-    .chart-card h3 {margin:0 0 8px;font-size:28px;font-weight:700;}
-    .chart-card p {margin:0 0 16px;color:#94a3b8;font-size:14px;}
-    .chart-frame {height:clamp(320px,45vh,520px);width:100%;overflow:hidden;}
-    .chart-frame canvas {display:block;width:100%;height:100%;max-width:100%;}
-    .telemetry-summary {display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;margin-bottom:26px;}
-    .summary-tiles{display:flex;flex-wrap:nowrap;gap:16px;}
-    .summary-tile {flex:1;min-width:0;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25);border-radius:18px;padding:18px 32px;display:flex;flex-direction:column;gap:6px;}
-    .summary-label {font-size:15px;color:#cbd5f5;text-transform:uppercase;letter-spacing:0.08em;}
-    .summary-value {font-size:clamp(32px,5vw,56px);font-weight:700;line-height:1;color:#f8fafc;margin-right:10px;white-space:nowrap;}
-    .summary-tile.red .summary-value {font-size:clamp(30px,4.5vw,50px);}
-    .summary-unit {font-size:16px;color:rgba(241,245,249,0.7);}
-    .summary-note {font-size:11px;color:#94a3b8;margin-top:6px;display:flex;justify-content:space-between;gap:8px;}
-    .summary-note-label {text-transform:uppercase;letter-spacing:0.08em;}
-    .summary-tile.blue {border-color:rgba(59,130,246,0.4);}
-    .summary-tile.red {border-color:rgba(239,68,68,0.4);}
-    .summary-tile.yellow {border-color:rgba(251,191,36,0.45);}
-    .controller-picker {margin:16px 0;display:flex;flex-direction:column;gap:6px;}
-    .controller-picker label {font-size:13px;color:#94a3b8;}
-    .controller-picker select {background:#020b1d;color:#f8fafc;border:1px solid rgba(148,163,184,0.35);border-radius:10px;padding:10px;font-size:14px;}
-    .controller-picker select:focus {outline:none;border-color:#3b82f6;box-shadow:0 0 0 1px rgba(59,130,246,0.45);}
-    .profile-steps{margin:18px 0;background:#050c1e;border:1px solid rgba(148,163,184,0.35);border-radius:16px;padding:16px;}
-    .profile-steps__title{font-size:13px;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;}
-    .profile-steps ol{list-style:none;padding:0;margin:0;counter-reset:step;}
-    .profile-step{position:relative;display:flex;flex-direction:column;gap:6px;font-size:14px;color:#f1f5f9;margin:6px 0;padding:10px 14px 10px 42px;border-radius:10px;background:rgba(148,163,184,0.08);cursor:pointer;transition:border .2s ease;}
-    .profile-step::before{counter-increment:step;content:counter(step) '.';color:#94a3b8;font-weight:600;position:absolute;left:14px;top:10px;}
-    .profile-step>div.step-header{display:flex;align-items:center;gap:8px;}
-    .profile-step>div.step-header span.step-name{flex:1;}
-    .profile-step.active{border:1px solid #3b82f6;background:rgba(59,130,246,0.12);}
-    .profile-step.empty{justify-content:center;color:#94a3b8;font-style:italic;cursor:default;}
-    .profile-step .step-details{display:none;font-size:13px;color:#cbd5f5;padding-left:18px;}
-    .profile-step.expanded .step-details{display:block;}
-    .profile-step .step-details div{margin:2px 0;}
-    @media (max-width:640px){
-      .summary-value {font-size:40px;}
-      .summary-tiles{flex-wrap:wrap;}
-      .summary-tile{min-width:200px;}
+    html,
+    body {
+      min-height: 100%;
+      overflow: auto;
+    }
+
+    body {
+      background: #020617;
+      color: #f1f5f9;
+    }
+
+    .rapt-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .page-panel {
+      position: relative;
+      background: rgba(3, 6, 16, 0.92);
+      padding: 56px 64px 72px;
+      border-radius: 56px;
+      box-shadow: 0 40px 110px rgba(0, 0, 0, 0.6);
+    }
+
+    .page-panel>.panel-label {
+      display: none;
+    }
+
+    .rapt-panel {
+      position: relative;
+      width: calc(100% - 96px);
+      margin: 48px auto 0 auto;
+      background: rgba(4, 6, 15, 0.94);
+      padding: 48px;
+      border-radius: 40px;
+      box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
+    }
+
+    .panel-label {
+      display: none;
+    }
+
+    .rapt-meta {
+      font-size: 13px;
+      color: #cbd5f5;
+      margin-bottom: 16px;
+    }
+
+    .rapt-meta span {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 18px;
+      gap: 6px;
+    }
+
+    .rapt-status {
+      margin-bottom: 8px;
+      color: #fbbf24;
+    }
+
+    .rapt-range {
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .btn.ghost:hover {
+      background: rgba(148, 163, 184, 0.08);
+    }
+
+    .btn.icon {
+      padding: 0;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .gpt-badge.gpt-badge--idle {
+      background: rgba(239, 68, 68, 0.22);
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.45);
+    }
+
+    .chart-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 12px;
+      margin: 6px 0 0;
+    }
+
+    .chart-actions__group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chart-actions__info {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .chart-actions__label {
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+
+    .start-override-control {
+      flex: 1 1 320px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .start-override-control label {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .start-override-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .start-override-field {
+      position: relative;
+      flex: none;
+      min-width: 220px;
+      margin-right: 24px;
+    }
+
+    .start-override-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.6);
+      color: #f1f5f9;
+    }
+
+    .start-override-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .reload-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .start-override-input::-webkit-calendar-picker-indicator {
+      filter: invert(100%);
+    }
+
+    .start-override-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+    }
+
+    .links-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 22px;
+    }
+
+    .loading-cursor {
+      cursor: progress !important;
+    }
+
+    .chart-card {
+      position: relative;
+      background: #0b1120;
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      width: calc(100% - 54px);
+      margin: 24px auto 0 auto;
+    }
+
+    .chart-card .panel-label {
+      top: 16px;
+      left: 24px;
+    }
+
+    .chart-card h3 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .chart-card p {
+      margin: 0 0 16px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .chart-frame {
+      height: clamp(320px, 45vh, 520px);
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .chart-frame canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+    }
+
+    .telemetry-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 18px;
+      margin-bottom: 26px;
+    }
+
+    .summary-tiles {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 16px;
+    }
+
+    .summary-tile {
+      flex: 1;
+      min-width: 0;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 18px;
+      padding: 18px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-label {
+      font-size: 15px;
+      color: #cbd5f5;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .summary-value {
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 700;
+      line-height: 1;
+      color: #f8fafc;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    .summary-tile.red .summary-value {
+      font-size: clamp(30px, 4.5vw, 50px);
+    }
+
+    .summary-unit {
+      font-size: 16px;
+      color: rgba(241, 245, 249, 0.7);
+    }
+
+    .summary-note {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .summary-note-label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .summary-tile.blue {
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .summary-tile.red {
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .summary-tile.yellow {
+      border-color: rgba(251, 191, 36, 0.45);
+    }
+
+    .controller-picker {
+      margin: 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .controller-picker label {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .controller-picker select {
+      background: #020b1d;
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    .controller-picker select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+    }
+
+    .profile-steps {
+      margin: 18px 0;
+      background: #050c1e;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .profile-steps__title {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .profile-steps ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      counter-reset: step;
+    }
+
+    .profile-step {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+      color: #f1f5f9;
+      margin: 6px 0;
+      padding: 10px 14px 10px 42px;
+      border-radius: 10px;
+      background: rgba(148, 163, 184, 0.08);
+      cursor: pointer;
+      transition: border .2s ease;
+    }
+
+    .profile-step::before {
+      counter-increment: step;
+      content: counter(step) '.';
+      color: #94a3b8;
+      font-weight: 600;
+      position: absolute;
+      left: 14px;
+      top: 10px;
+    }
+
+    .profile-step>div.step-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .profile-step>div.step-header span.step-name {
+      flex: 1;
+    }
+
+    .profile-step.active {
+      border: 1px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.12);
+    }
+
+    .profile-step.empty {
+      justify-content: center;
+      color: #94a3b8;
+      font-style: italic;
+      cursor: default;
+    }
+
+    .profile-step .step-details {
+      display: none;
+      font-size: 13px;
+      color: #cbd5f5;
+      padding-left: 18px;
+    }
+
+    .profile-step.expanded .step-details {
+      display: block;
+    }
+
+    .profile-step .step-details div {
+      margin: 2px 0;
+    }
+
+    @media (max-width:640px) {
+      .summary-value {
+        font-size: 40px;
+      }
+
+      .summary-tiles {
+        flex-wrap: wrap;
+      }
+
+      .summary-tile {
+        min-width: 200px;
+      }
     }
   </style>
 </head>
+
 <body data-page="rapt">
   <main class="gpt-shell">
     <section class="gpt-preview rapt-stack">
       <div class="page-panel">
-        <header class="gpt-head panel-head" style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+        <header class="gpt-head panel-head"
+          style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
           <div>
             <div class="gpt-badge gpt-badge--brew" id="brewing-badge">Currently Brewing</div>
             <h1 id="page-title">Gesammelte Telemetrie</h1>
           </div>
-          <img src="../../images/aibrewgenius-icon.png" alt="AiBrewGenius" style="width:68px;height:68px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.45);object-fit:cover;">
+          <img src="../../images/aibrewgenius-icon.png" alt="AiBrewGenius"
+            style="width:68px;height:68px;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.45);object-fit:cover;">
         </header>
         <div class="rapt-panel">
           <div class="rapt-status" id="telemetry-status">Noch nicht geladen.</div>
           <div class="rapt-range" id="telemetry-range">Zeitraum unbekannt.</div>
           <div class="chart-card">
             <h3 id="profile-title"></h3>
-          <div class="telemetry-summary summary-tiles">
-            <div class="summary-tile blue">
-              <span class="summary-label">Temperatur</span>
-              <span class="summary-value" id="summary-temp">–</span>
-              <span class="summary-unit">°C</span>
-            </div>
-            <div class="summary-tile red">
-              <span class="summary-label">Gravity</span>
-              <span class="summary-value" id="summary-gravity">–</span>
-              <span class="summary-unit">SG</span>
-              <div class="summary-note">
-                <span class="summary-note-label">OG</span>
-                <span id="summary-og-value">–</span>
+            <div class="telemetry-summary summary-tiles">
+              <div class="summary-tile blue">
+                <span class="summary-label">Temperatur</span>
+                <span class="summary-value" id="summary-temp">–</span>
+                <span class="summary-unit">°C</span>
               </div>
-              <div class="summary-note">
-                <span class="summary-note-label">Δ 24h</span>
-                <span id="summary-gravity-delta">–</span>
-              </div>
-            </div>
-            <div class="summary-tile yellow">
-              <span class="summary-label">Alkohol</span>
-              <span class="summary-value" id="summary-abv">–</span>
-              <span class="summary-unit">Vol.%</span>
-            </div>
-          </div>
-          <div class="controller-picker">
-            <label for="controller-select">Temperature Controller</label>
-            <select id="controller-select">
-              <option value="">Controller auswählen …</option>
-            </select>
-          </div>
-          <div class="chart-frame">
-            <canvas id="telemetry-chart"></canvas>
-          </div>
-          <div class="chart-actions">
-            <div class="start-override-control">
-              <label for="start-override">Startdatum (optional)</label>
-              <div class="start-override-row" style="flex-wrap:nowrap;flex-basis:100%;">
-                <div class="start-override-field">
-                  <input type="datetime-local" id="start-override" class="start-override-input" />
+              <div class="summary-tile red">
+                <span class="summary-label">Gravity</span>
+                <span class="summary-value" id="summary-gravity">–</span>
+                <span class="summary-unit">SG</span>
+                <div class="summary-note">
+                  <span class="summary-note-label">OG</span>
+                  <span id="summary-og-value">–</span>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:nowrap;">
-                  <button class="btn ghost" type="button" id="btn-start-apply">Übernehmen</button>
+                <div class="summary-note">
+                  <span class="summary-note-label">Δ 24h</span>
+                  <span id="summary-gravity-delta">–</span>
                 </div>
               </div>
-              <div class="start-override-actions">
-                <button class="btn ghost" type="button" id="btn-start-clear">Zurücksetzen</button>
-                <div class="reload-controls">
-                  <span class="chart-actions__info" id="reload-info">Lädt...</span>
-                  <span class="chart-actions__label">Reload</span>
-                  <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
+              <div class="summary-tile yellow">
+                <span class="summary-label">Alkohol</span>
+                <span class="summary-value" id="summary-abv">–</span>
+                <span class="summary-unit">Vol.%</span>
+              </div>
+            </div>
+            <div class="controller-picker">
+              <label for="controller-select">Temperature Controller</label>
+              <select id="controller-select">
+                <option value="">Controller auswählen …</option>
+              </select>
+            </div>
+            <div class="chart-frame">
+              <canvas id="telemetry-chart"></canvas>
+            </div>
+            <div class="chart-actions">
+              <div class="start-override-control">
+                <label for="start-override">Startdatum (optional)</label>
+                <div class="start-override-row" style="flex-wrap:nowrap;flex-basis:100%;">
+                  <div class="start-override-field">
+                    <input type="datetime-local" id="start-override" class="start-override-input" />
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:nowrap;">
+                    <button class="btn ghost" type="button" id="btn-start-apply">Übernehmen</button>
+                  </div>
+                </div>
+                <div class="start-override-actions">
+                  <button class="btn ghost" type="button" id="btn-start-clear">Zurücksetzen</button>
+                  <div class="reload-controls">
+                    <span class="chart-actions__info" id="reload-info">Lädt...</span>
+                    <span class="chart-actions__label">Reload</span>
+                    <button class="btn ghost icon" id="btn-reload" title="Neu laden">⟳</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="profile-steps" id="profile-steps">
-            <div class="profile-steps__title">Brauprogramm-Schritte</div>
-            <ol id="profile-steps-list"></ol>
-          </div>
+            <div class="profile-steps" id="profile-steps">
+              <div class="profile-steps__title">Brauprogramm-Schritte</div>
+              <ol id="profile-steps-list"></ol>
+            </div>
           </div>
           <div class="links-footer">
             <a class="btn ghost" href="./token/">Bearer-Details</a>
@@ -172,353 +538,361 @@
   <script src="../../js/api-base.js"></script>
   <script>
     Chart.register({
-      id:'dayMarkers',
-      afterDatasetsDraw(chart){
-        const markerOptions=chart.config.options.plugins.dayMarkers || {};
-        const labels=markerOptions.labels || [];
-        const deltaMap=markerOptions.deltaMap || {};
-        const xScale=chart.scales?.x;
-        const ctx=chart.ctx;
-        if(!labels.length || !xScale || !ctx) return;
-        let lastDay=null;
+      id: 'dayMarkers',
+      afterDatasetsDraw(chart) {
+        const markerOptions = chart.config.options.plugins.dayMarkers || {};
+        const labels = markerOptions.labels || [];
+        const deltaMap = markerOptions.deltaMap || {};
+        const xScale = chart.scales?.x;
+        const ctx = chart.ctx;
+        if (!labels.length || !xScale || !ctx) return;
+        let lastDay = null;
         ctx.save();
-        ctx.strokeStyle='rgba(255,255,255,0.2)';
-        ctx.lineWidth=1;
-        const bottom=chart.chartArea.bottom;
-        const textMarkers=[];
-        labels.forEach((label,idx)=>{
-          const labelDate=new Date(label);
-          const day=labelDate.toDateString();
-          if(!day || day===lastDay) return;
-          lastDay=day;
-          const x=xScale.getPixelForValue(idx);
-          if(Number.isNaN(x)) return;
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        const bottom = chart.chartArea.bottom;
+        const textMarkers = [];
+        labels.forEach((label, idx) => {
+          const labelDate = new Date(label);
+          const day = labelDate.toDateString();
+          if (!day || day === lastDay) return;
+          lastDay = day;
+          const x = xScale.getPixelForValue(idx);
+          if (Number.isNaN(x)) return;
           ctx.beginPath();
-          ctx.moveTo(x,chart.chartArea.top);
-          ctx.lineTo(x,bottom);
+          ctx.moveTo(x, chart.chartArea.top);
+          ctx.lineTo(x, bottom);
           ctx.stroke();
-          const text=formatDayShort(label);
-          if(text){
-            const dayKey=Number.isNaN(labelDate.getTime())?null:labelDate.toISOString().slice(0,10);
-            const deltaValue=dayKey && Object.prototype.hasOwnProperty.call(deltaMap,dayKey)
+          const text = formatDayShort(label);
+          if (text) {
+            const dayKey = Number.isNaN(labelDate.getTime()) ? null : labelDate.toISOString().slice(0, 10);
+            const deltaValue = dayKey && Object.prototype.hasOwnProperty.call(deltaMap, dayKey)
               ? deltaMap[dayKey]
               : null;
-            textMarkers.push({x,text,deltaValue});
+            textMarkers.push({ x, text, deltaValue });
           }
         });
-        const minSpacing=28;
-        for(let i=1;i<textMarkers.length;i++){
-          const prev=textMarkers[i-1];
-          const current=textMarkers[i];
-          if(Math.abs(current.x-prev.x)<minSpacing){
-            prev.bumped=true;
+        const minSpacing = 28;
+        for (let i = 1; i < textMarkers.length; i++) {
+          const prev = textMarkers[i - 1];
+          const current = textMarkers[i];
+          if (Math.abs(current.x - prev.x) < minSpacing) {
+            prev.bumped = true;
           }
         }
-        ctx.fillStyle='#cbd5f5';
-        ctx.font='10px "Inter", system-ui, sans-serif';
-        ctx.textAlign='center';
-        ctx.textBaseline='top';
-        textMarkers.forEach(marker=>{
-          const baseY=marker.bumped?bottom+18:bottom+4;
-          ctx.fillStyle='#cbd5f5';
-          ctx.fillText(marker.text,marker.x,baseY);
-          if(marker.deltaValue !== null && marker.deltaValue !== undefined){
-            ctx.fillStyle='#4ade80';
-            ctx.fillText(formatGravityDelta(marker.deltaValue),marker.x,baseY+12);
+        ctx.fillStyle = '#cbd5f5';
+        ctx.font = '10px "Inter", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        textMarkers.forEach(marker => {
+          const baseY = marker.bumped ? bottom + 18 : bottom + 4;
+          ctx.fillStyle = '#cbd5f5';
+          ctx.fillText(marker.text, marker.x, baseY);
+          if (marker.deltaValue !== null && marker.deltaValue !== undefined) {
+            ctx.fillStyle = '#4ade80';
+            ctx.fillText(formatGravityDelta(marker.deltaValue), marker.x, baseY + 12);
           }
         });
         ctx.restore();
       }
     });
 
-    const reloadBtn=document.getElementById('btn-reload');
-    const brewingBadge=document.getElementById('brewing-badge');
-    const telemetryStatus=document.getElementById('telemetry-status');
-    const telemetryRange=document.getElementById('telemetry-range');
-    const downloadBtn=document.getElementById('btn-download');
-    const chartCanvas=document.getElementById('telemetry-chart');
-    const profileTitle=document.getElementById('profile-title');
-    const pageTitle=document.getElementById('page-title');
-    const summaryTemp=document.getElementById('summary-temp');
-    const summaryGravity=document.getElementById('summary-gravity');
-    const summaryAbv=document.getElementById('summary-abv');
-    const summaryOgValue=document.getElementById('summary-og-value');
-    const summaryGravityDelta=document.getElementById('summary-gravity-delta');
-    const reloadInfo=document.getElementById('reload-info');
-    const startOverrideInput=document.getElementById('start-override');
-    const startOverrideApply=document.getElementById('btn-start-apply');
-    const startOverrideClear=document.getElementById('btn-start-clear');
-    const controllerSelect=document.getElementById('controller-select');
-    const profileStepsContainer=document.getElementById('profile-steps');
-    const profileStepsList=document.getElementById('profile-steps-list');
-    const START_OVERRIDE_STORAGE_KEY='RAPT_START_OVERRIDE';
-    const controllerDataMap=new Map();
-    let controllerList=[];
-    let currentControllerId='';
-    let currentControllerDefaultStart=null;
-    let cachedTelemetryData=null;
-    let telemetryChart=null;
-    let latestTelemetry=[];
-    let initialGravityValue=null;
-    const DISPLAY_LOCALE='de-CH';
-    const DISPLAY_TIMEZONE='Europe/Zurich';
+    const reloadBtn = document.getElementById('btn-reload');
+    const brewingBadge = document.getElementById('brewing-badge');
+    const telemetryStatus = document.getElementById('telemetry-status');
+    const telemetryRange = document.getElementById('telemetry-range');
+    const downloadBtn = document.getElementById('btn-download');
+    const chartCanvas = document.getElementById('telemetry-chart');
+    const profileTitle = document.getElementById('profile-title');
+    const pageTitle = document.getElementById('page-title');
+    const summaryTemp = document.getElementById('summary-temp');
+    const summaryGravity = document.getElementById('summary-gravity');
+    const summaryAbv = document.getElementById('summary-abv');
+    const summaryOgValue = document.getElementById('summary-og-value');
+    const summaryGravityDelta = document.getElementById('summary-gravity-delta');
+    const reloadInfo = document.getElementById('reload-info');
+    const startOverrideInput = document.getElementById('start-override');
+    const startOverrideApply = document.getElementById('btn-start-apply');
+    const startOverrideClear = document.getElementById('btn-start-clear');
+    const controllerSelect = document.getElementById('controller-select');
+    const profileStepsContainer = document.getElementById('profile-steps');
+    const profileStepsList = document.getElementById('profile-steps-list');
+    const START_OVERRIDE_STORAGE_KEY = 'RAPT_START_OVERRIDE';
+    const controllerDataMap = new Map();
+    let controllerList = [];
+    let currentControllerId = '';
+    let currentControllerDefaultStart = null;
+    let cachedTelemetryData = null;
+    let telemetryChart = null;
+    let latestTelemetry = [];
+    let initialGravityValue = null;
+    const DISPLAY_LOCALE = 'de-CH';
+    const DISPLAY_TIMEZONE = 'Europe/Zurich';
 
-    if(profileStepsContainer){
-      profileStepsContainer.style.display='none';
+    if (profileStepsContainer) {
+      profileStepsContainer.style.display = 'none';
     }
 
-    if(reloadBtn){
-      reloadBtn.addEventListener('click',()=>refreshCachesFromServer(getStartOverrideIso() || cachedTelemetryData?.requestedStartDate || null));
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', () => refreshCachesFromServer(getStartOverrideIso() || cachedTelemetryData?.requestedStartDate || null));
     }
-    if(downloadBtn){
-      downloadBtn.addEventListener('click',downloadCsv);
-      downloadBtn.disabled=true;
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', downloadCsv);
+      downloadBtn.disabled = true;
     }
     updateProfileHeading();
     updateSummary([]);
-    updateReloadInfo(null,false);
+    updateReloadInfo(null, false);
     initStartOverrideControl();
 
-    if(controllerSelect){
-      controllerSelect.addEventListener('change',()=>renderTelemetryForController(controllerSelect.value || ''));
+    if (controllerSelect) {
+      controllerSelect.addEventListener('change', () => renderTelemetryForController(controllerSelect.value || ''));
     }
 
     loadCachedData();
 
-    async function loadCachedData(force=false){
-      telemetryStatus.textContent=force?'♻️ Cache wird neu geladen ...':'⏳ Lade gespeicherte Daten ...';
-      telemetryRange.textContent='Zeitraum wird geladen ...';
+    async function loadCachedData(force = false) {
+      telemetryStatus.textContent = force ? '♻️ Cache wird neu geladen ...' : '⏳ Lade gespeicherte Daten ...';
+      telemetryRange.textContent = 'Zeitraum wird geladen ...';
       setLoadingState(true);
-      try{
-        const telemetryPromise=fetchCacheEndpoint('/api/cache/telemetry');
-        const controllersPromise=fetchCacheEndpoint('/api/cache/controllers').catch(()=>null);
-        const telemetryData=await telemetryPromise;
-        const controllersData=await controllersPromise;
-        cachedTelemetryData=telemetryData;
+      try {
+        const telemetryPromise = fetchCacheEndpoint('/api/cache/telemetry');
+        const controllersPromise = fetchCacheEndpoint('/api/cache/controllers').catch(() => null);
+        const telemetryData = await telemetryPromise;
+        const controllersData = await controllersPromise;
+        cachedTelemetryData = telemetryData;
         setupControllersFromCache(controllersData?.controllers || [], controllersData?.selectedId || null);
-        const initialId=controllerSelect && controllerSelect.value
+        const initialId = controllerSelect && controllerSelect.value
           ? controllerSelect.value
           : (controllersData?.selectedId && controllerDataMap.has(controllersData.selectedId)
             ? controllersData.selectedId
             : getControllerId(controllerList[0]) || '');
         renderTelemetryForController(initialId);
         setLoadingState(false);
-      }catch(error){
-        console.warn('Cache load failed:',error.message || error);
-        if(!force){
+      } catch (error) {
+        console.warn('Cache load failed:', error.message || error);
+        if (!force) {
           await refreshCachesFromServer(getStartOverrideIso());
           return;
         }
-        telemetryStatus.textContent='Keine Cache-Daten verfügbar.';
+        telemetryStatus.textContent = 'Keine Cache-Daten verfügbar.';
         renderChart([]);
         updateRangeInfo();
         updateProfileHeading();
         updateSummary([]);
-        updateReloadInfo(null,false);
+        updateReloadInfo(null, false);
         setLoadingState(false);
       }
     }
 
-    async function fetchCacheEndpoint(path){
-      const response=await fetch(getApiUrl(path));
-      if(!response.ok){
-        const error=new Error(`Cache HTTP ${response.status}`);
-        error.status=response.status;
+    async function fetchCacheEndpoint(path) {
+      const response = await fetch(getApiUrl(path));
+      if (!response.ok) {
+        const error = new Error(`Cache HTTP ${response.status}`);
+        error.status = response.status;
         throw error;
       }
       return response.json();
     }
 
-    function setupControllersFromCache(controllers,selectedId){
+    function setupControllersFromCache(controllers, selectedId) {
       controllerDataMap.clear();
-      controllerList=Array.isArray(controllers)?controllers:[];
-      if(!controllerSelect){
-        if(controllerList.length){
+      controllerList = Array.isArray(controllers) ? controllers : [];
+      if (!controllerSelect) {
+        if (controllerList.length) {
           renderProfileSteps(controllerList[0]);
-        }else if(profileStepsContainer){
-          profileStepsContainer.style.display='none';
+        } else if (profileStepsContainer) {
+          profileStepsContainer.style.display = 'none';
         }
         return;
       }
-      controllerSelect.innerHTML='';
-      if(!controllerList.length){
-        controllerSelect.disabled=true;
-        controllerSelect.innerHTML='<option value="">Keine Controller im Cache</option>';
-        if(profileStepsContainer){
-          profileStepsContainer.style.display='none';
+      controllerSelect.innerHTML = '';
+      if (!controllerList.length) {
+        controllerSelect.disabled = true;
+        controllerSelect.innerHTML = '<option value="">Keine Controller im Cache</option>';
+        if (profileStepsContainer) {
+          profileStepsContainer.style.display = 'none';
         }
         return;
       }
-      controllerList.forEach(controller=>{
-        const id=getControllerId(controller);
-        if(!id) return;
-        controllerDataMap.set(id,controller);
-        const option=document.createElement('option');
-        option.value=id;
-        option.textContent=controller?.name || controller?.controllerName || id;
+      controllerList.forEach(controller => {
+        const id = getControllerId(controller);
+        if (!id) return;
+        controllerDataMap.set(id, controller);
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = controller?.name || controller?.controllerName || id;
         controllerSelect.appendChild(option);
       });
-      controllerSelect.disabled=false;
-      const effectiveId=(selectedId && controllerDataMap.has(selectedId))
+      controllerSelect.disabled = false;
+      const effectiveId = (selectedId && controllerDataMap.has(selectedId))
         ? selectedId
         : getControllerId(controllerList[0]) || '';
-      currentControllerId=effectiveId;
-      controllerSelect.value=effectiveId;
+      currentControllerId = effectiveId;
+      controllerSelect.value = effectiveId;
       renderProfileSteps(controllerDataMap.get(effectiveId) || null);
     }
 
-    function renderTelemetryForController(controllerId){
-      if(!cachedTelemetryData){
-        telemetryStatus.textContent='Keine Cache-Daten verfügbar.';
+    function renderTelemetryForController(controllerId) {
+      if (!cachedTelemetryData) {
+        telemetryStatus.textContent = 'Keine Cache-Daten verfügbar.';
         return;
       }
-      if(controllerId && controllerDataMap.has(controllerId)){
-        currentControllerId=controllerId;
-        if(controllerSelect && controllerSelect.value!==controllerId){
-          controllerSelect.value=controllerId;
+      if (controllerId && controllerDataMap.has(controllerId)) {
+        currentControllerId = controllerId;
+        if (controllerSelect && controllerSelect.value !== controllerId) {
+          controllerSelect.value = controllerId;
         }
       }
-      const controller=controllerDataMap.get(currentControllerId) || controllerDataMap.get(controllerId) || controllerList[0] || null;
-      if(controller){
+      const controller = controllerDataMap.get(currentControllerId) || controllerDataMap.get(controllerId) || controllerList[0] || null;
+      if (controller) {
         renderProfileSteps(controller);
-      }else if(profileStepsContainer){
-        profileStepsContainer.style.display='none';
+      } else if (profileStepsContainer) {
+        profileStepsContainer.style.display = 'none';
       }
-      updateBrewingBadge(controllerHasActiveSession(controller));
-      const rowsSource=Array.isArray(cachedTelemetryData.rows)?cachedTelemetryData.rows:[];
-      let rows=rowsSource.filter(r=>!r?.error);
-      const info=controller?getControllerTelemetryInfo(controller):{hydrometerId:null,profileName:cachedTelemetryData.profileName || '',defaultStart:null};
-      currentControllerDefaultStart=info.defaultStart || null;
-      if(info.hydrometerId){
-        const filtered=rows.filter(r=>String(r.hydrometerId)===String(info.hydrometerId));
-        if(filtered.length){
-          rows=filtered;
+      const isActive = controllerHasActiveSession(controller);
+      updateBrewingBadge(isActive);
+      const rowsSource = Array.isArray(cachedTelemetryData.rows) ? cachedTelemetryData.rows : [];
+      let rows = rowsSource.filter(r => !r?.error);
+      const info = controller ? getControllerTelemetryInfo(controller) : { hydrometerId: null, profileName: cachedTelemetryData.profileName || '', defaultStart: null };
+      currentControllerDefaultStart = info.defaultStart || null;
+      if (info.hydrometerId) {
+        const filtered = rows.filter(r => String(r.hydrometerId) === String(info.hydrometerId));
+        if (filtered.length) {
+          rows = filtered;
         }
       }
-      if(!rows.length){
-        telemetryStatus.textContent='Keine Telemetriedaten im Cache.';
+      if (!rows.length) {
+        telemetryStatus.textContent = 'Keine Telemetriedaten im Cache.';
         renderChart([]);
         updateRangeInfo();
         updateProfileHeading(info.profileName || cachedTelemetryData.profileName || '');
         updateSummary([]);
-        updateReloadInfo(null,false);
+        updateReloadInfo(null, false);
         return;
       }
-      const fallbackStart=getDefaultStartForCurrentController(rows);
+      const fallbackStart = getDefaultStartForCurrentController(rows);
       syncStartOverrideInputValue(fallbackStart);
-      const generatedLabel=formatStatusTimestamp(cachedTelemetryData.generatedAt);
-      telemetryStatus.textContent=`💾 Cache · ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
-      const start=cachedTelemetryData.startDate || rows[0]?.startDate || '';
-      const end=cachedTelemetryData.endDate || cachedTelemetryData.generatedAt || rows[rows.length-1]?.startDate || '';
-      updateRangeInfo(start,end);
-      updateProfileHeading(info.profileName || cachedTelemetryData.profileName || rows.find(r=>r?.profileName)?.profileName || '');
+      const generatedLabel = formatStatusTimestamp(cachedTelemetryData.generatedAt);
+      telemetryStatus.textContent = `💾 Cache · ${rows.length} Messpunkte · Stand ${generatedLabel || '–'}`;
+      const start = cachedTelemetryData.startDate || rows[0]?.startDate || '';
+      const end = cachedTelemetryData.endDate || cachedTelemetryData.generatedAt || rows[rows.length - 1]?.startDate || '';
+
+      updateRangeInfo(start, end, isActive);
+
+      let displayName = info.profileName || cachedTelemetryData.profileName || rows.find(r => r?.profileName)?.profileName || '';
+      if (!isActive && displayName) {
+        displayName = `Last brew: ${displayName}`;
+      }
+      updateProfileHeading(displayName);
+
       renderChart(rows);
       updateSummary(rows);
-      updateReloadInfo(end || cachedTelemetryData.generatedAt || null,true);
+      updateReloadInfo(end || cachedTelemetryData.generatedAt || null, true);
     }
 
-    function syncStartOverrideInputValue(defaultIso){
-      if(!startOverrideInput) return;
-      const persisted=readPersistedStartOverride();
-      if(persisted){
-        startOverrideInput.value=isoToLocalInputValue(persisted);
+    function syncStartOverrideInputValue(defaultIso) {
+      if (!startOverrideInput) return;
+      const persisted = readPersistedStartOverride();
+      if (persisted) {
+        startOverrideInput.value = isoToLocalInputValue(persisted);
         return;
       }
-      if(defaultIso){
-        startOverrideInput.value=isoToLocalInputValue(defaultIso);
-      }else{
-        startOverrideInput.value='';
+      if (defaultIso) {
+        startOverrideInput.value = isoToLocalInputValue(defaultIso);
+      } else {
+        startOverrideInput.value = '';
       }
     }
 
-    function getDefaultStartForCurrentController(rows){
-      if(currentControllerDefaultStart){
+    function getDefaultStartForCurrentController(rows) {
+      if (currentControllerDefaultStart) {
         return currentControllerDefaultStart;
       }
-      if(cachedTelemetryData){
-        if(cachedTelemetryData.startDate){
+      if (cachedTelemetryData) {
+        if (cachedTelemetryData.startDate) {
           return cachedTelemetryData.startDate;
         }
-        if(cachedTelemetryData.requestedStartDate){
+        if (cachedTelemetryData.requestedStartDate) {
           return cachedTelemetryData.requestedStartDate;
         }
       }
-      const candidate=findFirstValidRow(rows) || findFirstValidRow(cachedTelemetryData?.rows);
+      const candidate = findFirstValidRow(rows) || findFirstValidRow(cachedTelemetryData?.rows);
       return candidate?.startDate || candidate?.createdOn || null;
     }
 
-    function findFirstValidRow(rows){
-      if(!Array.isArray(rows)) return null;
-      for(const row of rows){
-        if(row && !row.error && (row.startDate || row.createdOn)){
+    function findFirstValidRow(rows) {
+      if (!Array.isArray(rows)) return null;
+      for (const row of rows) {
+        if (row && !row.error && (row.startDate || row.createdOn)) {
           return row;
         }
       }
       return null;
     }
 
-    async function refreshCachesFromServer(startIso){
-      const currentController=controllerDataMap.get(currentControllerId) || null;
-      if(currentController && !controllerHasActiveSession(currentController)){
-        telemetryStatus.textContent='🔴 Keine aktive Session – zeige gespeicherte Telemetrie.';
-        updateRangeInfo(cachedTelemetryData?.startDate || null,cachedTelemetryData?.endDate || null);
-        updateReloadInfo(cachedTelemetryData?.generatedAt || null,false);
+    async function refreshCachesFromServer(startIso) {
+      const currentController = controllerDataMap.get(currentControllerId) || null;
+      if (currentController && !controllerHasActiveSession(currentController)) {
+        telemetryStatus.textContent = '🔴 Keine aktive Session – zeige gespeicherte Telemetrie.';
+        updateRangeInfo(cachedTelemetryData?.startDate || null, cachedTelemetryData?.endDate || null, false);
+        updateReloadInfo(cachedTelemetryData?.generatedAt || null, false);
         setLoadingState(false);
         return;
       }
-      telemetryStatus.textContent='⏳ Lade Live-Daten ...';
-      telemetryRange.textContent='Zeitraum wird geladen ...';
+      telemetryStatus.textContent = '⏳ Lade Live-Daten ...';
+      telemetryRange.textContent = 'Zeitraum wird geladen ...';
       setLoadingState(true);
-      try{
-        const base=getApiUrl('/api/rapt/telemetry');
-        const url=createAbsoluteUrl(base);
-        url.searchParams.set('reload','1');
-        if(startIso){
-          url.searchParams.set('start',startIso);
+      try {
+        const base = getApiUrl('/api/rapt/telemetry');
+        const url = createAbsoluteUrl(base);
+        url.searchParams.set('reload', '1');
+        if (startIso) {
+          url.searchParams.set('start', startIso);
         }
-        const response=await fetch(url.toString());
-        if(!response.ok){
-          telemetryStatus.textContent=`❗ Live HTTP ${response.status}`;
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          telemetryStatus.textContent = `❗ Live HTTP ${response.status}`;
           setLoadingState(false);
           return;
         }
-        await response.json().catch(()=>({}));
+        await response.json().catch(() => ({}));
         await loadCachedData(true);
-      }catch(error){
-        telemetryStatus.textContent='❗ Live-Aktualisierung fehlgeschlagen';
-        console.error('refreshCachesFromServer',error);
+      } catch (error) {
+        telemetryStatus.textContent = '❗ Live-Aktualisierung fehlgeschlagen';
+        console.error('refreshCachesFromServer', error);
         setLoadingState(false);
       }
     }
 
-    function createAbsoluteUrl(base){
-      if(base.startsWith('http://') || base.startsWith('https://')){
+    function createAbsoluteUrl(base) {
+      if (base.startsWith('http://') || base.startsWith('https://')) {
         return new URL(base);
       }
-      return new URL(base,window.location.origin);
+      return new URL(base, window.location.origin);
     }
 
-    function getControllerId(controller){
-      if(!controller) return null;
+    function getControllerId(controller) {
+      if (!controller) return null;
       return controller?.id || controller?.Id || controller?.temperatureControllerId || controller?.TemperatureControllerId || null;
     }
 
-    function getControllerTelemetryInfo(controller){
-      if(!controller) return {hydrometerId:null,profileName:'',defaultStart:null};
-      const session=controller?.activeProfileSession || controller?.ActiveProfileSession || {};
-      const hydrometerId=
+    function getControllerTelemetryInfo(controller) {
+      if (!controller) return { hydrometerId: null, profileName: '', defaultStart: null };
+      const session = controller?.activeProfileSession || controller?.ActiveProfileSession || {};
+      const hydrometerId =
         controller?.hydrometerId ||
         controller?.HydrometerId ||
         session?.hydrometerId ||
         session?.HydrometerId ||
         null;
-      const profileName=session?.name || session?.Name || controller?.profileName || controller?.name || '';
-      const defaultStart=findControllerStartDate(controller,session);
-      return {hydrometerId,profileName,defaultStart};
+      const profileName = session?.name || session?.Name || controller?.profileName || controller?.name || '';
+      const defaultStart = findControllerStartDate(controller, session);
+      return { hydrometerId, profileName, defaultStart };
     }
 
-    function findControllerStartDate(controller,session){
-      const candidates=[
+    function findControllerStartDate(controller, session) {
+      const candidates = [
         session?.startDate,
         session?.StartDate,
         session?.startTime,
@@ -534,80 +908,80 @@
         controller?.activeProfileStartTime,
         controller?.ActiveProfileStartTime,
       ];
-      for(const candidate of candidates){
-        if(candidate){
+      for (const candidate of candidates) {
+        if (candidate) {
           return candidate;
         }
       }
       return null;
     }
 
-    function controllerHasActiveSession(controller){
-      if(!controller) return false;
+    function controllerHasActiveSession(controller) {
+      if (!controller) return false;
       return !!(controller.activeProfileSession || controller.ActiveProfileSession);
     }
 
-    function updateBrewingBadge(isActive){
-      if(!brewingBadge) return;
-      if(isActive){
-        brewingBadge.textContent='Currently Brewing';
+    function updateBrewingBadge(isActive) {
+      if (!brewingBadge) return;
+      if (isActive) {
+        brewingBadge.textContent = 'Currently Brewing';
         brewingBadge.classList.add('gpt-badge--brew');
         brewingBadge.classList.remove('gpt-badge--idle');
-      }else{
-        brewingBadge.textContent='Currently Not Brewing';
+      } else {
+        brewingBadge.textContent = 'Currently Not Brewing';
         brewingBadge.classList.remove('gpt-badge--brew');
         brewingBadge.classList.add('gpt-badge--idle');
       }
     }
 
-    function renderProfileSteps(detail){
-      if(!profileStepsContainer || !profileStepsList) return;
-      const steps=getProfileSteps(detail);
-      const activeId=getActiveProfileStepId(detail);
-      if(!steps.length){
-        profileStepsContainer.style.display='none';
-        profileStepsList.innerHTML='';
+    function renderProfileSteps(detail) {
+      if (!profileStepsContainer || !profileStepsList) return;
+      const steps = getProfileSteps(detail);
+      const activeId = getActiveProfileStepId(detail);
+      if (!steps.length) {
+        profileStepsContainer.style.display = 'none';
+        profileStepsList.innerHTML = '';
         return;
       }
-      profileStepsContainer.style.display='block';
-      const items=steps.map((step,index)=>{
-        const id=normalizeStepId(step,index);
-        const name=step?.name || step?.Name || step?.title || step?.Title || `Schritt ${index+1}`;
-        const isActive=activeId && id && String(id)===String(activeId);
-        const endType=step?.endType || step?.EndType || '';
-        const temperatureValue=step?.temperature ?? step?.Temperature ?? null;
-        const durationText=String(endType).toLowerCase()==='duration'
+      profileStepsContainer.style.display = 'block';
+      const items = steps.map((step, index) => {
+        const id = normalizeStepId(step, index);
+        const name = step?.name || step?.Name || step?.title || step?.Title || `Schritt ${index + 1}`;
+        const isActive = activeId && id && String(id) === String(activeId);
+        const endType = step?.endType || step?.EndType || '';
+        const temperatureValue = step?.temperature ?? step?.Temperature ?? null;
+        const durationText = String(endType).toLowerCase() === 'duration'
           ? formatStepDurationText(step)
           : '';
-        const detailsParts=[];
-        if(endType){
-          detailsParts.push(`<div><strong>Endtyp:</strong> ${escapeHtml(endType)}${durationText?` · ${escapeHtml(durationText)}`:''}</div>`);
+        const detailsParts = [];
+        if (endType) {
+          detailsParts.push(`<div><strong>Endtyp:</strong> ${escapeHtml(endType)}${durationText ? ` · ${escapeHtml(durationText)}` : ''}</div>`);
         }
-        if(temperatureValue!==null && temperatureValue!==undefined){
-          const tempDisplay=Number(temperatureValue);
-          const formattedTemp=Number.isFinite(tempDisplay)
-            ? tempDisplay.toLocaleString('de-CH',{minimumFractionDigits:0,maximumFractionDigits:1})
+        if (temperatureValue !== null && temperatureValue !== undefined) {
+          const tempDisplay = Number(temperatureValue);
+          const formattedTemp = Number.isFinite(tempDisplay)
+            ? tempDisplay.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
             : temperatureValue;
           detailsParts.push(`<div><strong>Temperatur:</strong> ${escapeHtml(formattedTemp)} °C</div>`);
         }
-        const stepDetails=detailsParts.length?`<div class="step-details">${detailsParts.join('')}</div>`:'';
-        const classes=['profile-step'];
-        if(isActive) classes.push('active','expanded');
+        const stepDetails = detailsParts.length ? `<div class="step-details">${detailsParts.join('')}</div>` : '';
+        const classes = ['profile-step'];
+        if (isActive) classes.push('active', 'expanded');
         return `<li class="${classes.join(' ')}"><div class="step-header"><span class="step-name">${escapeHtml(name)}</span></div>${stepDetails}</li>`;
       }).join('');
-      profileStepsList.innerHTML=items || '<li class="profile-step empty">Keine Schritte vorhanden.</li>';
+      profileStepsList.innerHTML = items || '<li class="profile-step empty">Keine Schritte vorhanden.</li>';
       attachStepToggleHandlers();
     }
 
-    function getProfileSteps(detail){
-      if(!detail) return [];
-      const session=
+    function getProfileSteps(detail) {
+      if (!detail) return [];
+      const session =
         detail?.activeProfileSession
         || detail?.ActiveProfileSession
         || detail?.session
         || detail?.Session
         || null;
-      const candidates=[
+      const candidates = [
         detail?.steps,
         detail?.Steps,
         session?.steps,
@@ -619,30 +993,30 @@
         session?.profile?.profileSteps,
         session?.profile?.ProfileSteps,
       ];
-      for(const candidate of candidates){
-        if(Array.isArray(candidate) && candidate.length){
+      for (const candidate of candidates) {
+        if (Array.isArray(candidate) && candidate.length) {
           return candidate;
         }
-        if(candidate && Array.isArray(candidate.$values) && candidate.$values.length){
+        if (candidate && Array.isArray(candidate.$values) && candidate.$values.length) {
           return candidate.$values;
         }
       }
-      if(session){
-        const fallback=Object.values(session).find(val=>Array.isArray(val) && val.length && hasStepLikeShape(val[0]));
-        if(Array.isArray(fallback) && fallback.length){
+      if (session) {
+        const fallback = Object.values(session).find(val => Array.isArray(val) && val.length && hasStepLikeShape(val[0]));
+        if (Array.isArray(fallback) && fallback.length) {
           return fallback;
         }
       }
       return [];
     }
 
-    function hasStepLikeShape(obj){
-      if(!obj || typeof obj!=='object') return false;
+    function hasStepLikeShape(obj) {
+      if (!obj || typeof obj !== 'object') return false;
       return !!(obj.name || obj.Name || obj.title || obj.Title || obj.stepName || obj.StepName || obj.order || obj.Order);
     }
 
-    function getActiveProfileStepId(detail){
-      const session=detail?.activeProfileSession || detail?.ActiveProfileSession || {};
+    function getActiveProfileStepId(detail) {
+      const session = detail?.activeProfileSession || detail?.ActiveProfileSession || {};
       return detail?.activeProfileStepId
         || session.activeProfileStepId
         || session.activeStepId
@@ -650,470 +1024,474 @@
         || null;
     }
 
-    function normalizeStepId(step,index){
-      return step?.id || step?.Id || step?.stepId || step?.StepId || step?.sequence || step?.Sequence || index+1;
+    function normalizeStepId(step, index) {
+      return step?.id || step?.Id || step?.stepId || step?.StepId || step?.sequence || step?.Sequence || index + 1;
     }
 
-    function attachStepToggleHandlers(){
-      if(!profileStepsList) return;
-      profileStepsList.querySelectorAll('.profile-step').forEach(item=>{
-        if(item.classList.contains('empty')) return;
-        item.addEventListener('click',()=>{
+    function attachStepToggleHandlers() {
+      if (!profileStepsList) return;
+      profileStepsList.querySelectorAll('.profile-step').forEach(item => {
+        if (item.classList.contains('empty')) return;
+        item.addEventListener('click', () => {
           item.classList.toggle('expanded');
         });
       });
     }
 
-    function formatStepDurationText(step){
-      const raw=step?.length ?? step?.Length ?? step?.durationSeconds ?? step?.DurationSeconds ?? null;
-      const seconds=Number(raw);
-      if(!Number.isFinite(seconds) || seconds<=0) return '';
-      const totalHours=Math.floor(seconds/3600);
-      const days=Math.floor(totalHours/24);
-      const hours=totalHours%24;
-      const parts=[];
-      if(days>0) parts.push(`${days} ${days===1?'Tag':'Tage'}`);
-      if(hours>0) parts.push(`${hours} ${hours===1?'Stunde':'Stunden'}`);
-      if(!parts.length){
-        const minutes=Math.floor((seconds%3600)/60);
-        if(minutes>0) parts.push(`${minutes} ${minutes===1?'Minute':'Minuten'}`);
+    function formatStepDurationText(step) {
+      const raw = step?.length ?? step?.Length ?? step?.durationSeconds ?? step?.DurationSeconds ?? null;
+      const seconds = Number(raw);
+      if (!Number.isFinite(seconds) || seconds <= 0) return '';
+      const totalHours = Math.floor(seconds / 3600);
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
+      const parts = [];
+      if (days > 0) parts.push(`${days} ${days === 1 ? 'Tag' : 'Tage'}`);
+      if (hours > 0) parts.push(`${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`);
+      if (!parts.length) {
+        const minutes = Math.floor((seconds % 3600) / 60);
+        if (minutes > 0) parts.push(`${minutes} ${minutes === 1 ? 'Minute' : 'Minuten'}`);
       }
-      return parts.length?`Für ${parts.join(' und ')}`:'';
+      return parts.length ? `Für ${parts.join(' und ')}` : '';
     }
 
-    function renderChart(rows){
-      latestTelemetry=rows;
-      if(downloadBtn){
-        downloadBtn.disabled=!rows.length;
+    function renderChart(rows) {
+      latestTelemetry = rows;
+      if (downloadBtn) {
+        downloadBtn.disabled = !rows.length;
       }
-      const labels=rows.map(r=>r.createdOn || r.startDate || '');
-      lastDayTick=null;
-      const gravityValues=rows
-        .map(r=>normalizeGravity(r?.gravity))
-        .filter(v=>v!==null && Number.isFinite(v));
-      const gravityMax=gravityValues.length?Math.max(...gravityValues):1.05;
-      const gravityMin=gravityValues.length?Math.min(...gravityValues):1.0;
-      initialGravityValue=gravityValues.length?Math.max(...gravityValues):null;
-      const abvSeries=[];
-      let lastAbv=0;
-      rows.forEach(r=>{
-        const g=normalizeGravity(r?.gravity);
-        let currentAbv=computeAbv(initialGravityValue,g);
-        if(!Number.isFinite(currentAbv)){
-          currentAbv=null;
+      const labels = rows.map(r => r.createdOn || r.startDate || '');
+      lastDayTick = null;
+      const gravityValues = rows
+        .map(r => normalizeGravity(r?.gravity))
+        .filter(v => v !== null && Number.isFinite(v));
+      const gravityMax = gravityValues.length ? Math.max(...gravityValues) : 1.05;
+      const gravityMin = gravityValues.length ? Math.min(...gravityValues) : 1.0;
+      initialGravityValue = gravityValues.length ? Math.max(...gravityValues) : null;
+      const abvSeries = [];
+      let lastAbv = 0;
+      rows.forEach(r => {
+        const g = normalizeGravity(r?.gravity);
+        let currentAbv = computeAbv(initialGravityValue, g);
+        if (!Number.isFinite(currentAbv)) {
+          currentAbv = null;
         } else {
-          currentAbv=Math.max(lastAbv,currentAbv);
-          lastAbv=currentAbv;
+          currentAbv = Math.max(lastAbv, currentAbv);
+          lastAbv = currentAbv;
         }
         abvSeries.push(currentAbv);
       });
-      const validAbv=abvSeries.filter(v=>Number.isFinite(v));
-      const abvMax=validAbv.length?Math.max(...validAbv):0;
-      const datasets=[
+      const validAbv = abvSeries.filter(v => Number.isFinite(v));
+      const abvMax = validAbv.length ? Math.max(...validAbv) : 0;
+      const datasets = [
         {
-          label:'Temperatur (°C)',
-          data:rows.map(r=>r?.temperature ?? null),
-          borderColor:'#3b82f6',
-          backgroundColor:'rgba(59,130,246,0.05)',
-          yAxisID:'yTemp',
-          fill:false,
-          tension:0.25,
-          spanGaps:true,
-          borderWidth:1,
-          pointRadius:0,
-          pointHitRadius:8,
-          pointHoverRadius:4
+          label: 'Temperatur (°C)',
+          data: rows.map(r => r?.temperature ?? null),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.05)',
+          yAxisID: 'yTemp',
+          fill: false,
+          tension: 0.25,
+          spanGaps: true,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          pointHoverRadius: 4
         },
         {
-          label:'Gravity',
-          data:rows.map(r=>normalizeGravity(r?.gravity)),
-          borderColor:'#ef4444',
-          backgroundColor:'rgba(239,68,68,0.05)',
-          yAxisID:'yGravity',
-          fill:false,
-          tension:0.25,
-          spanGaps:true,
-          borderWidth:1,
-          pointRadius:0,
-          pointHitRadius:8,
-          pointHoverRadius:4
+          label: 'Gravity',
+          data: rows.map(r => normalizeGravity(r?.gravity)),
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.05)',
+          yAxisID: 'yGravity',
+          fill: false,
+          tension: 0.25,
+          spanGaps: true,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          pointHoverRadius: 4
         },
         {
-          label:'Alkohol (Vol.%)',
-          data:abvSeries,
-          borderColor:'#facc15',
-          backgroundColor:'rgba(250,204,21,0.12)',
-          yAxisID:'yAbv',
-          fill:false,
-          tension:0.25,
-          spanGaps:true,
-          borderWidth:1,
-          pointRadius:0,
-          pointHitRadius:8,
-          pointHoverRadius:4
+          label: 'Alkohol (Vol.%)',
+          data: abvSeries,
+          borderColor: '#facc15',
+          backgroundColor: 'rgba(250,204,21,0.12)',
+          yAxisID: 'yAbv',
+          fill: false,
+          tension: 0.25,
+          spanGaps: true,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          pointHoverRadius: 4
         }
       ];
 
-      const dailyDeltaEntries=computeDailyGravityDeltas(rows);
-      const dailyDeltaMap=dailyDeltaEntries.reduce((acc,item)=>{
-        acc[item.key]=item.delta;
+      const dailyDeltaEntries = computeDailyGravityDeltas(rows);
+      const dailyDeltaMap = dailyDeltaEntries.reduce((acc, item) => {
+        acc[item.key] = item.delta;
         return acc;
-      },{});
+      }, {});
 
-      const config={
-        type:'line',
-        data:{labels,datasets},
-        options:{
-          responsive:true,
-          maintainAspectRatio:false,
-          interaction:{mode:'index',intersect:false},
-          layout:{padding:{top:28}},
-          plugins:{
-            legend:{position:'bottom',labels:{color:'#f1f5f9',usePointStyle:true,pointStyle:'line',boxWidth:36}},
-            tooltip:{
-              callbacks:{
-                labelColor:ctx=>{
-                  const color=ctx.dataset.borderColor || ctx.dataset.backgroundColor || '#f1f5f9';
+      const config = {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          layout: { padding: { top: 28 } },
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#f1f5f9', usePointStyle: true, pointStyle: 'line', boxWidth: 36 } },
+            tooltip: {
+              callbacks: {
+                labelColor: ctx => {
+                  const color = ctx.dataset.borderColor || ctx.dataset.backgroundColor || '#f1f5f9';
                   return {
-                    borderColor:color,
-                    backgroundColor:color,
-                    borderWidth:1
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 1
                   };
                 },
-                title:items=>{
-                  const idx=items[0]?.dataIndex ?? 0;
-                  const label=labels[idx] || '';
+                title: items => {
+                  const idx = items[0]?.dataIndex ?? 0;
+                  const label = labels[idx] || '';
                   return formatFullTimestamp(label);
                 },
-                label:ctx=>{
-                  const label=ctx.dataset.label || '';
-                  const value=Number.isFinite(ctx.parsed?.y)?ctx.parsed.y:null;
-                  const isGravity=label.toLowerCase().includes('gravity');
-                  const formatted=isGravity && Number.isFinite(value)
+                label: ctx => {
+                  const label = ctx.dataset.label || '';
+                  const value = Number.isFinite(ctx.parsed?.y) ? ctx.parsed.y : null;
+                  const isGravity = label.toLowerCase().includes('gravity');
+                  const formatted = isGravity && Number.isFinite(value)
                     ? value.toFixed(4)
                     : ctx.formattedValue;
                   return `${label}: ${formatted}`;
                 }
               }
             },
-            dayMarkers:{labels,color:'rgba(148,163,184,0.4)',width:0.8,deltaMap:dailyDeltaMap}
+            dayMarkers: { labels, color: 'rgba(148,163,184,0.4)', width: 0.8, deltaMap: dailyDeltaMap }
           },
-          scales:{
-            yTemp:{
-              type:'linear',
-              position:'left',
-              suggestedMin:0,
-              suggestedMax:30,
-              grid:{color:'rgba(59,130,246,0.12)'},
-              ticks:{color:'#3b82f6'},
-              title:{display:true,text:'°C',color:'#3b82f6'}
+          scales: {
+            yTemp: {
+              type: 'linear',
+              position: 'left',
+              suggestedMin: 0,
+              suggestedMax: 30,
+              grid: { color: 'rgba(59,130,246,0.12)' },
+              ticks: { color: '#3b82f6' },
+              title: { display: true, text: '°C', color: '#3b82f6' }
             },
-            yGravity:{
-              type:'linear',
-              position:'right',
-              min:gravityMin,
-              max:Math.max(gravityMin,gravityMax),
-              grid:{drawOnChartArea:false},
-              ticks:{color:'#ef4444'},
-              title:{display:true,text:'Gravity',color:'#ef4444'}
+            yGravity: {
+              type: 'linear',
+              position: 'right',
+              min: gravityMin,
+              max: Math.max(gravityMin, gravityMax),
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#ef4444' },
+              title: { display: true, text: 'Gravity', color: '#ef4444' }
             },
-            yAbv:{
-              type:'linear',
-              position:'right',
-              offset:false,
-              min:0,
-              max:Math.max(5,Math.ceil(abvMax+0.5)),
-              grid:{drawOnChartArea:false},
-              ticks:{color:'#facc15'},
-              title:{display:true,text:'Alkohol %',color:'#facc15'}
+            yAbv: {
+              type: 'linear',
+              position: 'right',
+              offset: false,
+              min: 0,
+              max: Math.max(5, Math.ceil(abvMax + 0.5)),
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#facc15' },
+              title: { display: true, text: 'Alkohol %', color: '#facc15' }
             },
-            x:{
-              ticks:{color:'#cbd5f5',callback:(val,idx)=>labelDayTick(labels[idx],idx),autoSkip:true,maxRotation:0},
-              grid:{color:'rgba(148,163,184,0.08)'},
-              afterFit(scale){
-                scale.height+=18;
+            x: {
+              ticks: { color: '#cbd5f5', callback: (val, idx) => labelDayTick(labels[idx], idx), autoSkip: true, maxRotation: 0 },
+              grid: { color: 'rgba(148,163,184,0.08)' },
+              afterFit(scale) {
+                scale.height += 18;
               }
             }
           }
         }
       };
 
-      if(telemetryChart){
-        telemetryChart.data=config.data;
-        telemetryChart.options=config.options;
+      if (telemetryChart) {
+        telemetryChart.data = config.data;
+        telemetryChart.options = config.options;
         telemetryChart.update();
-      }else if(chartCanvas){
-        telemetryChart=new Chart(chartCanvas.getContext('2d'),config);
+      } else if (chartCanvas) {
+        telemetryChart = new Chart(chartCanvas.getContext('2d'), config);
       }
     }
 
-    function labelDayTick(label,index){
-      if(!label) return '';
-      const date=new Date(label);
-      if(Number.isNaN(date.getTime())) return '';
-      const dayStr=date.toISOString().slice(0,10);
-      if(index===0){
-        lastDayTick=dayStr;
+    function labelDayTick(label, index) {
+      if (!label) return '';
+      const date = new Date(label);
+      if (Number.isNaN(date.getTime())) return '';
+      const dayStr = date.toISOString().slice(0, 10);
+      if (index === 0) {
+        lastDayTick = dayStr;
         return '';
       }
-      if(lastDayTick===dayStr) return '';
-      lastDayTick=dayStr;
+      if (lastDayTick === dayStr) return '';
+      lastDayTick = dayStr;
       return formatDayShort(label);
     }
 
-    let lastDayTick=null;
+    let lastDayTick = null;
 
-    function formatDayShort(label){
-      return formatWithTimezone(label,{day:'2-digit',month:'2-digit'});
+    function formatDayShort(label) {
+      return formatWithTimezone(label, { day: '2-digit', month: '2-digit' });
     }
 
-    function formatFullTimestamp(label){
-      return formatWithTimezone(label,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+    function formatFullTimestamp(label) {
+      return formatWithTimezone(label, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     }
 
-    function formatWithTimezone(value,options){
-      if(!value) return '';
-      const date=new Date(value);
-      if(Number.isNaN(date.getTime())) return typeof value==='string'?value:'';
-      const opts={timeZone:DISPLAY_TIMEZONE,...(options || {})};
-      return date.toLocaleString(DISPLAY_LOCALE,opts);
+    function formatWithTimezone(value, options) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return typeof value === 'string' ? value : '';
+      const opts = { timeZone: DISPLAY_TIMEZONE, ...(options || {}) };
+      return date.toLocaleString(DISPLAY_LOCALE, opts);
     }
 
-    function formatStatusTimestamp(value){
-      return formatWithTimezone(value,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+    function formatStatusTimestamp(value) {
+      return formatWithTimezone(value, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     }
 
-    function normalizeGravity(value){
-      if(value===undefined || value===null) return null;
-      const num=Number(value);
-      if(!Number.isFinite(num)) return null;
-      return num/1000;
+    function normalizeGravity(value) {
+      if (value === undefined || value === null) return null;
+      const num = Number(value);
+      if (!Number.isFinite(num)) return null;
+      return num / 1000;
     }
 
-    function computeAbv(initial,current){
-      if(!Number.isFinite(initial) || !Number.isFinite(current)) return null;
-      const diff=initial-current;
-      if(diff<=0) return 0;
-      return diff*131.25;
+    function computeAbv(initial, current) {
+      if (!Number.isFinite(initial) || !Number.isFinite(current)) return null;
+      const diff = initial - current;
+      if (diff <= 0) return 0;
+      return diff * 131.25;
     }
 
-    function parseRowTimestamp(row){
-      const raw=row?.createdOn || row?.startDate || '';
-      if(!raw) return NaN;
-      const ts=Date.parse(raw);
-      return Number.isNaN(ts)?NaN:ts;
+    function parseRowTimestamp(row) {
+      const raw = row?.createdOn || row?.startDate || '';
+      if (!raw) return NaN;
+      const ts = Date.parse(raw);
+      return Number.isNaN(ts) ? NaN : ts;
     }
 
-    function findGravityDelta(rows){
-      if(!Array.isArray(rows) || rows.length===0) return null;
-      const latestRow=rows[rows.length-1];
-      const latestTimestamp=parseRowTimestamp(latestRow);
-      const latestGravity=normalizeGravity(latestRow?.gravity);
-      if(!Number.isFinite(latestTimestamp) || !Number.isFinite(latestGravity)) return null;
-      const threshold=latestTimestamp-24*60*60*1000;
-      let comparisonRow=null;
-      for(let i=rows.length-1;i>=0;i--){
-        const ts=parseRowTimestamp(rows[i]);
-        if(Number.isNaN(ts)) continue;
-        comparisonRow=rows[i];
-        if(ts <= threshold){
+    function findGravityDelta(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return null;
+      const latestRow = rows[rows.length - 1];
+      const latestTimestamp = parseRowTimestamp(latestRow);
+      const latestGravity = normalizeGravity(latestRow?.gravity);
+      if (!Number.isFinite(latestTimestamp) || !Number.isFinite(latestGravity)) return null;
+      const threshold = latestTimestamp - 24 * 60 * 60 * 1000;
+      let comparisonRow = null;
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const ts = parseRowTimestamp(rows[i]);
+        if (Number.isNaN(ts)) continue;
+        comparisonRow = rows[i];
+        if (ts <= threshold) {
           break;
         }
       }
-      const comparisonGravity= comparisonRow ? normalizeGravity(comparisonRow?.gravity) : null;
-      if(!Number.isFinite(comparisonGravity)) return null;
+      const comparisonGravity = comparisonRow ? normalizeGravity(comparisonRow?.gravity) : null;
+      if (!Number.isFinite(comparisonGravity)) return null;
       return latestGravity - comparisonGravity;
     }
 
-    function findMaxGravityValue(rows){
-      if(!Array.isArray(rows) || rows.length===0) return null;
-      let maxValue=null;
-      rows.forEach(row=>{
-        const value=normalizeGravity(row?.gravity);
-        if(!Number.isFinite(value)) return;
-        if(maxValue===null || value>maxValue){
-          maxValue=value;
+    function findMaxGravityValue(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return null;
+      let maxValue = null;
+      rows.forEach(row => {
+        const value = normalizeGravity(row?.gravity);
+        if (!Number.isFinite(value)) return;
+        if (maxValue === null || value > maxValue) {
+          maxValue = value;
         }
       });
       return maxValue;
     }
 
-    function computeDailyGravityDeltas(rows){
-      if(!Array.isArray(rows) || rows.length===0) return [];
-      const dayMap=new Map();
-      rows.forEach(row=>{
-        const ts=parseRowTimestamp(row);
-        if(Number.isNaN(ts)) return;
-        const dayKey=new Date(ts).toISOString().slice(0,10);
-        if(!dayMap.has(dayKey)){
-          dayMap.set(dayKey,{startRow:null,startTs:Infinity,endRow:null,endTs:-Infinity});
+    function computeDailyGravityDeltas(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return [];
+      const dayMap = new Map();
+      rows.forEach(row => {
+        const ts = parseRowTimestamp(row);
+        if (Number.isNaN(ts)) return;
+        const dayKey = new Date(ts).toISOString().slice(0, 10);
+        if (!dayMap.has(dayKey)) {
+          dayMap.set(dayKey, { startRow: null, startTs: Infinity, endRow: null, endTs: -Infinity });
         }
-        const entry=dayMap.get(dayKey);
-        if(ts < entry.startTs){
-          entry.startRow=row;
-          entry.startTs=ts;
+        const entry = dayMap.get(dayKey);
+        if (ts < entry.startTs) {
+          entry.startRow = row;
+          entry.startTs = ts;
         }
-        if(ts >= entry.endTs){
-          entry.endRow=row;
-          entry.endTs=ts;
+        if (ts >= entry.endTs) {
+          entry.endRow = row;
+          entry.endTs = ts;
         }
       });
       const sorted = Array.from(dayMap.entries())
-        .sort((a,b)=>a[0].localeCompare(b[0]));
-      return sorted.slice(1).map(([key,entry])=>{
-          const start=normalizeGravity(entry.startRow?.gravity);
-          const end=normalizeGravity(entry.endRow?.gravity);
-          const delta=(Number.isFinite(start) && Number.isFinite(end))? end-start : null;
-          return {
-            key,
-            label:formatDailyDeltaLabel(entry.endTs),
-            delta,
-          };
-        })
-        .filter(item=>item.delta!==null);
+        .sort((a, b) => a[0].localeCompare(b[0]));
+      return sorted.slice(1).map(([key, entry]) => {
+        const start = normalizeGravity(entry.startRow?.gravity);
+        const end = normalizeGravity(entry.endRow?.gravity);
+        const delta = (Number.isFinite(start) && Number.isFinite(end)) ? end - start : null;
+        return {
+          key,
+          label: formatDailyDeltaLabel(entry.endTs),
+          delta,
+        };
+      })
+        .filter(item => item.delta !== null);
     }
 
-    function formatDailyDeltaLabel(timestamp){
-      if(!Number.isFinite(timestamp)) return '';
-      const d=new Date(timestamp);
-      if(Number.isNaN(d.getTime())) return '';
-      return d.toLocaleDateString('de-CH',{day:'2-digit',month:'2-digit'});
+    function formatDailyDeltaLabel(timestamp) {
+      if (!Number.isFinite(timestamp)) return '';
+      const d = new Date(timestamp);
+      if (Number.isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
     }
 
-    function updateSummary(rows){
-      const latest=Array.isArray(rows) && rows.length?rows[rows.length-1]:null;
-      if(summaryTemp){
-        summaryTemp.textContent=formatTempDisplay(latest?.temperature);
+    function updateSummary(rows) {
+      const latest = Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
+      if (summaryTemp) {
+        summaryTemp.textContent = formatTempDisplay(latest?.temperature);
       }
-      const latestGravity=latest?normalizeGravity(latest?.gravity):null;
-      if(summaryGravity){
-        summaryGravity.textContent=formatGravityDisplay(latestGravity);
+      const latestGravity = latest ? normalizeGravity(latest?.gravity) : null;
+      if (summaryGravity) {
+        summaryGravity.textContent = formatGravityDisplay(latestGravity);
       }
-      if(summaryAbv){
-        const abv=computeAbv(initialGravityValue,latestGravity);
-        summaryAbv.textContent=formatAbvDisplay(abv);
+      if (summaryAbv) {
+        const abv = computeAbv(initialGravityValue, latestGravity);
+        summaryAbv.textContent = formatAbvDisplay(abv);
       }
-      if(summaryOgValue){
-        const ogValue=findMaxGravityValue(rows);
-        summaryOgValue.textContent=formatGravityDisplay(ogValue);
+      if (summaryOgValue) {
+        const ogValue = findMaxGravityValue(rows);
+        summaryOgValue.textContent = formatGravityDisplay(ogValue);
       }
-      if(summaryGravityDelta){
-        const delta=findGravityDelta(rows);
-        summaryGravityDelta.textContent=formatGravityDelta(delta);
+      if (summaryGravityDelta) {
+        const delta = findGravityDelta(rows);
+        summaryGravityDelta.textContent = formatGravityDelta(delta);
       }
     }
 
-    function formatTempDisplay(value){
-      if(value===undefined || value===null) return '–';
-      const num=Number(value);
-      if(!Number.isFinite(num)) return '–';
-      return num.toLocaleString('de-CH',{minimumFractionDigits:1,maximumFractionDigits:1});
+    function formatTempDisplay(value) {
+      if (value === undefined || value === null) return '–';
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '–';
+      return num.toLocaleString('de-CH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     }
 
-    function formatGravityDisplay(value){
-      if(value===undefined || value===null) return '–';
-      const num=Number(value);
-      if(!Number.isFinite(num)) return '–';
+    function formatGravityDisplay(value) {
+      if (value === undefined || value === null) return '–';
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '–';
       return num.toFixed(4);
     }
 
-    function formatGravityDelta(value){
-      if(value===undefined || value===null) return '–';
-      const num=Number(value);
-      if(!Number.isFinite(num)) return '–';
+    function formatGravityDelta(value) {
+      if (value === undefined || value === null) return '–';
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '–';
       const sign = num > 0 ? '+' : '';
       return `${sign}${num.toFixed(4)}`;
     }
 
-    function formatAbvDisplay(value){
-      if(value===undefined || value===null) return '–';
-      const num=Number(value);
-      if(!Number.isFinite(num)) return '–';
+    function formatAbvDisplay(value) {
+      if (value === undefined || value === null) return '–';
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '–';
       return `${num.toFixed(1)}%`;
     }
 
-    function updateProfileHeading(name){
-      if(profileTitle){
-        profileTitle.textContent=name || '';
+    function updateProfileHeading(name) {
+      if (profileTitle) {
+        profileTitle.textContent = name || '';
       }
-      if(pageTitle){
-        pageTitle.textContent=name || 'Gesammelte Telemetrie';
+      if (pageTitle) {
+        pageTitle.textContent = name || 'Gesammelte Telemetrie';
       }
     }
 
-    function updateRangeInfo(start,end){
-      if(!telemetryRange) return;
-      if(!start && !end){
-        telemetryRange.textContent='Zeitraum unbekannt.';
+    function updateRangeInfo(start, end, isActive) {
+      if (!telemetryRange) return;
+      if (!start && !end) {
+        telemetryRange.textContent = 'Zeitraum unbekannt.';
         return;
       }
-      const startLabel=formatRangeDate(start);
-      const endLabel=formatRangeDate(end);
-      telemetryRange.textContent=`Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
+      const startLabel = formatRangeDate(start);
+      const endLabel = formatRangeDate(end);
+      if (isActive === false) {
+        telemetryRange.textContent = `Brewed from ${startLabel || '–'} to ${endLabel || '–'}`;
+      } else {
+        telemetryRange.textContent = `Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
+      }
     }
 
-    function formatRangeDate(value){
-      return formatWithTimezone(value,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
+    function formatRangeDate(value) {
+      return formatWithTimezone(value, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     }
 
-    function downloadCsv(){
-      if(!latestTelemetry.length) return;
-      const columns=['createdOn','startDate','temperature','gravity','gravityVelocity'];
-      const header=columns.join(';');
-      const lines=latestTelemetry.map(row=>columns.map(col=>escapeCsv(row?.[col])).join(';'));
-      const csv=[header,...lines].join('\r\n');
-      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-      const url=URL.createObjectURL(blob);
-      const link=document.createElement('a');
-      link.href=url;
-      link.download=`rapt-telemetrie-${new Date().toISOString().slice(0,19)}.csv`;
+    function downloadCsv() {
+      if (!latestTelemetry.length) return;
+      const columns = ['createdOn', 'startDate', 'temperature', 'gravity', 'gravityVelocity'];
+      const header = columns.join(';');
+      const lines = latestTelemetry.map(row => columns.map(col => escapeCsv(row?.[col])).join(';'));
+      const csv = [header, ...lines].join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `rapt-telemetrie-${new Date().toISOString().slice(0, 19)}.csv`;
       link.click();
-      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
-    function setLoadingState(isLoading){
-      document.body.classList.toggle('loading-cursor',!!isLoading);
-      if(reloadBtn) reloadBtn.disabled=isLoading;
-      if(downloadBtn) downloadBtn.disabled=isLoading || !latestTelemetry.length;
+    function setLoadingState(isLoading) {
+      document.body.classList.toggle('loading-cursor', !!isLoading);
+      if (reloadBtn) reloadBtn.disabled = isLoading;
+      if (downloadBtn) downloadBtn.disabled = isLoading || !latestTelemetry.length;
     }
 
-    function updateReloadInfo(timestamp,isFresh){
-      if(!reloadInfo) return;
-      if(!timestamp){
-        reloadInfo.textContent=isFresh?'Gerade aktualisiert':'';
+    function updateReloadInfo(timestamp, isFresh) {
+      if (!reloadInfo) return;
+      if (!timestamp) {
+        reloadInfo.textContent = isFresh ? 'Gerade aktualisiert' : '';
         return;
       }
-      const label=formatWithTimezone(timestamp,{hour:'2-digit',minute:'2-digit',timeZoneName:'short'});
-      reloadInfo.textContent=label? (isFresh?`Stand ${label}`:`Letzter Stand ${label}`) : 'Zeit unbekannt';
+      const label = formatWithTimezone(timestamp, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+      reloadInfo.textContent = label ? (isFresh ? `Stand ${label}` : `Letzter Stand ${label}`) : 'Zeit unbekannt';
     }
 
-    function escapeCsv(value){
-      if(value===undefined || value===null) return '';
-      const str=String(value);
-      if(/[\";\n]/.test(str)){
-        return `"${str.replace(/"/g,'""')}"`;
+    function escapeCsv(value) {
+      if (value === undefined || value === null) return '';
+      const str = String(value);
+      if (/[\";\n]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
     }
 
-    function initStartOverrideControl(){
-      const stored=readPersistedStartOverride();
-      if(stored && startOverrideInput){
-        startOverrideInput.value=isoToLocalInputValue(stored);
+    function initStartOverrideControl() {
+      const stored = readPersistedStartOverride();
+      if (stored && startOverrideInput) {
+        startOverrideInput.value = isoToLocalInputValue(stored);
       }
-      if(startOverrideApply){
-        startOverrideApply.addEventListener('click',handleStartOverrideApply);
+      if (startOverrideApply) {
+        startOverrideApply.addEventListener('click', handleStartOverrideApply);
       }
-      if(startOverrideClear){
-        startOverrideClear.addEventListener('click',handleStartOverrideReset);
+      if (startOverrideClear) {
+        startOverrideClear.addEventListener('click', handleStartOverrideReset);
       }
     }
 
-    function handleStartOverrideApply(){
-      const iso=getStartOverrideIso();
-      if(!iso){
-        if(startOverrideInput){
-          startOverrideInput.value='';
+    function handleStartOverrideApply() {
+      const iso = getStartOverrideIso();
+      if (!iso) {
+        if (startOverrideInput) {
+          startOverrideInput.value = '';
         }
         persistStartOverride(null);
         refreshCachesFromServer(null);
@@ -1123,76 +1501,77 @@
       refreshCachesFromServer(iso);
     }
 
-    function handleStartOverrideReset(){
+    function handleStartOverrideReset() {
       persistStartOverride(null);
-      const fallbackIso=getDefaultStartForCurrentController();
-      if(startOverrideInput){
-        startOverrideInput.value=fallbackIso?isoToLocalInputValue(fallbackIso):'';
+      const fallbackIso = getDefaultStartForCurrentController();
+      if (startOverrideInput) {
+        startOverrideInput.value = fallbackIso ? isoToLocalInputValue(fallbackIso) : '';
       }
       refreshCachesFromServer(fallbackIso || null);
     }
 
-    function getStartOverrideIso(){
-      if(!startOverrideInput) return null;
-      const value=startOverrideInput.value?.trim();
-      if(!value) return null;
+    function getStartOverrideIso() {
+      if (!startOverrideInput) return null;
+      const value = startOverrideInput.value?.trim();
+      if (!value) return null;
       return localInputValueToIso(value);
     }
 
-    function localInputValueToIso(value){
-      if(!value) return null;
-      let normalized=value.trim();
-      if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/.test(normalized)){
-        normalized+=':00';
+    function localInputValueToIso(value) {
+      if (!value) return null;
+      let normalized = value.trim();
+      if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/.test(normalized)) {
+        normalized += ':00';
       }
-      const parsed=new Date(normalized);
-      if(Number.isNaN(parsed.getTime())) return null;
+      const parsed = new Date(normalized);
+      if (Number.isNaN(parsed.getTime())) return null;
       return parsed.toISOString();
     }
 
-    function isoToLocalInputValue(value){
-      if(!value) return '';
-      const parsed=new Date(value);
-      if(Number.isNaN(parsed.getTime())) return '';
-      const year=parsed.getFullYear();
-      const month=String(parsed.getMonth()+1).padStart(2,'0');
-      const day=String(parsed.getDate()).padStart(2,'0');
-      const hours=String(parsed.getHours()).padStart(2,'0');
-      const minutes=String(parsed.getMinutes()).padStart(2,'0');
+    function isoToLocalInputValue(value) {
+      if (!value) return '';
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return '';
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      const hours = String(parsed.getHours()).padStart(2, '0');
+      const minutes = String(parsed.getMinutes()).padStart(2, '0');
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
-    function readPersistedStartOverride(){
-      try{
-        return window.localStorage?window.localStorage.getItem(START_OVERRIDE_STORAGE_KEY):null;
-      }catch(error){
+    function readPersistedStartOverride() {
+      try {
+        return window.localStorage ? window.localStorage.getItem(START_OVERRIDE_STORAGE_KEY) : null;
+      } catch (error) {
         return null;
       }
     }
 
-    function persistStartOverride(value){
-      try{
-        if(!window.localStorage) return;
-        if(value){
-          window.localStorage.setItem(START_OVERRIDE_STORAGE_KEY,value);
-        }else{
+    function persistStartOverride(value) {
+      try {
+        if (!window.localStorage) return;
+        if (value) {
+          window.localStorage.setItem(START_OVERRIDE_STORAGE_KEY, value);
+        } else {
           window.localStorage.removeItem(START_OVERRIDE_STORAGE_KEY);
         }
-      }catch(error){
+      } catch (error) {
         // storage unavailable
       }
     }
 
-    function escapeHtml(str){
-      if(str===undefined || str===null) return '';
+    function escapeHtml(str) {
+      if (str === undefined || str === null) return '';
       return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#39;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
   </script>
 </body>
+
 </html>
