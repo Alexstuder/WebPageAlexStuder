@@ -33,6 +33,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
   double? _latestAbv;
   double? _og;
   double? _delta24h;
+  String? _generatedAt;
   
 
   @override
@@ -85,7 +86,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     return c['id'] ?? c['Id'] ?? c['temperatureControllerId'] ?? c['TemperatureControllerId'];
   }
 
-  Future<void> _loadTelemetry(String controllerId, {DateTime? startOverride}) async {
+  Future<void> _loadTelemetry(String controllerId, {DateTime? startOverride, bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -97,34 +98,36 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         apiKey: _profile!.raptApiKey!,
       );
       
-      // Default start date logic: 
-      // If we have an active session, use its start date?
-      // Or default to some reasonable lookback if no active session?
-      // JS logic: finds earliest valid row or session start.
+      // If we are forcing a refresh or setting a specific date, we use the active parameters.
+      // If just loading (init), we try cache first.
       
-      // For now, let's request without explicit start (Service handles it or API default)
-      // Or if startOverride is provided use it.
+      final dataEnv = await service.fetchTelemetry(
+        controllerId: controllerId,
+        startDate: startOverride,
+        forceRefresh: forceRefresh,
+        useCacheOnly: !forceRefresh && startOverride == null, // Cache default if no special params
+      );
       
-      DateTime start = startOverride ?? DateTime.now().subtract(const Duration(days: 7)); // Default 7d
+      // Process Data
+      final rows = (dataEnv['rows'] as List?)?.map((e) => e as Map<String,dynamic>).toList() ?? [];
+      final genAt = dataEnv['generatedAt'] as String?;
       
-      // Refine start date based on active session if available in controller data
-      final controller = _controllers.firstWhere((c) => _getControllerId(c) == controllerId, orElse: () => null);
-      if (controller != null && startOverride == null) {
-         // Check for ActiveProfileSession
-         final session = controller['activeProfileSession'] ?? controller['ActiveProfileSession'];
-         if (session != null) {
-            final sDate = session['startDate'] ?? session['startTime']; // Simplified
-            if (sDate != null) {
-               start = DateTime.tryParse(sDate) ?? start;
-            }
-         }
+      // Update resolved start date if available
+      if (dataEnv['resolvedStartDate'] != null) {
+         _startDate = DateTime.tryParse(dataEnv['resolvedStartDate']);
+      } else if (startOverride != null) {
+         _startDate = startOverride;
+      } else if (rows.isNotEmpty) {
+         // Fallback if no start date was explicitly returned, use first row? 
+         // Actually better to leave _startDate null or what user selected.
+         // But if user didn't select, we might want to know what the cache implies.
       }
+
+      setState(() {
+        _generatedAt = genAt;
+      });
       
-      _startDate = start;
-      
-      final data = await service.getTelemetry(controllerId, start);
-      
-      _processTelemetry(data);
+      _processTelemetry(rows);
       
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -133,6 +136,24 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     }
   }
   
+  // New helper to reset
+  Future<void> _resetDateAndReload() async {
+     setState(() => _isLoading = true);
+     try {
+       final service = RaptService(
+          userId: _profile!.raptUserId!,
+          apiKey: _profile!.raptApiKey!,
+        );
+       await service.resetStartDate();
+       setState(() => _startDate = null);
+       // Reload with force refresh to clear any stale cache state on proxy side regarding date override
+       await _loadTelemetry(_selectedControllerId!, forceRefresh: true);
+     } catch (e) {
+        if (mounted) setState(() => _error = e.toString());
+        setState(() => _isLoading = false);
+     }
+  }
+
   void _processTelemetry(List<dynamic> rows) {
     if (rows.isEmpty) {
       setState(() {
@@ -172,10 +193,25 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     final og = gravities.isNotEmpty ? gravities.reduce(max) : null;
     
     // ABV
-    // Formula: (OG - FG) * 131.25
+    // Formula: (OG - FG) * 131.25, but strictly increasing (matching Chart logic)
     double? abv;
-    if (og != null && gravity != null) {
-      abv = (og - gravity) * 131.25;
+    if (og != null && gravities.isNotEmpty) {
+       double lastAbv = 0.0;
+       // We need to iterate in time order. 'rows' is strictly sorted by date above.
+       for (final r in rows) {
+          double? g = (r['gravity'] as num?)?.toDouble();
+          if (g != null) {
+             g = normalize(g);
+             double currentAbv = (og - g) * 131.25;
+             if (currentAbv < 0) currentAbv = 0;
+             if (currentAbv < lastAbv) {
+                currentAbv = lastAbv;
+             } else {
+                lastAbv = currentAbv;
+             }
+             abv = currentAbv;
+          }
+       }
     }
     
     // Delta 24h
@@ -221,7 +257,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_profile == null && _isLoading) {
+    if (_profile == null && _isLoading && _controllers.isEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFF020617),
         body: Center(child: CircularProgressIndicator()),
@@ -234,16 +270,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('RAPT Dashboard'),
-        actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                 if (_selectedControllerId != null) {
-                    _loadTelemetry(_selectedControllerId!, startOverride: _startDate);
-                 }
-              },
-            )
-        ],
+        // No auto-refresh action here anymore, handled by UI controls
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -268,18 +295,41 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                 decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
                 ),
-            const SizedBox(height: 24),
             
-            // Status Line
-            Text(
-              'Stand: ${_latestTimestamp()}',
-              style: TextStyle(color: Colors.amber[400], fontSize: 13),
-            ),
-             const SizedBox(height: 4),
-            Text(
-              'Zeitraum: ${_startDate != null ? DateFormat('dd.MM.yyyy HH:mm').format(_startDate!) : '?'} \u2192 Heute',
-              style: TextStyle(color: Colors.indigo[100], fontSize: 13),
-            ),
+             // Dropdown (Moved Up as per typical dashboard flow)
+             const SizedBox(height: 16),
+             Container(
+               padding: const EdgeInsets.symmetric(horizontal: 12),
+               decoration: BoxDecoration(
+                  color: const Color(0xFF020B1D),
+                  border: Border.all(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(10),
+               ),
+               child: DropdownButton<String>(
+                 value: _selectedControllerId,
+                 isExpanded: true,
+                 dropdownColor: const Color(0xFF020B1D),
+                 underline: const SizedBox(),
+                 style: const TextStyle(color: Colors.white),
+                 items: _controllers.map((c) {
+                    final id = _getControllerId(c);
+                    final name = c['name'] ?? c['controllerName'] ?? id;
+                    return DropdownMenuItem<String>(
+                       value: id,
+                       child: Text(name),
+                    );
+                 }).toList(),
+                 onChanged: (v) {
+                    if (v != null) {
+                       setState(() {
+                         _selectedControllerId = v;
+                         _startDate = null; // Reset date on controller change
+                       });
+                       _loadTelemetry(v); // Try cache first
+                    }
+                 },
+               ),
+             ),
              const SizedBox(height: 24),
              
              // Main Panel
@@ -325,40 +375,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      ),
                      const SizedBox(height: 24),
                      
-                     // Dropdown
-                     const Align(alignment: Alignment.centerLeft, child: Text('Temperature Controller', style: TextStyle(color: Colors.white54, fontSize: 12))),
-                     const SizedBox(height: 8),
-                     Container(
-                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                       decoration: BoxDecoration(
-                          color: const Color(0xFF020B1D),
-                          border: Border.all(color: Colors.white24),
-                          borderRadius: BorderRadius.circular(10),
-                       ),
-                       child: DropdownButton<String>(
-                         value: _selectedControllerId,
-                         isExpanded: true,
-                         dropdownColor: const Color(0xFF020B1D),
-                         underline: const SizedBox(),
-                         style: const TextStyle(color: Colors.white),
-                         items: _controllers.map((c) {
-                            final id = _getControllerId(c);
-                            final name = c['name'] ?? c['controllerName'] ?? id;
-                            return DropdownMenuItem<String>(
-                               value: id,
-                               child: Text(name),
-                            );
-                         }).toList(),
-                         onChanged: (v) {
-                            if (v != null) {
-                               setState(() => _selectedControllerId = v);
-                               _loadTelemetry(v);
-                            }
-                         },
-                       ),
-                     ),
-                     const SizedBox(height: 24),
-                     
                      // CHART
                      SizedBox(
                        height: 400,
@@ -368,54 +384,123 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      ),
                      const SizedBox(height: 24),
                      
-                     // Date Picker
-                     const Align(alignment: Alignment.centerLeft, child: Text('Startdatum (optional)', style: TextStyle(color: Colors.white54, fontSize: 12))),
-                     const SizedBox(height: 8),
-                     Row(
+                     // Controls Row (Date, Apply, Reset, Reload)
+                     Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                          Expanded(
-                            child: InkWell(
-                               onTap: () async {
-                                  final picked = await showDatePicker(
-                                    context: context, 
-                                    initialDate: _startDate ?? DateTime.now(), 
-                                    firstDate: DateTime(2020), 
-                                    lastDate: DateTime.now()
-                                  );
-                                  if (picked != null) {
-                                     // Also time?
-                                      if (!context.mounted) return;
-                                      // ignore: use_build_context_synchronously
-                                      final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_startDate ?? DateTime.now()));
-                                      if (time != null) {
-                                         final dt = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
-                                         setState(() => _startDate = dt);
+                         const Text('Startdatum (optional)', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                         const SizedBox(height: 8),
+                         Wrap(
+                           spacing: 12,
+                           runSpacing: 12,
+                           crossAxisAlignment: WrapCrossAlignment.center,
+                           children: [
+                              // Date Picker
+                              InkWell(
+                                 onTap: () async {
+                                    final picked = await showDatePicker(
+                                      context: context, 
+                                      initialDate: _startDate ?? DateTime.now(), 
+                                      firstDate: DateTime(2020), 
+                                      lastDate: DateTime.now()
+                                    );
+                                    if (picked != null) {
+                                       if (!context.mounted) return;
+                                       // ignore: use_build_context_synchronously
+                                       final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_startDate ?? DateTime.now()));
+                                       if (time != null) {
+                                          final dt = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+                                          setState(() => _startDate = dt);
+                                       }
+                                    }
+                                 },
+                                 child: Container(
+                                   width: 200,
+                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                   decoration: BoxDecoration(
+                                       color: const Color(0xFF0F172A).withValues(alpha: 0.6),
+                                      border: Border.all(color: Colors.white24),
+                                      borderRadius: BorderRadius.circular(10),
+                                   ),
+                                   child: Row(
+                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                     children: [
+                                       Text(
+                                         _startDate != null ? DateFormat('dd.MM.yyyy, HH:mm').format(_startDate!) : 'Datum wählen...',
+                                         style: const TextStyle(color: Colors.white),
+                                       ),
+                                       const Icon(Icons.calendar_today, size: 16, color: Colors.white54),
+                                     ],
+                                   ),
+                                 ),
+                              ),
+                              
+                              // Übernehmen
+                              SizedBox(
+                                height: 48,
+                                child: ElevatedButton(
+                                   onPressed: () {
+                                      if (_selectedControllerId != null) {
+                                         _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
                                       }
-                                  }
-                               },
-                               child: Container(
-                                 padding: const EdgeInsets.all(12),
-                                 decoration: BoxDecoration(
-                                     color: const Color(0xFF0F172A).withValues(alpha: 0.6),
-                                    border: Border.all(color: Colors.white24),
-                                    borderRadius: BorderRadius.circular(10),
-                                 ),
-                                 child: Text(
-                                   _startDate != null ? DateFormat('dd.MM.yyyy HH:mm').format(_startDate!) : 'Datum wählen...',
-                                   style: const TextStyle(color: Colors.white),
-                                 ),
-                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          OutlinedButton(
-                             onPressed: () {
-                                if (_selectedControllerId != null) {
-                                   _loadTelemetry(_selectedControllerId!, startOverride: _startDate);
-                                }
-                             },
-                             child: const Text('Übernehmen'),
-                          ),
+                                   },
+                                   style: ElevatedButton.styleFrom(
+                                     backgroundColor: const Color(0xFF1E293B),
+                                     foregroundColor: Colors.white,
+                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Colors.white24)),
+                                   ),
+                                   child: const Text('Übernehmen'),
+                                ),
+                              ),
+                              
+                              // Zurücksetzen
+                              SizedBox(
+                                height: 48,
+                                child: OutlinedButton(
+                                   onPressed: () {
+                                      _resetDateAndReload();
+                                   },
+                                   style: OutlinedButton.styleFrom(
+                                     foregroundColor: Colors.white,
+                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                     side: const BorderSide(color: Colors.white24),
+                                   ),
+                                   child: const Text('Zurücksetzen'),
+                                ),
+                              ),
+                              
+                              // Stand info
+                              if (_generatedAt != null)
+                                Text(
+                                  'Stand ${_formatTime(_generatedAt!)}', // e.g. "Stand 07:00 MEZ"
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+                                ),
+                                
+                              // Reload
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('Reload', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.white24),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.refresh, color: Colors.white),
+                                      onPressed: () {
+                                         if (_selectedControllerId != null) {
+                                            // Reload keeps current date if set, but forces refresh
+                                            _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
+                                         }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              )
+                           ],
+                         ),
                        ],
                      ),
                   ],
@@ -436,6 +521,13 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       ),
     );
   }
+  
+  String _formatTime(String iso) {
+     final dt = DateTime.tryParse(iso);
+     if (dt == null) return iso;
+     return '${DateFormat('HH:mm').format(dt)} MEZ'; // Assuming local is close enough to MEZ or converting explicitly if needed
+  }
+
   
   Widget _buildStatusBadge() {
       // Check active session
@@ -518,13 +610,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      );
   }
   
-  String _latestTimestamp() {
-     if (_telemetryData.isEmpty) return '–';
-     final last = _telemetryData.last;
-     final dt = DateTime.tryParse(last['createdOn'] ?? '');
-     if (dt == null) return '–';
-     return DateFormat('dd.MM.yyyy HH:mm').format(dt);
-  }
+
 
   Widget _buildChart() {
      // Prepare Spots

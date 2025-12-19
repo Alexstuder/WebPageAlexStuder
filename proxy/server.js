@@ -331,9 +331,9 @@ async function handleRaptTelemetryRequest(req, res) {
     const data = canServeCached
       ? telemetryCache
       : await ensureTelemetryCache({
-          force: forceReload,
-          startDateOverride: effectiveStartOverride,
-        });
+        force: forceReload,
+        startDateOverride: effectiveStartOverride,
+      });
     const payload = {
       ...data,
       persistedStartDate: persistedRaptStartDate,
@@ -585,7 +585,10 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
         ? cachedRowsByController.get(controllerId)
         : null;
 
-    if (!hasActiveSession) {
+    // If user provided a specific start date (override), we assume they want historical data
+    // regardless of whether there is an "active session" right now.
+    // Otherwise, if no session is active and no override, we just serve cache.
+    if (!hasActiveSession && !startDateOverride) {
       if (cachedRowsForController && cachedRowsForController.length) {
         cachedRowsForController.forEach(entry => {
           rows.push({

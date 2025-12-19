@@ -59,54 +59,63 @@ class RaptService {
     }
   }
 
-  Future<List<dynamic>> getTelemetry(String controllerId, DateTime startDate) async {
-    // Proxy: /cache/telemetry (returns object with 'rows') or /rapt/telemetry
-    // Direct: /TemperatureControllers/GetTelemetry (returns List)
-    
-    Uri uri;
-    if (kIsWeb) {
-       // Using the cache endpoint is faster and structured
-       uri = Uri.parse('$baseUrl/cache/telemetry'); 
-       // Note: The proxy cache might not filter by specific controllerId in the GET request if it's singleton
-       // But let's try the dynamic telemetry key if available?
-       // The proxy has /api/rapt/telemetry which takes ?start=... 
-       // but /api/cache/telemetry returns the latest cached dump for the configured user.
-       // Let's rely on /api/rapt/telemetry so we can pass query params if needed, 
-       // BUT note the proxy ignores dynamic params for the *cache* usually? 
-       // Proxy code: handleRaptTelemetryRequest checks ?start=
-       
-       uri = Uri.parse('$baseUrl/rapt/telemetry').replace(queryParameters: {
-         'start': startDate.toIso8601String(),
-       });
-    } else {
-       uri = Uri.parse('$baseUrl/TemperatureControllers/GetTelemetry').replace(queryParameters: {
-          'temperatureControllerId': controllerId,
-          'startDate': startDate.toIso8601String(),
-       });
-    }
-
-    final headers = {'Content-Type': 'application/json'};
+  Future<Map<String, dynamic>> fetchTelemetry({
+    String? controllerId, 
+    DateTime? startDate,
+    bool forceRefresh = false,
+    bool useCacheOnly = false,
+  }) async {
     if (!kIsWeb) {
-      headers['Authorization'] = 'Bearer $apiKey';
+      // Direct Mode (Legacy/Native)
+      // Calls RAPT API directly which returns a List<dynamic>
+      final uri = Uri.parse('$baseUrl/TemperatureControllers/GetTelemetry').replace(queryParameters: {
+          'temperatureControllerId': controllerId,
+          'startDate': startDate?.toIso8601String(),
+       });
+       
+       final response = await http.get(uri, headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $apiKey'});
+       
+       if (response.statusCode == 200) {
+         final list = jsonDecode(response.body) as List;
+         return {
+           'rows': list,
+           'generatedAt': DateTime.now().toIso8601String(), // Mock for direct
+         };
+       } else {
+         throw Exception('Failed to load telemetry: ${response.statusCode}');
+       }
     }
 
-    final response = await http.get(uri, headers: headers);
+    // Web / Proxy Mode
+    Uri uri;
+    if (useCacheOnly) {
+      uri = Uri.parse('$baseUrl/cache/telemetry');
+    } else {
+      final query = <String, String>{};
+      if (forceRefresh) query['reload'] = 'true';
+      if (startDate != null) query['start'] = startDate.toIso8601String();
+      
+      uri = Uri.parse('$baseUrl/rapt/telemetry').replace(queryParameters: query);
+    }
+
+    final response = await http.get(uri);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      if (kIsWeb) {
-         // Proxy returns { rows: [...], ... }
-         if (data is Map && data.containsKey('rows')) {
-            return data['rows'] as List;
-         }
-         return [];
-      } else {
-         return data as List;
+      if (data is Map<String, dynamic>) {
+        return data; 
       }
+      return {'rows': []};
     } else {
-      debugPrint('RAPT Telemetry Error ${response.statusCode}: ${response.body}');
-      throw Exception('Failed to load telemetry: ${response.statusCode}');
+      throw Exception('Failed to load telemetry: ${response.statusCode} ${response.body}');
     }
   }
+
+  Future<void> resetStartDate() async {
+    if (!kIsWeb) return;
+    
+    final uri = Uri.parse('$baseUrl/rapt/telemetry/start-override');
+    await http.delete(uri);
+  }
+
 }

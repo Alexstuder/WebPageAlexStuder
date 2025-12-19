@@ -1,0 +1,6 @@
+
+> brew-proxy@0.1.0 start
+> node server.js
+
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000

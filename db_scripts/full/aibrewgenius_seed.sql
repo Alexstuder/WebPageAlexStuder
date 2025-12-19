@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict rjMX6DreRGWIfJ2uNJL6KCdbO9DINHhH2wKLdXgwPDAlExADbFcNUygGxrirDlW
+\restrict yZWWXb2fwcVTakC2Jh5AkXF55gA2OhkIK3IMrYi5jBBB7VGNjLYGhodQbEF1fz4
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.0
@@ -210,5 +210,5 @@ INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id,
 -- PostgreSQL database dump complete
 --
 
-\unrestrict rjMX6DreRGWIfJ2uNJL6KCdbO9DINHhH2wKLdXgwPDAlExADbFcNUygGxrirDlW
+\unrestrict yZWWXb2fwcVTakC2Jh5AkXF55gA2OhkIK3IMrYi5jBBB7VGNjLYGhodQbEF1fz4
 
