@@ -297,7 +297,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
                         Text(
-                          'Last brew: $profileName',
+                          'Letzter Sud: $profileName',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -308,7 +308,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                         const SizedBox(height: 8),
                         if (start != null && end != null)
                           Text(
-                            'Brewed from ${fmt.format(start)} to ${fmt.format(end)}',
+                            'Gebraut vom ${fmt.format(start)} bis ${fmt.format(end)}',
                              style: const TextStyle(color: Colors.white70, fontSize: 16),
                           ),
                         const SizedBox(height: 24),
@@ -591,7 +591,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
             borderRadius: BorderRadius.circular(20),
          ),
          child: Text(
-            isActive ? 'Currently Brewing' : 'Currently Not Brewing',
+            isActive ? 'Gärt gerade' : 'Gärt nicht',
             style: TextStyle(
                color: isActive ? Colors.greenAccent : Colors.redAccent,
                fontSize: 12,
@@ -880,7 +880,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                        } else {
                           // Velocity (Index 3)
                           double v = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
-                          return LineTooltipItem('${v.toStringAsFixed(1)} P/d', const TextStyle(color: Colors.brown));
+                          return LineTooltipItem('${v.toStringAsFixed(1)} P/Tag', const TextStyle(color: Colors.brown));
                        }
                     }).toList();
                  }

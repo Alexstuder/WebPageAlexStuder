@@ -448,7 +448,7 @@
         <header class="gpt-head panel-head"
           style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
           <div>
-            <div class="gpt-badge gpt-badge--brew" id="brewing-badge">Currently Brewing</div>
+            <div class="gpt-badge gpt-badge--brew" id="brewing-badge">Gärt gerade</div>
             <h1 id="page-title">Gesammelte Telemetrie</h1>
             <div id="page-subtitle" style="color:#94a3b8; margin-top:4px; font-size:15px; display:none;"></div>
           </div>
@@ -788,7 +788,7 @@
       let displayName = '';
       if (!isActive) {
         const name = dataProfileName || sessionName;
-        displayName = `Last brew: ${name}`;
+        displayName = `Letzter Sud: ${name}`;
       } else {
         displayName = sessionName || dataProfileName;
       }
@@ -932,11 +932,11 @@
     function updateBrewingBadge(isActive) {
       if (!brewingBadge) return;
       if (isActive) {
-        brewingBadge.textContent = 'Currently Brewing';
+        brewingBadge.textContent = 'Gärt gerade';
         brewingBadge.classList.add('gpt-badge--brew');
         brewingBadge.classList.remove('gpt-badge--idle');
       } else {
-        brewingBadge.textContent = 'Currently Not Brewing';
+        brewingBadge.textContent = 'Gärt nicht';
         brewingBadge.classList.remove('gpt-badge--brew');
         brewingBadge.classList.add('gpt-badge--idle');
       }
@@ -1140,7 +1140,7 @@
           pointHoverRadius: 4
         },
         {
-          label: 'Velocity (Punkte/Tag)',
+          label: 'Gärgeschw. (Punkte/Tag)',
           data: velocityData,
           borderColor: '#a16207',
           backgroundColor: 'rgba(161, 98, 7, 0.1)',
@@ -1460,7 +1460,7 @@
           telemetryRange.textContent = 'Zeitraum unbekannt.';
         } else {
           if (!actuallyActive) {
-            telemetryRange.textContent = `Brewed from ${startLabel || '–'} to ${endLabel || '–'}`;
+            telemetryRange.textContent = `Gebraut vom ${startLabel || '–'} bis ${endLabel || '–'}`;
           } else {
             telemetryRange.textContent = `Zeitraum: ${startLabel || '–'} → ${endLabel || '–'}`;
           }
@@ -1469,7 +1469,7 @@
 
       if (pageSubtitle) {
         if (!actuallyActive && (startLabel || endLabel)) {
-          pageSubtitle.textContent = `Brewed from ${startLabel || '?'} to ${endLabel || '?'}`;
+          pageSubtitle.textContent = `Gebraut vom ${startLabel || '?'} bis ${endLabel || '?'}`;
           pageSubtitle.style.display = 'block';
         } else {
           pageSubtitle.style.display = 'none';
