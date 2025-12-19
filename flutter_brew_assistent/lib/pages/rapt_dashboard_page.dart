@@ -27,6 +27,8 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
   List<dynamic> _telemetryData = [];
   DateTime? _startDate;
   
+  bool _isFallbackData = false;
+
   // Dashboard Metrics
   double? _latestTemp;
   double? _latestGravity;
@@ -42,7 +44,16 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     _loadProfileAndControllers();
   }
 
+  // ... (unchanged)
+
   Future<void> _loadProfileAndControllers() async {
+    // ... same content as existing method, just ensuring I don't break it by context ...
+    // Actually, I can leave this method alone if I target the right range.
+    // But since I am replacing a huge chunk, let's keep it safe. 
+    // Wait, the tool 'replacement' works by finding TargetContent. 
+    // I will target the State variable declaration first, then _loadTelemetry, then build.
+    // Since tool only allows CONTINUOUS block, and these are separated...
+    // I MUST use multi_replace.
     setState(() => _isLoading = true);
     try {
       final profile = await UserProfileService().fetchDefaultProfile();
@@ -53,7 +64,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       
       _profile = profile;
       
-      // Update Service with credentials
       final service = RaptService(
         userId: profile.raptUserId!,
         apiKey: profile.raptApiKey!,
@@ -64,13 +74,9 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       
       setState(() {
         _controllers = controllers;
-        // Select first or default
-        // Try to find one with active session?
-        // Logic: specific ID logic or just first.
         _selectedControllerId = _getControllerId(controllers.first);
       });
       
-      // Load Telemetry for selected
       if (_selectedControllerId != null) {
         await _loadTelemetry(_selectedControllerId!);
       }
@@ -98,33 +104,26 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         apiKey: _profile!.raptApiKey!,
       );
       
-      // If we are forcing a refresh or setting a specific date, we use the active parameters.
-      // If just loading (init), we try cache first.
-      
       final dataEnv = await service.fetchTelemetry(
         controllerId: controllerId,
         startDate: startOverride,
         forceRefresh: forceRefresh,
-        useCacheOnly: !forceRefresh && startOverride == null, // Cache default if no special params
+        useCacheOnly: !forceRefresh && startOverride == null,
       );
       
-      // Process Data
       final rows = (dataEnv['rows'] as List?)?.map((e) => e as Map<String,dynamic>).toList() ?? [];
       final genAt = dataEnv['generatedAt'] as String?;
+      final isFallback = dataEnv['isFallback'] == true; // Capture fallback flag
       
-      // Update resolved start date if available
       if (dataEnv['resolvedStartDate'] != null) {
          _startDate = DateTime.tryParse(dataEnv['resolvedStartDate']);
       } else if (startOverride != null) {
          _startDate = startOverride;
-      } else if (rows.isNotEmpty) {
-         // Fallback if no start date was explicitly returned, use first row? 
-         // Actually better to leave _startDate null or what user selected.
-         // But if user didn't select, we might want to know what the cache implies.
       }
 
       setState(() {
         _generatedAt = genAt;
+        _isFallbackData = isFallback;
       });
       
       _processTelemetry(rows);
@@ -135,6 +134,9 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+  
+  // (Rest of methods) ... skip to build ...
+
   
   // New helper to reset
   Future<void> _resetDateAndReload() async {
@@ -280,57 +282,99 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
             // Status Badge
             _buildStatusBadge(),
             const SizedBox(height: 16),
-            const Text(
-              'RAPT Temperature Controller',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-             const SizedBox(height: 8),
-             if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            if (_isFallbackData && _telemetryData.isNotEmpty) ...[
+               Builder(
+                 builder: (context) {
+                   final first = _telemetryData.first;
+                   final last = _telemetryData.last;
+                   
+                   final profileName = first['profileName'] ?? first['ProfileName'] ?? 'Unknown Profile';
+                   final start = DateTime.tryParse(first['createdOn'] ?? '');
+                   final end = DateTime.tryParse(last['createdOn'] ?? '');
+                   final fmt = DateFormat('dd.MM.yyyy HH:mm');
+                   
+                   return Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                        Text(
+                          'Last beer brewing : $profileName',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (start != null && end != null)
+                          Text(
+                            'Brewing from ${fmt.format(start)} to ${fmt.format(end)}',
+                             style: const TextStyle(color: Colors.white70, fontSize: 16),
+                          ),
+                        const SizedBox(height: 24),
+                        if (_error != null)
+                           Container(
+                             padding: const EdgeInsets.all(12),
+                             margin: const EdgeInsets.only(bottom: 16),
+                             decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                             child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                           ),
+                     ],
+                   );
+                 }
+               )
+            ] else ...[
+                const Text(
+                  'RAPT Temperature Controller',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-            
-             // Dropdown (Moved Up as per typical dashboard flow)
-             const SizedBox(height: 16),
-             Container(
-               padding: const EdgeInsets.symmetric(horizontal: 12),
-               decoration: BoxDecoration(
-                  color: const Color(0xFF020B1D),
-                  border: Border.all(color: Colors.white24),
-                  borderRadius: BorderRadius.circular(10),
-               ),
-               child: DropdownButton<String>(
-                 value: _selectedControllerId,
-                 isExpanded: true,
-                 dropdownColor: const Color(0xFF020B1D),
-                 underline: const SizedBox(),
-                 style: const TextStyle(color: Colors.white),
-                 items: _controllers.map((c) {
-                    final id = _getControllerId(c);
-                    final name = c['name'] ?? c['controllerName'] ?? id;
-                    return DropdownMenuItem<String>(
-                       value: id,
-                       child: Text(name),
-                    );
-                 }).toList(),
-                 onChanged: (v) {
-                    if (v != null) {
-                       setState(() {
-                         _selectedControllerId = v;
-                         _startDate = null; // Reset date on controller change
-                       });
-                       _loadTelemetry(v); // Try cache first
-                    }
-                 },
-               ),
-             ),
-             const SizedBox(height: 24),
+                 const SizedBox(height: 8),
+                 if (_error != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                      child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                    ),
+                
+                 const SizedBox(height: 16),
+                 Container(
+                   padding: const EdgeInsets.symmetric(horizontal: 12),
+                   decoration: BoxDecoration(
+                      color: const Color(0xFF020B1D),
+                      border: Border.all(color: Colors.white24),
+                      borderRadius: BorderRadius.circular(10),
+                   ),
+                   child: DropdownButton<String>(
+                     value: _selectedControllerId,
+                     isExpanded: true,
+                     dropdownColor: const Color(0xFF020B1D),
+                     underline: const SizedBox(),
+                     style: const TextStyle(color: Colors.white),
+                     items: _controllers.map((c) {
+                        final id = _getControllerId(c);
+                        final name = c['name'] ?? c['controllerName'] ?? id;
+                        return DropdownMenuItem<String>(
+                           value: id,
+                           child: Text(name),
+                        );
+                     }).toList(),
+                     onChanged: (v) {
+                        if (v != null) {
+                           setState(() {
+                             _selectedControllerId = v;
+                             _startDate = null; 
+                           });
+                           _loadTelemetry(v); 
+                        }
+                     },
+                   ),
+                 ),
+                 const SizedBox(height: 24),
+            ],
              
              // Main Panel
              Container(
