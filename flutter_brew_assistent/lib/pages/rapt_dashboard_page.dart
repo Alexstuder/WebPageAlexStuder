@@ -297,7 +297,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
                         Text(
-                          'Last beer brewing : $profileName',
+                          'Last brew: $profileName',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -308,7 +308,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                         const SizedBox(height: 8),
                         if (start != null && end != null)
                           Text(
-                            'Brewing from ${fmt.format(start)} to ${fmt.format(end)}',
+                            'Brewed from ${fmt.format(start)} to ${fmt.format(end)}',
                              style: const TextStyle(color: Colors.white70, fontSize: 16),
                           ),
                         const SizedBox(height: 24),
