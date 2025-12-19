@@ -117,7 +117,7 @@ function setCorsHeaders(req, res) {
           ? requestOrigin
           : ALLOWED_ORIGINS[0] || '*';
   res.setHeader('Access-Control-Allow-Origin', resolved);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
 }
@@ -334,11 +334,24 @@ async function handleRaptTelemetryRequest(req, res) {
         force: forceReload,
         startDateOverride: effectiveStartOverride,
       });
+    let payloadData = data;
+    const isLiveRequest = !effectiveStartOverride;
+
+    if (isLiveRequest && !hasActiveSessionInCache()) {
+      const fallback = tryServeFallback();
+      if (fallback) {
+        payloadData = fallback;
+      }
+    }
+
     const payload = {
-      ...data,
+      ...payloadData,
       persistedStartDate: persistedRaptStartDate,
-      resolvedStartDate: effectiveStartOverride || data.startDate || null,
+      resolvedStartDate: effectiveStartOverride || payloadData.startDate || null,
     };
+
+    console.log(`[Proxy] Final Response Rows: ${payload.rows ? payload.rows.length : 0} (First Row Error: ${payload.rows && payload.rows[0] ? payload.rows[0].error : 'none'})`);
+
     respondJson(res, 200, payload);
   } catch (error) {
     console.error('RAPT telemetry error:', error);
@@ -348,18 +361,53 @@ async function handleRaptTelemetryRequest(req, res) {
 }
 
 async function handleTelemetryCacheResponse(res) {
-  if (!telemetryCache) {
+  let dataToSend = telemetryCache;
+
+  if (!dataToSend) {
     try {
       await ensureTelemetryCache({ force: false });
+      dataToSend = telemetryCache;
     } catch (error) {
       console.warn('Unable to refresh telemetry cache:', error.message || error);
     }
   }
-  if (!telemetryCache) {
+
+  // Fallback Logic for Cache Endpoint
+  if (!hasActiveSessionInCache()) {
+    const fallback = tryServeFallback();
+    if (fallback) {
+      console.log('[Proxy] Using fallback for cache endpoint.');
+      dataToSend = fallback;
+    }
+  }
+
+  if (!dataToSend) {
     respondJson(res, 404, { error: 'Telemetry cache unavailable.' });
     return;
   }
-  respondJson(res, 200, telemetryCache);
+  respondJson(res, 200, dataToSend);
+}
+
+function tryServeFallback() {
+  try {
+    if (fs.existsSync(LAST_TELEMETRY_CACHE_FILE)) {
+      const raw = fs.readFileSync(LAST_TELEMETRY_CACHE_FILE, 'utf8');
+      const diskData = JSON.parse(raw);
+      const potentialPayload = diskData.payload || diskData;
+
+      if (potentialPayload && Array.isArray(potentialPayload.rows) && potentialPayload.rows.length) {
+        // Check if rows are actually valid (no error)
+        if (!potentialPayload.rows[0].error) {
+          console.log(`[Proxy] Serving fallback with ${potentialPayload.rows.length} rows.`);
+          // Ensure isFallback flag
+          return { ...potentialPayload, isFallback: true };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Proxy] Fallback read failed:', err.message);
+  }
+  return null;
 }
 
 async function handleControllerCacheResponse(res) {
@@ -585,10 +633,14 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
         ? cachedRowsByController.get(controllerId)
         : null;
 
+    // Logging debug info for decision
+    console.log(`[DEBUG] refreshTelemetryCache for ${controllerId}: active=${hasActiveSession}, override=${startDateOverride}, cachedRows=${cachedRowsForController?.length}`);
+
     // If user provided a specific start date (override), we assume they want historical data
     // regardless of whether there is an "active session" right now.
     // Otherwise, if no session is active and no override, we just serve cache.
     if (!hasActiveSession && !startDateOverride) {
+      console.log('[DEBUG] Reusing cache because no active session and no override.');
       if (cachedRowsForController && cachedRowsForController.length) {
         cachedRowsForController.forEach(entry => {
           rows.push({
@@ -875,27 +927,81 @@ function getLastKnownStartDate() {
   return persistedRaptStartDate || lastEffectiveStartDate || telemetryCache?.startDate || null;
 }
 
+const LAST_TELEMETRY_CACHE_FILE = path.join(CACHE_DIR, 'last-telemetry-cache.json');
+const LAST_CONTROLLER_CACHE_FILE = path.join(CACHE_DIR, 'last-controllers-cache.json');
+
 function scheduleHourlyTelemetryRefresh() {
   const scheduleNext = () => {
     const delay = getMsUntilNextHour();
-    setTimeout(() => {
-      ensureTelemetryCache({
-        force: true,
-        startDateOverride: getLastKnownStartDate(),
-      }).catch(err => {
-        console.error('Scheduled telemetry refresh failed:', err.message || err);
-      });
+    console.log(`[Scheduler] Next telemetry refresh scheduled in ${Math.round(delay / 1000 / 60)} minutes.`);
+    setTimeout(async () => {
+      console.log('[Scheduler] Starting hourly telemetry refresh...');
+
+      // 1. Backup current cache to 'last-' files ONLY if we currently have an active session.
+      // This ensures 'last' files always contain the most recent *active* state.
+      try {
+        if (hasActiveSessionInCache()) {
+          console.log('[Scheduler] Active session detected in current cache. Backing up to last-cache files.');
+          if (fs.existsSync(TELEMETRY_CACHE_FILE)) {
+            fs.copyFileSync(TELEMETRY_CACHE_FILE, LAST_TELEMETRY_CACHE_FILE);
+          }
+          if (fs.existsSync(CONTROLLER_CACHE_FILE)) {
+            fs.copyFileSync(CONTROLLER_CACHE_FILE, LAST_CONTROLLER_CACHE_FILE);
+          }
+        } else {
+          console.log('[Scheduler] No active session in current cache. Skipping backup to preserve previous active state.');
+        }
+      } catch (backupErr) {
+        console.error('[Scheduler] Backup failed:', backupErr);
+      }
+
+      // 2. Refresh Telemetry
+      try {
+        await ensureTelemetryCache({
+          force: true,
+          startDateOverride: getLastKnownStartDate(),
+        });
+        console.log('[Scheduler] Hourly refresh completed.');
+      } catch (err) {
+        console.error('[Scheduler] Telemetry refresh failed:', err.message || err);
+      }
+
       scheduleNext();
     }, delay);
   };
   scheduleNext();
 }
 
+function hasActiveSessionInCache() {
+  // Check in-memory first
+  if (controllersCache && Array.isArray(controllersCache.controllers)) {
+    return controllersCache.controllers.some(c => controllerHasActiveSession(c));
+  }
+  return false;
+}
+
 function getMsUntilNextHour(referenceTime = Date.now()) {
   const referenceDate = new Date(referenceTime);
   referenceDate.setMinutes(0, 0, 0);
-  const nextHourMs = referenceDate.getTime() + CACHE_INTERVAL_MS;
-  return Math.max(1000, nextHourMs - referenceTime);
+  // Add 1 hour
+  const nextHourMs = referenceDate.getTime() + (60 * 60 * 1000);
+  // If we are currently exactly at 00, add another hour? 
+  // ensureTelemetryCache runs, then schedules next. 
+  // If we are at 09:00:01, next is 10:00:00.
+  // The logic below adds INTERVAL (which is 1h) to the rounded-down hour?
+  // Original logic: referenceDate + CACHE_INTERVAL_MS. 
+  // If referenceDate is 09:00:00, +1h = 10:00:00.
+  // If current time is 09:30, referenceDate is 09:00. +1h = 10:00. diff = 30min. Correct.
+  // But usage of CACHE_INTERVAL_MS variable is safer if we want to config it.
+  // Assuming CACHE_INTERVAL_MS is 1 hour (3600000).
+  const nextHourMsCalculated = referenceDate.getTime() + 3600000;
+
+  // Calculate delay, but ensure we don't fire immediately if we are super close
+  const delay = nextHourMsCalculated - referenceTime;
+  // If delay is negative (shouldn't happen with math above) or very small, wait 1h?
+  // For safety, just use the logic: Next top of the hour.
+
+  return Math.max(1000, delay);
 }
 
 function loadEnvFile(filePath) {
