@@ -1091,6 +1091,11 @@
       });
       const validAbv = abvSeries.filter(v => Number.isFinite(v));
       const abvMax = validAbv.length ? Math.max(...validAbv) : 0;
+      const velocityData = rows.map(r => {
+        const v = Number(r?.gravityVelocity);
+        return Number.isFinite(v) ? -v : null;
+      });
+
       const datasets = [
         {
           label: 'Temperatur (°C)',
@@ -1126,6 +1131,20 @@
           borderColor: '#facc15',
           backgroundColor: 'rgba(250,204,21,0.12)',
           yAxisID: 'yAbv',
+          fill: false,
+          tension: 0.25,
+          spanGaps: true,
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          pointHoverRadius: 4
+        },
+        {
+          label: 'Velocity (Punkte/Tag)',
+          data: velocityData,
+          borderColor: '#a16207',
+          backgroundColor: 'rgba(161, 98, 7, 0.1)',
+          yAxisID: 'yVelocity',
           fill: false,
           tension: 0.25,
           spanGaps: true,
@@ -1198,6 +1217,14 @@
               grid: { drawOnChartArea: false },
               ticks: { color: '#ef4444' },
               title: { display: true, text: 'Gravity', color: '#ef4444' }
+            },
+            yVelocity: {
+              type: 'linear',
+              position: 'right', // Stacked on right with others
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#a16207' },
+              title: { display: true, text: 'Vel', color: '#a16207' },
+              display: false // Hide axis to avoid clutter, but show line? Or show nicely?
             },
             yAbv: {
               type: 'linear',

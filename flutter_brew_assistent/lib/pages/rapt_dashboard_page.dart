@@ -674,6 +674,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      final pointsTemp = <FlSpot>[];
      final pointsGravity = <FlSpot>[];
      final pointsAbv = <FlSpot>[];
+     final pointsVelocity = <FlSpot>[];
      
      // Store raw gravity values for ABV calculation
      final rawGravities = <double>[];
@@ -684,11 +685,17 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         double? grav = (r['gravity'] as num?)?.toDouble(); // typically 1.0xx
         if (grav != null && grav > 500) grav = grav / 1000.0;
         
+        // Velocity (often negative, so we invert for visual "activity")
+        double? vel = (r['gravityVelocity'] as num?)?.toDouble();
+
         if (t != null) {
            if (temp != null) pointsTemp.add(FlSpot(t, temp));
            if (grav != null) {
               pointsGravity.add(FlSpot(t, grav));
               rawGravities.add(grav);
+           }
+           if (vel != null) {
+              pointsVelocity.add(FlSpot(t, -vel));
            }
         }
      }
@@ -712,21 +719,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         }
      }
      
-     // Normalize Gravity to fit right axis?
-     // FlChart supports multiple axes properly?
-     // We define minY/maxY for left (Temp) and right (Gravity).
-     // Wait, LineChartData allows sets to use different indices?
-     // No, yAxisID is ChartJS. FlChart has one Y axis system unless we use SideTitles for visualization, but the PLOTTING is on the same scale unless we normalize.
-     // To plot 20C and 1.050 SG on same chart, 1.050 is way down.
-     // We MUST normalize gravity to the temp scale or use a second axis visualization and plot normalized values.
-     
-     // Visualization approach:
-     // Map Gravity [1.000, 1.100] to range [0, 30] (example Temp range).
-     // Let's say Temp range is 0..30. Gravity range 1.000..1.080.
-     // Formula: y_plot = (grav - 1.000) * 1000 * scale + offset?
-     // Simpler: Plot gravity on Right Axis logic.
-     // FlChart checks: does it support multi-axis? Not natively for SCALING. We have to scale data manually.
-     
      double minTemp = 0;
      double maxTemp = 30;
      if (pointsTemp.isNotEmpty) {
@@ -748,18 +740,25 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      maxGrav += 0.005;
      
      double minAbv = 0.0;
-     double maxAbv = 7.0; // Default range
+     double maxAbv = 7.0; 
      if (pointsAbv.isNotEmpty) {
         minAbv = pointsAbv.map((e) => e.y).reduce(min);
         maxAbv = pointsAbv.map((e) => e.y).reduce(max);
      }
-     minAbv = -0.5; // Start slightly below 0
+     minAbv = -0.5; 
      maxAbv += 1.0;
+
+     double minVel = 0;
+     double maxVel = 50; 
+     if (pointsVelocity.isNotEmpty) {
+        minVel = pointsVelocity.map((e) => e.y).reduce(min);
+        maxVel = pointsVelocity.map((e) => e.y).reduce(max);
+     }
+     if (minVel > 0) minVel = 0;
+     maxVel += 5;
      
      // Normalizers
      double normalizeG(double g) {
-        // Map [minGrav, maxGrav] -> [minTemp, maxTemp]
-        // (g - minG) / (maxG - minG) * (maxT - minT) + minT
         if (maxGrav == minGrav) return minTemp + (maxTemp - minTemp)/2;
         return (g - minGrav) / (maxGrav - minGrav) * (maxTemp - minTemp) + minTemp;
      }
@@ -769,8 +768,14 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         return (a - minAbv) / (maxAbv - minAbv) * (maxTemp - minTemp) + minTemp;
      }
 
+     double normalizeVel(double v) {
+        if (maxVel == minVel) return minTemp + (maxTemp - minTemp)/2;
+        return (v - minVel) / (maxVel - minVel) * (maxTemp - minTemp) + minTemp;
+     }
+
      final normalizedGravityPoints = pointsGravity.map((e) => FlSpot(e.x, normalizeG(e.y))).toList();
      final normalizedAbvPoints = pointsAbv.map((e) => FlSpot(e.x, normalizeAbv(e.y))).toList();
+     final normalizedVelocityPoints = pointsVelocity.map((e) => FlSpot(e.x, normalizeVel(e.y))).toList();
      
      return LineChart(
         LineChartData(
@@ -779,7 +784,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
            minX: pointsTemp.isNotEmpty ? pointsTemp.first.x : (pointsGravity.isNotEmpty ? pointsGravity.first.x : (pointsAbv.isNotEmpty ? pointsAbv.first.x : 0)),
            maxX: pointsTemp.isNotEmpty ? pointsTemp.last.x : (pointsGravity.isNotEmpty ? pointsGravity.last.x : (pointsAbv.isNotEmpty ? pointsAbv.last.x : 0)),
            lineBarsData: [
-              // Temp
+              // Temp (Index 0)
               LineChartBarData(
                  spots: pointsTemp,
                  color: Colors.blue,
@@ -787,7 +792,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                  dotData: const FlDotData(show: false),
                  belowBarData: BarAreaData(show: true, color: Colors.blue.withValues(alpha: 0.1)),
               ),
-              // Gravity
+              // Gravity (Index 1)
               LineChartBarData(
                  spots: normalizedGravityPoints,
                  color: Colors.red,
@@ -795,13 +800,22 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                  dotData: const FlDotData(show: false),
                  belowBarData: BarAreaData(show: true, color: Colors.red.withValues(alpha: 0.1)),
               ),
-              // Alcohol
+              // Alcohol (Index 2)
               LineChartBarData(
                  spots: normalizedAbvPoints,
                  color: Colors.amber,
                  isCurved: true,
                  dotData: const FlDotData(show: false),
                  belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.1)),
+              ),
+              // Velocity (Index 3)
+              LineChartBarData(
+                 spots: normalizedVelocityPoints,
+                 color: Colors.brown, // Or similar to screenshot
+                 isCurved: true,
+                 dotData: const FlDotData(show: false),
+                 belowBarData: BarAreaData(show: false),
+                 barWidth: 1.5,
               ),
            ],
            titlesData: FlTitlesData(
@@ -815,7 +829,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                          child: Text(DateFormat('dd.MM\nHH:mm').format(dt), style: const TextStyle(color: Colors.white54, fontSize: 10), textAlign: TextAlign.center),
                        );
                     },
-                    interval: (pointsTemp.isNotEmpty) ? (pointsTemp.last.x - pointsTemp.first.x) / 5 : 1000000, // 5 ticks, handle empty case
+                    interval: (pointsTemp.isNotEmpty) ? (pointsTemp.last.x - pointsTemp.first.x) / 5 : 1000000, 
                     reservedSize: 40,
                  ),
               ),
@@ -832,9 +846,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                  sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (val, meta) {
-                       // Reverse normalization:
-                       // val = (g - minG) / (maxG - minG) * (maxT - minT) + minT
-                       // (val - minT) / RangeT * RangeG + minG = g
                        double g = (val - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
                        return Text(g.toStringAsFixed(3), style: const TextStyle(color: Colors.red, fontSize: 10));
                     },
@@ -859,16 +870,17 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                           // Temp
                           return LineTooltipItem('${spot.y.toStringAsFixed(1)} °C', const TextStyle(color: Colors.blue));
                        } else if (spot.barIndex == 1) {
-                          // Gravity (Normalized) -> Restore real value
+                          // Gravity
                           double g = (spot.y - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
                           return LineTooltipItem('${g.toStringAsFixed(4)} SG', const TextStyle(color: Colors.red));
-                       } else {
+                       } else if (spot.barIndex == 2) {
                           // Alcohol
-                          // Reverse normalization:
-                          // val = (a - minA) / (maxA - minA) * (maxT - minT) + minT
-                          // (val - minT) / (maxT - minT) * (maxA - minA) + minA = a
                           double a = (spot.y - minTemp) / (maxTemp - minTemp) * (maxAbv - minAbv) + minAbv;
                           return LineTooltipItem('${a.toStringAsFixed(1)} %', const TextStyle(color: Colors.amber));
+                       } else {
+                          // Velocity (Index 3)
+                          double v = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
+                          return LineTooltipItem('${v.toStringAsFixed(1)} P/d', const TextStyle(color: Colors.brown));
                        }
                     }).toList();
                  }
