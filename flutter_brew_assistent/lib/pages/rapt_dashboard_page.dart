@@ -274,7 +274,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
              const SizedBox(width: 6),
              Icon(Icons.battery_std, color: color, size: 16),
              const SizedBox(width: 4),
-             Text('${percent.toStringAsFixed(0)}%', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold))
+             Text('${percent.floor()}%', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold))
           ]
        )
      );
