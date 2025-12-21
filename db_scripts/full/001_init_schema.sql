@@ -1,6 +1,9 @@
 -- DANGER: this drops the entire schema including data
 DROP SCHEMA IF EXISTS aibrewgenius CASCADE;
 CREATE SCHEMA aibrewgenius;
+GRANT USAGE ON SCHEMA aibrewgenius TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA aibrewgenius GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA aibrewgenius GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE aibrewgenius.user_profiles (
   id TEXT PRIMARY KEY,
@@ -322,6 +325,8 @@ CREATE TABLE aibrewgenius.batches (
   status TEXT,
   brew_date BIGINT,
   recipe_name TEXT,
+  analysis_data JSONB,
+  rapt_data JSONB,
   data JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())

@@ -676,17 +676,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
       
       // Update inventory in Brewfather if synced
       if (_syncEnabled && isSynced && saved.inventory != null && _userProfile?.brewfatherApiKey != null && _userProfile?.brewfatherUserId != null) {
-          try {
-             final bfService = BrewfatherService(userId: _userProfile!.brewfatherUserId!, apiKey: _userProfile!.brewfatherApiKey!);
-             // Note: We need a method to update yeast inventory specifically.
-             // Implemented in BrewfatherService (assumed based on previous logs)
-             // await bfService.updateInventoryYeast(saved.brewfatherId!, saved.inventory!); 
-             // Since I don't see the tool output for bfService to confirm, I'll assume it's part of the requirement.
-             // Wait, the user prompt said "The user's main objective is to refine the Brewfather yeast synchronization logic." 
-             // It seems I am reimplementing existing logic. Use caution.
-          } catch(e) {
-             debugPrint("Failed to update BF inventory: $e");
-          }
+          // Sync logic placeholder if implemented
       }
 
       if (!mounted) return;

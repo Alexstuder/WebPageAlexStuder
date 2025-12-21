@@ -4,16 +4,17 @@ import '../services/user_profile_service.dart';
 import '../models/fermentable.dart';
 
 class AvailableIngredientsPage extends StatefulWidget {
-  const AvailableIngredientsPage({super.key, required this.profileId});
+  const AvailableIngredientsPage({super.key, required this.profileId, this.userRepository});
 
   final String profileId;
+  final UserProfileRepository? userRepository;
 
   @override
   State<AvailableIngredientsPage> createState() => _AvailableIngredientsPageState();
 }
 
 class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
-  final UserProfileService _userService = UserProfileService();
+  late final UserProfileRepository _userService;
   bool _isLoading = true;
   String? _error;
   List<Fermentable> _fermentables = [];
@@ -21,6 +22,7 @@ class _AvailableIngredientsPageState extends State<AvailableIngredientsPage> {
   @override
   void initState() {
     super.initState();
+    _userService = widget.userRepository ?? UserProfileService();
     _load();
   }
 

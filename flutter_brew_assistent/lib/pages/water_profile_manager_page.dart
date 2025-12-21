@@ -388,6 +388,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Kalzium Ca²⁺',
                     controller: _calciumCtrl,
+                    fieldKey: const Key('input_calcium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -396,6 +397,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Magnesium Mg²⁺',
                     controller: _magnesiumCtrl,
+                    fieldKey: const Key('input_magnesium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -404,6 +406,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Natrium Na⁺',
                     controller: _sodiumCtrl,
+                    fieldKey: const Key('input_sodium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -425,6 +428,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Chlorid Cl⁻',
                     controller: _chlorideCtrl,
+                    fieldKey: const Key('input_chloride'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -433,6 +437,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Sulfat SO₄²⁻',
                     controller: _sulfateCtrl,
+                    fieldKey: const Key('input_sulfate'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -441,6 +446,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Bicarbonat HCO₃⁻',
                     controller: _bicarbonateCtrl,
+                    fieldKey: const Key('input_bicarbonate'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -745,11 +751,13 @@ class _WaterIonTile extends StatelessWidget {
   const _WaterIonTile({
     required this.title,
     required this.controller,
+    this.fieldKey,
     this.onChanged,
   });
 
   final String title;
   final TextEditingController controller;
+  final Key? fieldKey;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -781,6 +789,7 @@ class _WaterIonTile extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: fieldKey,
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(

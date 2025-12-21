@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/fermenter.dart';
 
-class FermenterService {
+abstract class FermenterRepository {
+  Future<List<Fermenter>> fetchFermenters(String userProfileId);
+  Future<Fermenter> saveFermenter(Fermenter fermenter);
+  Future<void> deleteFermenter(String id);
+}
+
+class FermenterService implements FermenterRepository {
   FermenterService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class FermenterService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<Fermenter>> fetchFermenters(String userProfileId) async {
     final data = await _table()
         .select()
@@ -25,6 +32,7 @@ class FermenterService {
         .toList();
   }
 
+  @override
   Future<Fermenter> saveFermenter(Fermenter fermenter) async {
     if (fermenter.isDefault) {
       await _table()
@@ -35,6 +43,7 @@ class FermenterService {
     return Fermenter.fromJson(data);
   }
 
+  @override
   Future<void> deleteFermenter(String id) async {
     await _table().delete().eq('id', id);
   }

@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/malt_depot_entry.dart';
 
-class MaltDepotService {
+abstract class MaltDepotRepository {
+  Future<List<MaltDepotEntryModel>> fetchEntries(String userProfileId);
+  Future<MaltDepotEntryModel> saveEntry(MaltDepotEntryModel entry);
+  Future<void> deleteEntry(String id);
+}
+
+class MaltDepotService implements MaltDepotRepository {
   MaltDepotService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class MaltDepotService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<MaltDepotEntryModel>> fetchEntries(String userProfileId) async {
     final data = await _table()
         .select()
@@ -24,11 +31,13 @@ class MaltDepotService {
         .toList();
   }
 
+  @override
   Future<MaltDepotEntryModel> saveEntry(MaltDepotEntryModel entry) async {
     final data = await _table().upsert(entry.toJson()).select().single();
     return MaltDepotEntryModel.fromJson(data);
   }
 
+  @override
   Future<void> deleteEntry(String id) async {
     await _table().delete().eq('id', id);
   }

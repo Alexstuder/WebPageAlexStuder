@@ -4,16 +4,21 @@ import '../services/brew_kettle_service.dart';
 import '../widgets/card_actions.dart'; // Ensure this path is correct
 
 class BrewKettleManagerPage extends StatefulWidget {
-  const BrewKettleManagerPage({super.key, required this.profileId});
+  const BrewKettleManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final BrewKettleRepository? repository;
 
   @override
   State<BrewKettleManagerPage> createState() => _BrewKettleManagerPageState();
 }
 
 class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
-  final BrewKettleService _service = BrewKettleService();
+  late final BrewKettleRepository _service;
   bool _isLoading = true;
   List<BrewKettle> _kettles = [];
   String? _error;
@@ -21,6 +26,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
   @override
   void initState() {
     super.initState();
+    _service = widget.repository ?? BrewKettleService();
     _load();
   }
 

@@ -63,6 +63,60 @@ class RaptService {
     }
   }
 
+  Future<List<dynamic>> getHydrometers() async {
+    final uri = kIsWeb 
+        ? Uri.parse('$baseUrl/rapt/hydrometers')
+        : Uri.parse('$baseUrl/Hydrometers/GetHydrometers');
+
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
+    if (!kIsWeb) {
+      headers['Authorization'] = 'Bearer $apiKey';
+    }
+
+    final response = await http.get(uri, headers: headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Failed to load hydrometers: ${response.statusCode}');
+    }
+  }
+
+  Future<List<dynamic>> fetchHydrometerTelemetry({
+    required String hydrometerId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final Map<String, dynamic> params = {
+      'hydrometerId': hydrometerId,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+    };
+    
+    final uri = kIsWeb
+        ? Uri.parse('$baseUrl/rapt/hydrometer-telemetry').replace(queryParameters: params)
+        : Uri.parse('$baseUrl/Hydrometers/GetTelemetry').replace(queryParameters: params);
+
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
+    if (!kIsWeb) {
+      headers['Authorization'] = 'Bearer $apiKey';
+    }
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      // RAPT usually returns a List for direct, and our proxy also sends List 
+      if (decoded is List) return decoded;
+      return [];
+    } else {
+      throw Exception('Failed to load hydrometer telemetry: ${response.statusCode}');
+    }
+  }
+
   Future<Map<String, dynamic>> fetchTelemetry({
     String? controllerId, 
     DateTime? startDate,

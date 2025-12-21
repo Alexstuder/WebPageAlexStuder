@@ -56,8 +56,30 @@ Future<void> main() async {
   runApp(const BrewMateApp());
 }
 
+
 class BrewMateApp extends StatelessWidget {
-  const BrewMateApp({super.key});
+  const BrewMateApp({
+    super.key,
+    this.profileRepository,
+    this.waterRepository,
+    this.brewKettleRepository,
+    this.fermenterRepository,
+    this.fermenterControllerRepository,
+    this.maltDepotRepository,
+    this.packagingRepository,
+    this.finingAgentsRepository,
+    this.yeastRepository,
+  });
+  
+  final UserProfileRepository? profileRepository;
+  final WaterProfileRepository? waterRepository;
+  final BrewKettleRepository? brewKettleRepository;
+  final FermenterRepository? fermenterRepository;
+  final FermenterControllerRepository? fermenterControllerRepository;
+  final MaltDepotRepository? maltDepotRepository;
+  final PackagingProfileRepository? packagingRepository;
+  final FiningAgentsRepository? finingAgentsRepository;
+  final YeastBankRepository? yeastRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +103,17 @@ class BrewMateApp extends StatelessWidget {
       initialRoute: BrewEntryPage.routeName,
       routes: {
         BrewEntryPage.routeName: (_) => const BrewEntryPage(),
-        UserProfilePage.routeName: (_) => const UserProfilePage(),
+        UserProfilePage.routeName: (_) => UserProfilePage(
+          profileRepository: profileRepository,
+          waterRepository: waterRepository,
+          brewKettleRepository: brewKettleRepository,
+          fermenterRepository: fermenterRepository,
+          fermenterControllerRepository: fermenterControllerRepository,
+          maltDepotRepository: maltDepotRepository,
+          packagingRepository: packagingRepository,
+          finingAgentsRepository: finingAgentsRepository,
+          yeastRepository: yeastRepository,
+        ),
         DiscoveryWelcomePage.routeName: (_) => const DiscoveryWelcomePage(),
         RecipePromptPage.routeName: (_) => const RecipePromptPage(),
         RaptDashboardPage.routeName: (_) => const RaptDashboardPage(),
@@ -313,11 +345,25 @@ class UserProfilePage extends StatefulWidget {
     super.key,
     this.profileRepository,
     this.waterRepository,
+    this.brewKettleRepository,
+    this.fermenterRepository,
+    this.fermenterControllerRepository,
+    this.maltDepotRepository,
+    this.packagingRepository,
+    this.finingAgentsRepository,
+    this.yeastRepository,
   });
 
   static const String routeName = '/user-profile';
   final UserProfileRepository? profileRepository;
   final WaterProfileRepository? waterRepository;
+  final BrewKettleRepository? brewKettleRepository;
+  final FermenterRepository? fermenterRepository;
+  final FermenterControllerRepository? fermenterControllerRepository;
+  final MaltDepotRepository? maltDepotRepository;
+  final PackagingProfileRepository? packagingRepository;
+  final FiningAgentsRepository? finingAgentsRepository;
+  final YeastBankRepository? yeastRepository;
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -562,7 +608,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openBrewKettleManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => BrewKettleManagerPage(profileId: _profileId),
+        builder: (_) => BrewKettleManagerPage(
+          profileId: _profileId,
+          repository: widget.brewKettleRepository,
+        ),
       ),
     );
   }
@@ -570,7 +619,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openFermenterManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FermenterManagerPage(profileId: _profileId),
+        builder: (_) => FermenterManagerPage(
+          profileId: _profileId,
+          repository: widget.fermenterRepository,
+        ),
       ),
     );
   }
@@ -578,7 +630,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openYeastBankManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => YeastBankManagerPage(profileId: _profileId),
+        builder: (_) => YeastBankManagerPage(
+          profileId: _profileId,
+          repository: widget.yeastRepository,
+          userRepository: widget.profileRepository,
+        ),
       ),
     );
   }
@@ -620,7 +676,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openAvailableIngredientsManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AvailableIngredientsPage(profileId: _profileId),
+        builder: (_) => AvailableIngredientsPage(
+          profileId: _profileId,
+          userRepository: widget.profileRepository,
+        ),
       ),
     );
   }
@@ -628,7 +687,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openMaltDepotManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MaltDepotManagerPage(profileId: _profileId),
+        builder: (_) => MaltDepotManagerPage(
+          profileId: _profileId,
+          repository: widget.maltDepotRepository,
+        ),
       ),
     );
   }
@@ -636,7 +698,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openFermenterControllerManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FermenterControllerManagerPage(profileId: _profileId),
+        builder: (_) => FermenterControllerManagerPage(
+          profileId: _profileId,
+          repository: widget.fermenterControllerRepository,
+        ),
       ),
     );
   }
@@ -644,7 +709,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openPackagingProfileManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PackagingProfileManagerPage(profileId: _profileId),
+        builder: (_) => PackagingProfileManagerPage(
+          profileId: _profileId,
+          repository: widget.packagingRepository,
+        ),
       ),
     );
   }
@@ -652,7 +720,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void _openFiningAgentsManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FiningAgentsPage(profileId: _profileId),
+        builder: (_) => FiningAgentsPage(
+          profileId: _profileId,
+          repository: widget.finingAgentsRepository,
+        ),
       ),
     );
   }
@@ -1010,11 +1081,13 @@ class _WaterIonTile extends StatelessWidget {
   const _WaterIonTile({
     required this.title,
     required this.controller,
+    this.fieldKey,
     this.onChanged,
   });
 
   final String title;
   final TextEditingController controller;
+  final Key? fieldKey;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -1046,6 +1119,7 @@ class _WaterIonTile extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: fieldKey,
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
@@ -1492,6 +1566,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Kalzium Ca²⁺',
                     controller: _calciumCtrl,
+                    fieldKey: const Key('input_calcium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1500,6 +1575,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Magnesium Mg²⁺',
                     controller: _magnesiumCtrl,
+                    fieldKey: const Key('input_magnesium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1508,6 +1584,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Natrium Na⁺',
                     controller: _sodiumCtrl,
+                    fieldKey: const Key('input_sodium'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1529,6 +1606,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Chlorid Cl⁻',
                     controller: _chlorideCtrl,
+                    fieldKey: const Key('input_chloride'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1537,6 +1615,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Sulfat SO₄²⁻',
                     controller: _sulfateCtrl,
+                    fieldKey: const Key('input_sulfate'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1545,6 +1624,7 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
                   child: _WaterIonTile(
                     title: 'Bicarbonat HCO₃⁻',
                     controller: _bicarbonateCtrl,
+                    fieldKey: const Key('input_bicarbonate'),
                     onChanged: (_) => _updateWaterStats(),
                   ),
                 ),
@@ -1636,9 +1716,11 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
             ],
             const SizedBox(height: 24),
             Row(
+              key: const Key('editor_actions_row'),
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 FilledButton.icon(
+                  key: const Key('save_button'),
                   onPressed: _isSaving ? null : _handleSave,
                   icon: _isSaving
                       ? const SizedBox(
@@ -1785,25 +1867,33 @@ class _WaterProfileEditorPageState extends State<WaterProfileEditorPage> {
 }
 
 class BrewKettleManagerPage extends StatefulWidget {
-  const BrewKettleManagerPage({super.key, required this.profileId});
+  const BrewKettleManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final BrewKettleRepository? repository;
 
   @override
   State<BrewKettleManagerPage> createState() => _BrewKettleManagerPageState();
 }
 
 class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
-  final BrewKettleService _service = BrewKettleService();
-  bool _isLoading = true;
-  List<BrewKettle> _kettles = [];
-  String? _error;
+  late final BrewKettleRepository _service;
 
   @override
   void initState() {
     super.initState();
+    _service = widget.repository ?? BrewKettleService();
     _load();
   }
+  bool _isLoading = true;
+  List<BrewKettle> _kettles = [];
+  String? _error;
+
+
 
   Future<void> _load() async {
     setState(() {
@@ -2129,16 +2219,21 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
 }
 
 class FermenterManagerPage extends StatefulWidget {
-  const FermenterManagerPage({super.key, required this.profileId});
+  const FermenterManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final FermenterRepository? repository;
 
   @override
   State<FermenterManagerPage> createState() => _FermenterManagerPageState();
 }
 
 class _FermenterManagerPageState extends State<FermenterManagerPage> {
-  final FermenterService _service = FermenterService();
+  late final FermenterRepository _service;
   bool _isLoading = true;
   List<Fermenter> _fermenters = [];
   String? _error;
@@ -2146,6 +2241,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
   @override
   void initState() {
     super.initState();
+    _service = widget.repository ?? FermenterService();
     _load();
   }
 
@@ -2490,17 +2586,24 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
 }
 
 class YeastBankManagerPage extends StatefulWidget {
-  const YeastBankManagerPage({super.key, required this.profileId});
+  const YeastBankManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+    this.userRepository,
+  });
 
   final String profileId;
+  final YeastBankRepository? repository;
+  final UserProfileRepository? userRepository;
 
   @override
   State<YeastBankManagerPage> createState() => _YeastBankManagerPageState();
 }
 
 class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
-  final YeastBankService _service = YeastBankService();
-  final UserProfileService _userService = UserProfileService();
+  late final YeastBankRepository _service;
+  late final UserProfileRepository _userService;
   bool _isLoading = true;
   List<YeastBankEntry> _entries = [];
   String? _error;
@@ -2511,6 +2614,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
   @override
   void initState() {
     super.initState();
+    _service = widget.repository ?? YeastBankService();
+    _userService = widget.userRepository ?? UserProfileService();
     _load();
   }
 
@@ -6140,9 +6245,14 @@ class _Marker extends StatelessWidget {
 
 
 class MaltDepotManagerPage extends StatefulWidget {
-  const MaltDepotManagerPage({super.key, required this.profileId});
+  const MaltDepotManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final MaltDepotRepository? repository;
 
   @override
   State<MaltDepotManagerPage> createState() => _MaltDepotManagerPageState();
@@ -7120,7 +7230,7 @@ class _RecipeEntry {
 }
 
 class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
-  final MaltDepotService service = MaltDepotService();
+  late final MaltDepotRepository repository;
   bool isLoading = true;
   List<MaltDepotEntryModel> entries = [];
   String? error;
@@ -7128,6 +7238,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
   @override
   void initState() {
     super.initState();
+    repository = widget.repository ?? MaltDepotService();
     load();
   }
 
@@ -7137,7 +7248,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
       error = null;
     });
     try {
-      final items = await service.fetchEntries(widget.profileId);
+      final items = await repository.fetchEntries(widget.profileId);
       if (!mounted) return;
       setState(() {
         entries = items;
@@ -7298,7 +7409,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
     );
 
     try {
-      final saved = await service.saveEntry(entry);
+      final saved = await repository.saveEntry(entry);
       if (!mounted) return;
       setState(() {
         final index = entries.indexWhere((element) => element.id == saved.id);
@@ -7331,7 +7442,7 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
   Future<void> deleteEntry(MaltDepotEntryModel entry) async {
     if (entry.id == null) return;
     try {
-      await service.deleteEntry(entry.id!);
+      await repository.deleteEntry(entry.id!);
       setState(() {
         entries.removeWhere((item) => item.id == entry.id);
       });
@@ -7375,9 +7486,14 @@ class _MaltDepotManagerPageState extends State<MaltDepotManagerPage> {
 }
 
 class FermenterControllerManagerPage extends StatefulWidget {
-  const FermenterControllerManagerPage({super.key, required this.profileId});
+  const FermenterControllerManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final FermenterControllerRepository? repository;
 
   @override
   State<FermenterControllerManagerPage> createState() =>
@@ -7385,16 +7501,21 @@ class FermenterControllerManagerPage extends StatefulWidget {
 }
 
 class FiningAgentsPage extends StatefulWidget {
-  const FiningAgentsPage({super.key, required this.profileId});
+  const FiningAgentsPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final FiningAgentsRepository? repository;
 
   @override
   State<FiningAgentsPage> createState() => _FiningAgentsPageState();
 }
 
 class _FiningAgentsPageState extends State<FiningAgentsPage> {
-  final FiningAgentsService service = FiningAgentsService();
+  late final FiningAgentsRepository repository;
   bool isLoading = true;
   bool isSaving = false;
   FiningAgents? settings;
@@ -7402,7 +7523,6 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
   final List<TextEditingController> extraCtrls = [];
   final TextEditingController newExtraCtrl = TextEditingController();
   String? error;
-
   static const List<_FiningOption> options = [
     _FiningOption(
       key: 'irish_moss',
@@ -7454,6 +7574,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
   @override
   void initState() {
     super.initState();
+    repository = widget.repository ?? FiningAgentsService();
     load();
   }
 
@@ -7472,7 +7593,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
       error = null;
     });
     try {
-      final data = await service.fetchSettings(widget.profileId);
+      final data = await repository.fetchSettings(widget.profileId);
       if (!mounted) return;
       setState(() {
         settings = data;
@@ -7647,7 +7768,7 @@ class _FiningAgentsPageState extends State<FiningAgentsPage> {
             .where((text) => text.isNotEmpty)
             .toList(),
       );
-      final saved = await service.saveSettings(updated);
+      final saved = await repository.saveSettings(updated);
       if (!mounted) return;
       setState(() {
         settings = saved;
@@ -7683,9 +7804,14 @@ class _FiningOption {
 }
 
 class PackagingProfileManagerPage extends StatefulWidget {
-  const PackagingProfileManagerPage({super.key, required this.profileId});
+  const PackagingProfileManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final PackagingProfileRepository? repository;
 
   @override
   State<PackagingProfileManagerPage> createState() =>
@@ -7694,7 +7820,7 @@ class PackagingProfileManagerPage extends StatefulWidget {
 
 class _PackagingProfileManagerPageState
     extends State<PackagingProfileManagerPage> {
-  final PackagingProfileService service = PackagingProfileService();
+  late final PackagingProfileRepository repository;
   bool isLoading = true;
   List<PackagingProfile> profiles = [];
   String? error;
@@ -7702,6 +7828,7 @@ class _PackagingProfileManagerPageState
   @override
   void initState() {
     super.initState();
+    repository = widget.repository ?? PackagingProfileService();
     load();
   }
 
@@ -7711,7 +7838,7 @@ class _PackagingProfileManagerPageState
       error = null;
     });
     try {
-      final items = await service.fetchProfiles(widget.profileId);
+      final items = await repository.fetchProfiles(widget.profileId);
       if (!mounted) return;
       setState(() {
         profiles = items;
@@ -8046,7 +8173,7 @@ class _PackagingProfileManagerPageState
     );
 
     try {
-      final saved = await service.saveProfile(profile);
+      final saved = await repository.saveProfile(profile);
       if (!mounted) return;
       setState(() {
         if (saved.isDefault) {
@@ -8097,7 +8224,7 @@ class _PackagingProfileManagerPageState
   Future<void> deleteProfile(PackagingProfile profile) async {
     if (profile.id == null) return;
     try {
-      await service.deleteProfile(profile.id!);
+      await repository.deleteProfile(profile.id!);
       setState(() {
         profiles.removeWhere((item) => item.id == profile.id);
       });
@@ -8142,7 +8269,7 @@ class _PackagingProfileManagerPageState
 
 class _FermenterControllerManagerPageState
     extends State<FermenterControllerManagerPage> {
-  final FermenterControllerService service = FermenterControllerService();
+  late final FermenterControllerRepository service;
   bool isLoading = true;
   List<FermenterControllerModel> controllers = [];
   String? error;
@@ -8150,6 +8277,7 @@ class _FermenterControllerManagerPageState
   @override
   void initState() {
     super.initState();
+    service = widget.repository ?? FermenterControllerService();
     load();
   }
 

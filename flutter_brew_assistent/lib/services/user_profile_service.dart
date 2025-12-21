@@ -15,6 +15,7 @@ abstract class UserProfileRepository {
   Future<List<Fermentable>> getFermentables(String userProfileId);
   Future<void> saveFermentables(List<Fermentable> fermentables);
   Future<void> saveFermentable(Fermentable fermentable);
+  Future<void> deleteFermentable(String id);
 
   // Hops
   Future<List<Hop>> getHops(String userProfileId);
@@ -109,6 +110,7 @@ class UserProfileService implements UserProfileRepository {
     }
   }
 
+  @override
   Future<void> deleteFermentable(String id) async {
     await _tableFermentables().delete().eq('id', id);
   }
@@ -210,12 +212,54 @@ class UserProfileService implements UserProfileRepository {
   @override
   Future<void> saveBatches(List<BfBatch> batches) async {
     if (batches.isEmpty) return;
-    final data = batches.map((e) {
-      final json = e.toJson();
-      if (json['id'] == null) json.remove('id');
-      return json;
-    }).toList();
-    await _tableBatches().upsert(data, onConflict: 'user_profile_id, brewfather_id');
+
+    // 1. Fetch existing batches for this user/profile to check for existing RAPT data or updates
+    // We assume all batches belong to the same profile based on the first item
+    final userProfileId = batches.first.userProfileId;
+    final existingData = await _tableBatches()
+        .select('brewfather_id, rapt_data, analysis_data, data, id')
+        .eq('user_profile_id', userProfileId);
+    
+    // Map existing batches by brewfather_id for quick lookup
+    final existingMap = {
+      for (var item in existingData) 
+         if (item['brewfather_id'] != null) item['brewfather_id'] as String : item
+    };
+
+    final Map<String, Map<String, dynamic>> dataToUpsert = {};
+    for (var batch in batches) {
+       var json = batch.toJson();
+       if (json['id'] == null) json.remove('id');
+
+       final bfId = batch.brewfatherId;
+       if (bfId != null) {
+          if (existingMap.containsKey(bfId)) {
+             final existing = existingMap[bfId]!;
+             
+             // Preserve existing data if incoming is empty
+             final incomingRapt = json['rapt_data'] as Map<String, dynamic>? ?? {};
+             final existingRapt = existing['rapt_data'] as Map<String, dynamic>? ?? {};
+             if (incomingRapt.isEmpty && existingRapt.isNotEmpty) {
+                json['rapt_data'] = existingRapt;
+             }
+
+             final incomingAnalysis = json['analysis_data'] as Map<String, dynamic>? ?? {};
+             final existingAnalysis = existing['analysis_data'] as Map<String, dynamic>? ?? {};
+             if (incomingAnalysis.isEmpty && existingAnalysis.isNotEmpty) {
+                json['analysis_data'] = existingAnalysis;
+             }
+             
+             // Ensure we update the existing row ID if it exists
+             json['id'] = existing['id'];
+          }
+          // Deduplicate in the local list to avoid conflict errors
+          dataToUpsert[bfId] = json;
+       }
+    }
+
+    if (dataToUpsert.isNotEmpty) {
+       await _tableBatches().upsert(dataToUpsert.values.toList(), onConflict: 'user_profile_id, brewfather_id');
+    }
   }
 
   SupabaseQueryBuilder _table() =>

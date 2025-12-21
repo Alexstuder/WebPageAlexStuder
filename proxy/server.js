@@ -59,6 +59,15 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host}`);
 
+  if (url.pathname === '/api/rapt/hydrometers' && req.method === 'GET') {
+    await handleRaptHydrometersRequest(res);
+    return;
+  }
+  if (url.pathname === '/api/rapt/hydrometer-telemetry' && req.method === 'GET') {
+    await handleDirectHydrometerTelemetryRequest(req, res);
+    return;
+  }
+
   if (url.pathname === '/api/brew' && req.method === 'POST') {
     await handleBrewRequest(req, res);
     return;
@@ -304,6 +313,88 @@ async function handleRaptProfilesRequest(res) {
     console.error('RAPT devices error:', error);
     const status = error.statusCode ?? 500;
     respondJson(res, status, { error: error.message ?? 'RAPT devices request failed.' });
+  }
+}
+
+async function handleRaptHydrometersRequest(res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const token = await requestRaptToken();
+    if (!token?.access_token) {
+      respondJson(res, 502, { error: 'Token response invalid.' });
+      return;
+    }
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+    const apiResponse = await fetch(`${base}/api/Hydrometers/GetHydrometers`, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const payload = await apiResponse.json().catch(() => ([]));
+    if (!apiResponse.ok) {
+      respondJson(res, apiResponse.status, payload);
+      return;
+    }
+    respondJson(res, 200, payload);
+  } catch (error) {
+    console.error('RAPT hydrometers error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message ?? 'RAPT hydrometers request failed.' });
+  }
+}
+
+async function handleDirectHydrometerTelemetryRequest(req, res) {
+  if (!RAPT_USERNAME || !RAPT_API_KEY) {
+    respondJson(res, 500, { error: 'RAPT credentials not configured.' });
+    return;
+  }
+  try {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const hydrometerId = url.searchParams.get('hydrometerId');
+    const startDate = url.searchParams.get('startDate');
+    const endDate = url.searchParams.get('endDate');
+
+    if (!hydrometerId || !startDate || !endDate) {
+      respondJson(res, 400, { error: 'Missing parameters: hydrometerId, startDate, endDate' });
+      return;
+    }
+
+    const token = await requestRaptToken();
+    if (!token?.access_token) {
+      respondJson(res, 502, { error: 'Token response invalid.' });
+      return;
+    }
+    const base = RAPT_API_BASE.replace(/\/$/, '');
+
+    // determine URL - ensure we use the correct endpoint path
+    const teleUrl = new URL(`${base}/api/Hydrometers/GetTelemetry`);
+    teleUrl.searchParams.set('hydrometerId', hydrometerId);
+    teleUrl.searchParams.set('startDate', startDate);
+    teleUrl.searchParams.set('endDate', endDate);
+
+    const apiResponse = await fetch(teleUrl, {
+      headers: {
+        'Authorization': `Bearer ${token.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const payload = await apiResponse.json().catch(() => ([]));
+    if (!apiResponse.ok) {
+      respondJson(res, apiResponse.status, payload);
+      return;
+    }
+
+    respondJson(res, 200, payload);
+
+  } catch (error) {
+    console.error('RAPT direct telemetry error:', error);
+    const status = error.statusCode ?? 500;
+    respondJson(res, status, { error: error.message ?? 'RAPT telemetry request failed.' });
   }
 }
 

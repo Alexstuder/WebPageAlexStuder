@@ -1,8 +1,15 @@
 import 'dart:convert';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/bf_batch.dart';
+import '../services/rapt_service.dart';
+import '../services/user_profile_service.dart';
+import '../utils/image_utils.dart';
+import 'dart:math';
 
 class BatchDetailPage extends StatefulWidget {
   final BfBatch batch;
@@ -17,16 +24,41 @@ class BatchDetailPage extends StatefulWidget {
 
 class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // RAPT Integration State
+  bool _useRaptData = false;
+  bool _isLoadingRapt = false;
+  List<dynamic> _raptData = [];
+  String? _raptError;
+  String? _hydrometerId;
+  DateTime? _raptStartDate;
+  DateTime? _raptEndDate;
+  
+  // Analysis Tab State
+  late TextEditingController _analysisController;
+  late List<String> _analysisPhotos;
+  bool _isSavingAnalysis = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
+    _initializeRaptState();
+    
+    _analysisController = TextEditingController(
+      text: widget.batch.analysisData['description'] ?? '',
+    );
+    // Self-healing: Filter out any non-base64 strings (remnants of previous buggy versions like HEIC filenames)
+    final existingPhotos = widget.batch.analysisData['photos'] ?? [];
+    _analysisPhotos = List<String>.from(
+      existingPhotos.where((p) => (p as String).startsWith('data:image')).toList()
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _analysisController.dispose();
     super.dispose();
   }
 
@@ -47,6 +79,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
             Tab(text: 'BRAUEN'),
             Tab(text: 'IN GÄRUNG'),
             Tab(text: 'ABGESCHLOSSEN'),
+            Tab(text: 'ANALYSE'),
             Tab(text: 'JSON'),
             Tab(text: 'JSON ROH'),
           ],
@@ -63,6 +96,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                 _buildBrewingTab(),
                 _buildFermentingTab(),
                 _buildCompletedTab(),
+                _buildAnalysisTab(),
                 _buildJsonTab(),
                 _buildRawJsonTab(),
               ],
@@ -678,6 +712,106 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
   // --- Sections for Fermenting Tab ---
 
+  Future<void> _loadRaptData() async {
+    if (_raptStartDate == null || _raptEndDate == null) return;
+    
+    setState(() {
+      _isLoadingRapt = true;
+      _raptError = null;
+    });
+
+    try {
+      final profile = await UserProfileService().fetchDefaultProfile();
+      if (profile == null || (profile.raptUserId ?? '').isEmpty || (profile.raptApiKey ?? '').isEmpty) {
+        throw Exception('Keine RAPT Zugangsdaten im Profil.');
+      }
+
+      final service = RaptService(userId: profile.raptUserId!, apiKey: profile.raptApiKey!);
+      
+      // 1. Get Hydrometer ID if not yet known
+      if (_hydrometerId == null) {
+        final hydrometers = await service.getHydrometers();
+        if (hydrometers.isNotEmpty) {
+           // Prefer one that looks like a Pill? Or just first.
+           _hydrometerId = hydrometers.first['id'] ?? hydrometers.first['Id'];
+        } else {
+           throw Exception('Keine Hydrometer bei RAPT gefunden.');
+        }
+      }
+      
+      if (_hydrometerId == null) throw Exception('Konnte Hydrometer ID nicht ermitteln.');
+
+      // 2. Get Telemetry
+      final data = await service.fetchHydrometerTelemetry(
+        hydrometerId: _hydrometerId!,
+        startDate: _raptStartDate!,
+        endDate: _raptEndDate!,
+      );
+      
+      setState(() {
+        _raptData = data;
+        // Sort by date
+        _raptData.sort((a,b) {
+           final da = DateTime.tryParse(a['createdOn'] ?? '') ?? DateTime(0);
+           final db = DateTime.tryParse(b['createdOn'] ?? '') ?? DateTime(0);
+           return da.compareTo(db);
+        });
+        
+        // Save to DB
+        _saveRaptDataToBatch();
+      });
+
+    } catch (e) {
+      if (mounted) setState(() => _raptError = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoadingRapt = false);
+    }
+  }
+
+  void _initializeRaptState() {
+     final raptData = widget.batch.raptData;
+     if (raptData.isNotEmpty && raptData['telemetry'] != null && (raptData['telemetry'] as List).isNotEmpty) {
+        _useRaptData = true;
+        _raptData = List<dynamic>.from(raptData['telemetry']);
+        
+        if (raptData['start_date'] != null) {
+           _raptStartDate = DateTime.tryParse(raptData['start_date']);
+        }
+        if (raptData['end_date'] != null) {
+           _raptEndDate = DateTime.tryParse(raptData['end_date']);
+        }
+        if (raptData['hydrometer_id'] != null) {
+           _hydrometerId = raptData['hydrometer_id'];
+        }
+     }
+  }
+
+  Future<void> _saveRaptDataToBatch() async {
+     try {
+       // Clear old map entries to update structure cleanly
+       widget.batch.raptData.clear();
+       widget.batch.raptData.addAll({
+          'telemetry': _raptData,
+          'start_date': _raptStartDate?.toIso8601String(),
+          'end_date': _raptEndDate?.toIso8601String(),
+          'hydrometer_id': _hydrometerId,
+       });
+       
+       // Force update via UserProfileService which calls saveBatches
+       // Note: saveBatches in service uses batch.toJson() which now includes rapt_data
+       await UserProfileService().saveBatches([widget.batch]);
+       
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('RAPT Daten gespeichert (separat).')));
+       }
+     } catch (e) {
+       debugPrint('Failed to save RAPT data: $e');
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $e')));
+       }
+     }
+  }
+
   Widget _buildMesswerteSection() {
      final recipe = widget.batch.data['recipe'] ?? {};
      final steps = (recipe['fermentation']?['steps'] as List?) ?? [];
@@ -698,51 +832,377 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
          Row(
            mainAxisAlignment: MainAxisAlignment.spaceBetween,
            children: [
-             const Text('Keine Messwerte gefunden...', style: TextStyle(fontSize: 12, color: Colors.grey)), 
-             OutlinedButton.icon(
-                onPressed: () {}, 
-                icon: const Icon(Icons.add, size: 14), 
-                label: const Text('GERÄTE', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white24),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                  minimumSize: const Size(0, 30)
-                ),
-             )
+             const Text('Get Controller Date', style: TextStyle(fontSize: 12, color: Colors.white)),
+             Switch(
+                value: _useRaptData,
+                onChanged: (val) {
+                   setState(() => _useRaptData = val);
+                },
+                activeThumbColor: Colors.green,
+             ),
            ],
          ),
          const SizedBox(height: 12),
-         AspectRatio(
-             aspectRatio: 1.7,
-             child: LineChart(
-               LineChartData(
-                 gridData: FlGridData(
-                    show: true, 
-                    drawVerticalLine: false, 
-                    getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 1)
+         if (_useRaptData) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDatePickerField('Start Datum', _raptStartDate, (dt) {
+                    setState(() => _raptStartDate = dt);
+                    if (_raptStartDate != null && _raptEndDate != null) _loadRaptData();
+                  }),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDatePickerField('End Datum', _raptEndDate, (dt) {
+                     setState(() => _raptEndDate = dt);
+                     if (_raptStartDate != null && _raptEndDate != null) _loadRaptData();
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_isLoadingRapt)
+               const Center(child: CircularProgressIndicator())
+            else if (_raptError != null)
+               Text(_raptError!, style: const TextStyle(color: Colors.red))
+            else if (_raptData.isEmpty && _raptStartDate != null && _raptEndDate != null)
+               const Text('Keine Daten für diesen Zeitraum.', style: TextStyle(color: Colors.grey))
+            else if (_raptData.isNotEmpty)
+               SizedBox(height: 300, child: _buildRaptChart())
+            else
+               const SizedBox(height: 100, child: Center(child: Text('Bitte Daten wählen', style: TextStyle(color: Colors.grey)))),
+         ] else ...[
+             AspectRatio(
+                 aspectRatio: 1.7,
+                 child: LineChart(
+                   LineChartData(
+                     gridData: FlGridData(
+                        show: true, 
+                        drawVerticalLine: false, 
+                        getDrawingHorizontalLine: (value) => FlLine(color: Colors.white10, strokeWidth: 1)
+                     ),
+                     titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, getTitlesWidget: (val, meta) => Text(val.toInt().toString(), style: const TextStyle(fontSize: 10, color: Colors.grey)))),
+                        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 2, getTitlesWidget: (val, meta) => Text('${val.toInt()}d', style: const TextStyle(fontSize: 10, color: Colors.grey)))),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                     ),
+                     borderData: FlBorderData(show: false),
+                     lineBarsData: [
+                       LineChartBarData(
+                         spots: targetTempSpots,
+                         isCurved: false,
+                         color: Colors.greenAccent,
+                         barWidth: 2,
+                         dotData: const FlDotData(show: false),
+                         belowBarData: BarAreaData(show: true, color: Colors.greenAccent.withValues(alpha: 0.1)), 
+                       )
+                     ]
+                   )
                  ),
+             )
+         ]
+     ]);
+  }
+
+  Widget _buildDatePickerField(String label, DateTime? date, Function(DateTime) onChanged) {
+      final fmt = DateFormat('dd.MM.yyyy HH:mm');
+      return InkWell(
+         onTap: () async {
+            final picked = await showDatePicker(
+              context: context, 
+              initialDate: date ?? DateTime.now(), 
+              firstDate: DateTime(2020), 
+              lastDate: DateTime.now()
+            );
+            if (picked != null) {
+               if (!context.mounted) return;
+                // ignore: use_build_context_synchronously
+               final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(date ?? DateTime.now()));
+               if (time != null) {
+                  onChanged(DateTime(picked.year, picked.month, picked.day, time.hour, time.minute));
+               }
+            }
+         },
+         child: Container(
+           padding: const EdgeInsets.all(12),
+           decoration: BoxDecoration(
+             border: Border.all(color: Colors.white24),
+             borderRadius: BorderRadius.circular(8),
+             color: Colors.white.withValues(alpha: 0.05)
+           ),
+           child: Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+               const SizedBox(height: 4),
+               Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                 children: [
+                   Text(date != null ? fmt.format(date) : '-', style: const TextStyle(color: Colors.white)),
+                   const Icon(Icons.calendar_today, size: 14, color: Colors.white54),
+                 ],
+               )
+             ],
+           ),
+         ),
+      );
+  }
+
+  Widget _buildRaptChart() {
+     // Identical chart logic to RaptDashboardPage
+     List<dynamic> source = _raptData;
+     if (source.length > 500) {
+        final step = (source.length / 500).ceil();
+        List<dynamic> reduced = [];
+        for (int i = 0; i < source.length; i += step) {
+           reduced.add(source[i]);
+        }
+        source = reduced;
+     }
+
+     final pointsTemp = <FlSpot>[];
+     final pointsGravity = <FlSpot>[];
+     
+     // Store raw gravity values for ABV calculation
+     final rawGravities = <double>[];
+     
+     for (final r in source) {
+        final t = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+        final temp = (r['temperature'] as num?)?.toDouble();
+        double? grav = (r['gravity'] as num?)?.toDouble(); 
+        if (grav != null && grav > 500) grav = grav / 1000.0;
+        
+        if (t != null) {
+           if (temp != null) pointsTemp.add(FlSpot(t, temp));
+           if (grav != null) {
+              pointsGravity.add(FlSpot(t, grav));
+              rawGravities.add(grav);
+           }
+        }
+     }
+     
+     double minTemp = 0;
+     double maxTemp = 30;
+     if (pointsTemp.isNotEmpty) {
+        minTemp = pointsTemp.map((e) => e.y).reduce(min);
+        maxTemp = pointsTemp.map((e) => e.y).reduce(max);
+     }
+     minTemp -= 5;
+     maxTemp += 5;
+     
+     double minGrav = 1.000;
+     double maxGrav = 1.080;
+     if (pointsGravity.isNotEmpty) {
+        minGrav = pointsGravity.map((e) => e.y).reduce(min);
+        maxGrav = pointsGravity.map((e) => e.y).reduce(max);
+     }
+     minGrav -= 0.005;
+     maxGrav += 0.005;
+     
+     double normalizeG(double g) {
+        if (maxGrav == minGrav) return minTemp + (maxTemp - minTemp)/2;
+        return (g - minGrav) / (maxGrav - minGrav) * (maxTemp - minTemp) + minTemp;
+     }
+
+     final pointsAbv = <FlSpot>[];
+     final pointsVelocity = <FlSpot>[];
+
+     for (final r in source) {
+        final t = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+        
+        // Velocity (often negative, so we invert for visual "activity")
+        double? vel = (r['gravityVelocity'] as num?)?.toDouble();
+
+        if (t != null) {
+           if (vel != null) {
+              pointsVelocity.add(FlSpot(t, -vel));
+           }
+        }
+     }
+
+     if (rawGravities.isNotEmpty) {
+        final double og = rawGravities.reduce(max);
+        double lastAbv = 0.0;
+        
+        // We iterate pointsGravity to align time
+        for (final spot in pointsGravity) {
+           final g = spot.y;
+           double currentAbv = (og - g) * 131.25;
+           if (currentAbv < 0) currentAbv = 0;
+           
+           if (currentAbv < lastAbv) {
+              currentAbv = lastAbv; 
+           } else {
+              lastAbv = currentAbv;
+           }
+           pointsAbv.add(FlSpot(spot.x, currentAbv));
+        }
+     }
+     
+     double minAbv = 0.0;
+     double maxAbv = 7.0; 
+     if (pointsAbv.isNotEmpty) {
+        minAbv = pointsAbv.map((e) => e.y).reduce(min);
+        maxAbv = pointsAbv.map((e) => e.y).reduce(max);
+     }
+     minAbv = -0.5; 
+     maxAbv += 1.0;
+
+     double minVel = 0;
+     double maxVel = 50; 
+     if (pointsVelocity.isNotEmpty) {
+        minVel = pointsVelocity.map((e) => e.y).reduce(min);
+        maxVel = pointsVelocity.map((e) => e.y).reduce(max);
+     }
+     if (minVel > 0) minVel = 0;
+     maxVel += 5;
+     
+     double normalizeAbv(double a) {
+        if (maxAbv == minAbv) return minTemp + (maxTemp - minTemp)/2;
+        return (a - minAbv) / (maxAbv - minAbv) * (maxTemp - minTemp) + minTemp;
+     }
+
+     double normalizeVel(double v) {
+        if (maxVel == minVel) return minTemp + (maxTemp - minTemp)/2;
+        return (v - minVel) / (maxVel - minVel) * (maxTemp - minTemp) + minTemp;
+     }
+
+     return Column(
+       children: [
+         SizedBox(
+           height: 250,
+           child: LineChart(
+              LineChartData(
+                 minY: minTemp,
+                 maxY: maxTemp,
+                 lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                       getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                          // Sort spots by barIndex to keep order consistent
+                          touchedSpots.sort((a, b) => a.barIndex.compareTo(b.barIndex));
+                          
+                          return touchedSpots.asMap().entries.map((entry) {
+                             int idx = entry.key;
+                             LineBarSpot spot = entry.value;
+                             
+                             String txt = '';
+                             Color col = Colors.white;
+                             
+                             if (spot.barIndex == 0) {
+                                 txt = '${spot.y.toStringAsFixed(1)} °C';
+                                col = Colors.blue; 
+                             } else if (spot.barIndex == 1) {
+                                double denorm = (spot.y - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
+                                txt = denorm.toStringAsFixed(4);
+                                col = Colors.red;
+                             } else if (spot.barIndex == 2) {
+                                double denorm = (spot.y - minTemp) / (maxTemp - minTemp) * (maxAbv - minAbv) + minAbv;
+                                 txt = '${denorm.toStringAsFixed(1)} %';
+                                col = Colors.amber;
+                             } else if (spot.barIndex == 3) {
+                                double denorm = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
+                                 txt = '${denorm.toStringAsFixed(4)} pts/day';
+                                col = Colors.purple;
+                             }
+                             
+                             // Add Date to the first item (Temp)
+                             if (idx == 0) {
+                                DateTime date = DateTime.fromMillisecondsSinceEpoch(spot.x.toInt());
+                                String dateStr = DateFormat('dd.MM.yyyy HH:mm').format(date);
+                                return LineTooltipItem(
+                                    '$dateStr\n$txt', 
+                                   TextStyle(color: col, fontWeight: FontWeight.bold),
+                                   children: [
+                                       TextSpan(text: '', style: TextStyle(color: col, fontWeight: FontWeight.bold))
+                                   ]
+                                );
+                             }
+                             
+                             return LineTooltipItem(txt, TextStyle(color: col, fontWeight: FontWeight.bold));
+                          }).toList();
+                       }
+                    )
+                 ),
+                 gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: Colors.white10)),
                  titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, getTitlesWidget: (val, meta) => Text(val.toInt().toString(), style: const TextStyle(fontSize: 10, color: Colors.grey)))),
-                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 2, getTitlesWidget: (val, meta) => Text('${val.toInt()}d', style: const TextStyle(fontSize: 10, color: Colors.grey)))),
+                    bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30, getTitlesWidget: (val, _) => Text(val.toInt().toString(), style: const TextStyle(color: Colors.blue, fontSize: 10)))),
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (val, _) {
+                       if (val < minTemp || val > maxTemp) return const SizedBox.shrink();
+                       double denorm = (val - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
+                       return Text(denorm.toStringAsFixed(3), style: const TextStyle(color: Colors.red, fontSize: 10));
+                    })),
+                    // Hide Top Titles completely
                     topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                  ),
                  borderData: FlBorderData(show: false),
                  lineBarsData: [
-                   LineChartBarData(
-                     spots: targetTempSpots,
-                     isCurved: false,
-                     color: Colors.greenAccent,
-                     barWidth: 2,
-                     dotData: const FlDotData(show: false),
-                     belowBarData: BarAreaData(show: true, color: Colors.greenAccent.withValues(alpha: 0.1)), 
-                   )
+                    // Temp
+                    LineChartBarData(
+                       spots: pointsTemp,
+                       color: Colors.blue,
+                       barWidth: 2,
+                       dotData: const FlDotData(show: false),
+                    ),
+                    // Gravity
+                    LineChartBarData(
+                       spots: pointsGravity.map((s) => FlSpot(s.x, normalizeG(s.y))).toList(),
+                       color: Colors.red,
+                       barWidth: 2,
+                       dotData: const FlDotData(show: false),
+                    ),
+                    // ABV
+                    LineChartBarData(
+                       spots: pointsAbv.map((s) => FlSpot(s.x, normalizeAbv(s.y))).toList(),
+                       color: Colors.amber,
+                       barWidth: 2,
+                       dashArray: [5, 5],
+                       dotData: const FlDotData(show: false),
+                    ),
+                    // Velocity
+                    LineChartBarData(
+                       spots: pointsVelocity.map((s) => FlSpot(s.x, normalizeVel(s.y))).toList(),
+                       color: Colors.purple.withValues(alpha: 0.5),
+                       barWidth: 1,
+                       isCurved: true,
+                       dotData: const FlDotData(show: false),
+                       belowBarData: BarAreaData(show: true, color: Colors.purple.withValues(alpha: 0.1)),
+                    ),
                  ]
-               )
-             ),
+              )
+           ),
+         ),
+         const SizedBox(height: 16),
+         // Legend
+         Row(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+              _buildLegendItem('Temperatur', Colors.blue),
+              const SizedBox(width: 16),
+              _buildLegendItem('Extrakt', Colors.red),
+              const SizedBox(width: 16),
+              _buildLegendItem('Alkohol', Colors.amber),
+              const SizedBox(width: 16),
+              _buildLegendItem('Aktivität', Colors.purple),
+           ],
          )
-     ]);
+       ],
+     );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 8, height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      ],
+    );
   }
 
   Widget _buildGatProfilSection(List steps, String startDate, String bottlingDate, int? brewDateMs) {
@@ -896,7 +1356,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
       }
 
       String method = widget.batch.data['carbonationType'] ?? carbonationMethod ?? 'Keg';
-      String info = "-1.05 Bar bei 4 °C\nfür etwa 1 Wochen\num ${carbonationVolumes ?? 0} Vol CO₂ zu erreichen"; 
+      String info = '-1.05 Bar bei 4 °C\nfür etwa 1 Wochen\num ${carbonationVolumes ?? 0} Vol CO₂ zu erreichen'; 
 
       return _buildCardSection('Karbonisierung', [
           const Text('Typ', style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -978,7 +1438,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
          _buildSummaryRow('Verdampfung pro Stunde', "${r['equipment']?['boilOffPerHr'] ?? '-'}", "${r['equipment']?['boilOffPerHr'] ?? '-'}"),
          _buildSummaryRow('Sudgröße', "${r['batchSize'] ?? '-'}", "${r['batchSize'] ?? '-'}"),
          _buildSummaryRow('Stammwürze vor Kochen', "${r['preBoilGravity'] ?? '-'}", "${r['preBoilGravity'] ?? '-'}"), 
-       _buildSummaryRow('Stammwürze nach dem Kochen', "${r['og'] ?? '-'}", "${widget.batch.data['measuredOg'] ?? '-'}"),
+       _buildSummaryRow('Stammwürze nach dem Kochen', "${r['og'] ?? '-'}", "${widget.batch.data['measuredPostBoilGravity'] ?? '-'}"),
        _buildSummaryRow('Stammwürze', "${r['og'] ?? '-'}", "${widget.batch.data['measuredOg'] ?? '-'}"),
        _buildSummaryRow('Restextrakt', "${r['fg'] ?? '-'}", "${widget.batch.data['measuredFg'] ?? '-'}"),
        _buildSummaryRow('Gesamteffizienz', "${r['efficiency'] ?? '-'}%", "${r['efficiency'] ?? '-'}%"),
@@ -1089,7 +1549,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
               min: 0,
               max: 50,
               divisions: 50,
-              activeColor: const Color(0xFF66B342), 
+               activeColor: const Color(0xFF66B342), 
               inactiveColor: Colors.grey[800],
               onChanged: (val) {}, // Read-only for now or impl update
               label: (batchData['tasteRating'] as num? ?? 0).toString(),
@@ -1384,6 +1844,208 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
       ),
     );
   }
+
+  Widget _buildAnalysisTab() {
+     return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'SENSORIK & BEWERTUNG',
+                  style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                ),
+                if (_isSavingAnalysis)
+                   const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                else
+                   TextButton.icon(
+                      onPressed: _saveBatchAnalysis,
+                      icon: const Icon(Icons.save, size: 18, color: Colors.greenAccent),
+                      label: const Text('SPEICHERN', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                   ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _analysisController,
+              maxLines: 12,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                hintText: 'Beschreibe Aussehen, Geruch und Geschmack deines Bieres...',
+                hintStyle: const TextStyle(color: Colors.white24),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'FOTOS',
+                  style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                ),
+                TextButton.icon(
+                  onPressed: _pickAndProcessPhoto,
+                  icon: const Icon(Icons.add_a_photo, size: 18),
+                  label: const Text('HINZUFÜGEN'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.greenAccent),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_analysisPhotos.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.photo_library_outlined, color: Colors.white24, size: 48),
+                    SizedBox(height: 12),
+                    Text('Noch keine Fotos hinzugefügt', style: TextStyle(color: Colors.white24)),
+                  ],
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: _analysisPhotos.length,
+                itemBuilder: (context, index) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _analysisPhotos[index].startsWith('data:image') 
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              base64Decode(_analysisPhotos[index].split(',').last),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.broken_image, color: Colors.white24, size: 32),
+                              const SizedBox(height: 4),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Text(
+                                  _analysisPhotos[index],
+                                  style: const TextStyle(fontSize: 8, color: Colors.white54),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _analysisPhotos.removeAt(index)),
+                          child: CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.red.withValues(alpha: 0.8),
+                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                },
+              ),
+          ],
+        ),
+      );
+  }
+
+  Future<void> _pickAndProcessPhoto() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: true,
+        withData: true,
+      );
+      
+      if (result == null || result.files.isEmpty) return;
+
+      for (var file in result.files) {
+        Uint8List? fileBytes = file.bytes;
+        if (fileBytes == null) continue;
+
+        String? base64Result = await processPhoto(fileBytes);
+
+        if (base64Result != null) {
+          setState(() {
+            _analysisPhotos.add(base64Result);
+          });
+        } else {
+           if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Das Format von "${file.name}" konnte nicht verarbeitet werden.')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Foto-Upload fehlgeschlagen: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveBatchAnalysis() async {
+    setState(() => _isSavingAnalysis = true);
+    try {
+      widget.batch.analysisData['description'] = _analysisController.text;
+      widget.batch.analysisData['photos'] = _analysisPhotos;
+
+      await UserProfileService().saveBatches([widget.batch]);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Analyse erfolgreich gespeichert.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler beim Speichern: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingAnalysis = false);
+    }
+  }
+
 }
 
 class DottedLinePainter extends CustomPainter {
@@ -1404,4 +2066,39 @@ class DottedLinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class DottedBorderButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final String label;
+  final IconData icon;
+
+  const DottedBorderButton({
+    super.key, 
+    required this.onTap, 
+    required this.label, 
+    required this.icon
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container( // Dashed border simulator using simple container for now or custom paint
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey, style: BorderStyle.solid), // Solid for now as dash needs path
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
 }

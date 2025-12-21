@@ -2,7 +2,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/fining_agents.dart';
 
-class FiningAgentsService {
+abstract class FiningAgentsRepository {
+  Future<FiningAgents> fetchSettings(String userProfileId);
+  Future<FiningAgents> saveSettings(FiningAgents settings);
+}
+
+class FiningAgentsService implements FiningAgentsRepository {
   FiningAgentsService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +18,7 @@ class FiningAgentsService {
   SupabaseQueryBuilder _tableRef() =>
       _client.schema(_schema).from(_table);
 
+  @override
   Future<FiningAgents> fetchSettings(String userProfileId) async {
     final data = await _tableRef()
         .select()
@@ -25,6 +31,7 @@ class FiningAgentsService {
     return FiningAgents.fromJson(map);
   }
 
+  @override
   Future<FiningAgents> saveSettings(FiningAgents settings) async {
     final data = await _tableRef()
         .upsert(settings.toJson())

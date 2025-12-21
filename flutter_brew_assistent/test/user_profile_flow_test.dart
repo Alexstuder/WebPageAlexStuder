@@ -150,6 +150,11 @@ class FakeUserProfileRepository implements UserProfileRepository {
   }
   
   @override
+  Future<void> deleteFermentable(String id) async {
+    // no-op
+  }
+  
+  @override
   Future<List<Hop>> getHops(String userProfileId) async {
     return [];
   }

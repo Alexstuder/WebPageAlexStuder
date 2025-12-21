@@ -18,12 +18,16 @@ dependencies:
   image: ^4.6.0
   fl_chart: ^1.1.1
   intl: ^0.20.2
+  web: ^1.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  integration_test:
+    sdk: flutter
   flutter_launcher_icons: ^0.14.4
+  shared_preferences: ^2.5.4
 
 flutter:
   uses-material-design: true

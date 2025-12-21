@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/brew_kettle.dart';
 
-class BrewKettleService {
+abstract class BrewKettleRepository {
+  Future<List<BrewKettle>> fetchKettles(String userProfileId);
+  Future<BrewKettle> saveKettle(BrewKettle kettle);
+  Future<void> deleteKettle(String id);
+}
+
+class BrewKettleService implements BrewKettleRepository {
   BrewKettleService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class BrewKettleService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<BrewKettle>> fetchKettles(String userProfileId) async {
     final data = await _table()
         .select()
@@ -25,6 +32,7 @@ class BrewKettleService {
         .toList();
   }
 
+  @override
   Future<BrewKettle> saveKettle(BrewKettle kettle) async {
     if (kettle.isDefault) {
       await _table()
@@ -35,6 +43,7 @@ class BrewKettleService {
     return BrewKettle.fromJson(data);
   }
 
+  @override
   Future<void> deleteKettle(String id) async {
     await _table().delete().eq('id', id);
   }

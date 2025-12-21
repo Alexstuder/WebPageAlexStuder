@@ -9,10 +9,7 @@ import '../services/packaging_profile_service.dart';
 import '../services/brew_kettle_service.dart';
 import '../services/fining_agents_service.dart';
 import '../services/user_profile_service.dart';
-import '../models/user_profile.dart';
 import '../models/packaging_profile.dart';
-import '../models/brew_kettle.dart';
-import '../models/fining_agents.dart';
 import '../models/ai_recipe.dart';
 import 'recipe_result_page.dart';
 import 'user_profile_page.dart';
@@ -39,9 +36,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   String? _imageMime;
   bool _isSearchingShops = false;
 
-  String? _lastGeneratedPrompt;
-  AiRecipe? _lastGeneratedRecipe;
-
   @override
   void initState() {
     super.initState();
@@ -66,8 +60,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       _isLoading = true;
       _error = null;
       _response = null;
-
-      _lastGeneratedPrompt = null;
     });
 
     try {
@@ -277,10 +269,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           .replaceAll('{{fining_agents}}', finingAgentsInfo)
           .replaceAll('{{json_template}}', jsonTemplate);
 
-      setState(() {
-        _lastGeneratedPrompt = fullPrompt;
-      });
-
       final attachment = _buildAttachment();
       final recipeJsonString = await _service.brewRecipe(
         fullPrompt,
@@ -295,7 +283,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       
       setState(() {
         _isLoading = false;
-        _lastGeneratedRecipe = recipe;
         _response = recipeJsonString; // Save raw response
       });
 
@@ -523,8 +510,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
 
   @override
   Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    final bool isWide = media.size.width >= 720;
+    // final media = MediaQuery.of(context);
+    // final bool isWide = media.size.width >= 720;
+
 
     return Scaffold(
       appBar: AppBar(

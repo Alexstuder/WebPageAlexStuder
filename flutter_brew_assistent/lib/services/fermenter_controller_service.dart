@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/fermenter_controller.dart';
 
-class FermenterControllerService {
+abstract class FermenterControllerRepository {
+  Future<List<FermenterControllerModel>> fetchControllers(String userProfileId);
+  Future<FermenterControllerModel> saveController(FermenterControllerModel controller);
+  Future<void> deleteController(String id);
+}
+
+class FermenterControllerService implements FermenterControllerRepository {
   FermenterControllerService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class FermenterControllerService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<FermenterControllerModel>> fetchControllers(
       String userProfileId) async {
     final data = await _table()
@@ -26,6 +33,7 @@ class FermenterControllerService {
         .toList();
   }
 
+  @override
   Future<FermenterControllerModel> saveController(
       FermenterControllerModel controller) async {
     if (controller.isDefault) {
@@ -37,6 +45,7 @@ class FermenterControllerService {
     return FermenterControllerModel.fromJson(data);
   }
 
+  @override
   Future<void> deleteController(String id) async {
     await _table().delete().eq('id', id);
   }

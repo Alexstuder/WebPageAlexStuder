@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/packaging_profile.dart';
 
-class PackagingProfileService {
+abstract class PackagingProfileRepository {
+  Future<List<PackagingProfile>> fetchProfiles(String userProfileId);
+  Future<PackagingProfile> saveProfile(PackagingProfile profile);
+  Future<void> deleteProfile(String id);
+}
+
+class PackagingProfileService implements PackagingProfileRepository {
   PackagingProfileService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class PackagingProfileService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<PackagingProfile>> fetchProfiles(String userProfileId) async {
     final data = await _table()
         .select()
@@ -25,6 +32,7 @@ class PackagingProfileService {
         .toList();
   }
 
+  @override
   Future<PackagingProfile> saveProfile(PackagingProfile profile) async {
     if (profile.isDefault) {
       await _table()
@@ -35,6 +43,7 @@ class PackagingProfileService {
     return PackagingProfile.fromJson(data);
   }
 
+  @override
   Future<void> deleteProfile(String id) async {
     await _table().delete().eq('id', id);
   }

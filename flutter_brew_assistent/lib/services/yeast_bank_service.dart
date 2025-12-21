@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/yeast_bank_entry.dart';
 
-class YeastBankService {
+abstract class YeastBankRepository {
+  Future<List<YeastBankEntry>> fetchEntries(String userProfileId);
+  Future<YeastBankEntry> saveEntry(YeastBankEntry entry);
+  Future<void> deleteEntry(String id);
+}
+
+class YeastBankService implements YeastBankRepository {
   YeastBankService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
@@ -13,6 +19,7 @@ class YeastBankService {
   SupabaseQueryBuilder _table() =>
       _client.schema(_schemaName).from(_tableName);
 
+  @override
   Future<List<YeastBankEntry>> fetchEntries(String userProfileId) async {
     final data = await _table()
         .select()
@@ -24,11 +31,13 @@ class YeastBankService {
         .toList();
   }
 
+  @override
   Future<YeastBankEntry> saveEntry(YeastBankEntry entry) async {
     final data = await _table().upsert(entry.toJson()).select().single();
     return YeastBankEntry.fromJson(data);
   }
 
+  @override
   Future<void> deleteEntry(String id) async {
     await _table().delete().eq('id', id);
   }

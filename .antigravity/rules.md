@@ -22,4 +22,4 @@ Nach jeder Code-Änderung ist folgender Ablauf **zwingend**:
 ## 4. Abschluss (Restart)
 Sobald Code und Datenbank-Status validiert sind:
 1.  Stoppe die aktuell laufende Instanz der App (SIGTERM/Stop).
-2.  Starte die App frisch neu (z.B. via `flutter run`).
+2.  Starte die App frisch neu (z.B. via `flutter run`) immer auf port 8080 ohne den Chrom oder sonstigen Browser gleichzeitig zu starten.

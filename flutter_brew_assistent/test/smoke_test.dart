@@ -19,7 +19,7 @@ import 'package:flutter/services.dart';
 class TestAssetBundle extends CachingAssetBundle {
   @override
   Future<String> loadString(String key, {bool cache = true}) async {
-    return "{}";
+    return '{}';
   }
   @override
   Future<ByteData> load(String key) async {
@@ -69,6 +69,7 @@ class MockUserProfileRepository implements UserProfileRepository {
   @override Future<List<Fermentable>> getFermentables(String id) async => [];
   @override Future<void> saveFermentables(List<Fermentable> f) async {}
   @override Future<void> saveFermentable(Fermentable f) async {}
+  @override Future<void> deleteFermentable(String id) async {}
   
   @override Future<List<Hop>> getHops(String id) async => [];
   @override Future<void> saveHops(List<Hop> h) async {}
