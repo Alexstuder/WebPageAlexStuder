@@ -14,5 +14,5 @@ void downloadBytes(Uint8List bytes, String fileName) {
   // Revoke after a short delay to ensure click processing finishes in some browsers
   web.window.setTimeout(() {
     web.URL.revokeObjectURL(url);
-  }.toJS, 100);
+  }.toJS, 100.toJS);
 }
