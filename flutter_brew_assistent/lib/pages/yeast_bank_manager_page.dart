@@ -7,7 +7,8 @@ import '../services/yeast_bank_service.dart';
 import '../services/user_profile_service.dart';
 import '../services/brewfather_service.dart';
 import '../widgets/card_actions.dart';
-import 'integrations_page.dart'; // Assumed to be in the same directory
+import 'yeast_label_page.dart';
+import 'integrations_page.dart';
 
 class YeastBankManagerPage extends StatefulWidget {
   const YeastBankManagerPage({super.key, required this.profileId});
@@ -116,7 +117,9 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             attenuationMax: (y['maxAttenuation'] as num?)?.toDouble() ?? (y['attenuation'] as num?)?.toDouble(),
             temperatureMin: (y['minTemp'] as num?)?.toDouble(),
             temperatureMax: (y['maxTemp'] as num?)?.toDouble(),
-            notes: y['description'] ?? y['notes'],
+            notes: (y['userNotes']?.toString().isNotEmpty == true) 
+                ? y['userNotes'] 
+                : ((y['notes']?.toString().isNotEmpty == true) ? y['notes'] : y['description']),
             // Map additional fields from Brewfather or preserve existing
             productId: y['productId']?.toString() ?? existingEntry?.productId,
             form: y['form']?.toString() ?? existingEntry?.form,
@@ -325,12 +328,31 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                 ],
               ],
             ),
-            trailing: CardActions(
-              onEdit: () => _openForm(editing: entry),
-              onDelete: () => _confirmDelete(
-                'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
-                () => _deleteEntry(entry),
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.label_outline, color: Colors.blueAccent),
+                  onPressed: () async {
+                    final updated = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => YeastLabelPage(entry: entry),
+                      ),
+                    );
+                    if (updated == true) {
+                      _load(); // Refresh list to see updated generations if needed
+                    }
+                  },
+                  tooltip: 'Etikette generieren',
+                ),
+                CardActions(
+                  onEdit: () => _openForm(editing: entry),
+                  onDelete: () => _confirmDelete(
+                    'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
+                    () => _deleteEntry(entry),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -365,7 +387,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
         TextEditingController(text: editing?.temperatureMin?.toString() ?? '');
     final tempMaxCtrl =
         TextEditingController(text: editing?.temperatureMax?.toString() ?? '');
-    final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+    String initialNotes = editing?.notes ?? '';
     
     String initialProductId = editing?.productId ?? '';
     String initialForm = editing?.form ?? '';
@@ -383,6 +405,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
        } catch (_) {}
     }
 
+    final notesCtrl = TextEditingController(text: initialNotes);
     final productIdCtrl = TextEditingController(text: initialProductId);
     final formCtrl = TextEditingController(text: initialForm);
     final inventoryCtrl = TextEditingController(text: initialInventory);
@@ -607,12 +630,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         const SizedBox(height: 12),
                         Tooltip(
                           message: isSynced
-                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              ? 'Dieses Feld wird von Brewfather synchronisiert.'
                               : '',
                           child: TextField(
                             controller: notesCtrl,
-                            readOnly: isSynced,
                             maxLines: 3,
+                            readOnly: isSynced,
                             decoration: InputDecoration(
                               labelText: 'Notizen',
                               filled: isSynced,

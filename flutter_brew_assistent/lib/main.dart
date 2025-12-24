@@ -42,6 +42,7 @@ import 'pages/brewfather_menu_page.dart';
 import 'services/brewfather_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'widgets/card_actions.dart';
+import 'pages/yeast_label_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -2701,7 +2702,9 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
             attenuationMax: (y['maxAttenuation'] as num?)?.toDouble() ?? (y['attenuation'] as num?)?.toDouble(),
             temperatureMin: (y['minTemp'] as num?)?.toDouble(),
             temperatureMax: (y['maxTemp'] as num?)?.toDouble(),
-            notes: y['description'] ?? y['notes'],
+            notes: (y['userNotes']?.toString().isNotEmpty == true) 
+                ? y['userNotes'] 
+                : ((y['notes']?.toString().isNotEmpty == true) ? y['notes'] : y['description']),
             // Map additional fields from Brewfather or preserve existing
             productId: y['productId']?.toString() ?? existingEntry?.productId,
             form: y['form']?.toString() ?? existingEntry?.form,
@@ -2910,12 +2913,31 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                 ],
               ],
             ),
-            trailing: CardActions(
-              onEdit: () => _openForm(editing: entry),
-              onDelete: () => _confirmDelete(
-                'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
-                () => _deleteEntry(entry),
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.label_outline, color: Colors.blueAccent),
+                  onPressed: () async {
+                    final updated = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => YeastLabelPage(entry: entry),
+                      ),
+                    );
+                    if (updated == true) {
+                      _load();
+                    }
+                  },
+                  tooltip: 'Etikette generieren',
+                ),
+                CardActions(
+                  onEdit: () => _openForm(editing: entry),
+                  onDelete: () => _confirmDelete(
+                    'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
+                    () => _deleteEntry(entry),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -2950,7 +2972,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
         TextEditingController(text: editing?.temperatureMin?.toString() ?? '');
     final tempMaxCtrl =
         TextEditingController(text: editing?.temperatureMax?.toString() ?? '');
-    final notesCtrl = TextEditingController(text: editing?.notes ?? '');
+    String initialNotes = editing?.notes ?? '';
     
     // Initialize new controllers (try editing entry first, then fallback to debug map if needed, though usually editing is source of truth after sync)
     // We actually need access to the debug map here if we want to pre-fill for the FIRST time before DB has these columns populated.
@@ -2979,6 +3001,7 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
        } catch (_) {}
     }
 
+    final notesCtrl = TextEditingController(text: initialNotes);
     final productIdCtrl = TextEditingController(text: initialProductId);
     final formCtrl = TextEditingController(text: initialForm);
     final inventoryCtrl = TextEditingController(text: initialInventory);
@@ -3204,12 +3227,12 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                         const SizedBox(height: 12),
                         Tooltip(
                           message: isSynced
-                              ? 'Dieses Feld erlaubt Brewfather nicht mutiert zu werden.'
+                              ? 'Dieses Feld wird von Brewfather synchronisiert.'
                               : '',
                           child: TextField(
                             controller: notesCtrl,
-                            readOnly: isSynced,
                             maxLines: 3,
+                            readOnly: isSynced,
                             decoration: InputDecoration(
                               labelText: 'Notizen',
                               filled: isSynced,

@@ -16,6 +16,7 @@ class YeastBankEntry {
     this.temperatureMax,
     this.url,
     this.notes,
+    this.zuchtGenerationen = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -36,6 +37,7 @@ class YeastBankEntry {
   final double? temperatureMax;
   final String? url;
   final String? notes;
+  final List<String> zuchtGenerationen;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -56,6 +58,7 @@ class YeastBankEntry {
     double? temperatureMax,
     String? url,
     String? notes,
+    List<String>? zuchtGenerationen,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -76,6 +79,7 @@ class YeastBankEntry {
       temperatureMax: temperatureMax ?? this.temperatureMax,
       url: url ?? this.url,
       notes: notes ?? this.notes,
+      zuchtGenerationen: zuchtGenerationen ?? this.zuchtGenerationen,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -101,6 +105,7 @@ class YeastBankEntry {
       temperatureMax: (json['temperature_max'] as num?)?.toDouble(),
       url: json['url'] as String?,
       notes: json['notes'] as String?,
+      zuchtGenerationen: (json['zucht_generationen'] as List?)?.cast<String>() ?? [],
       createdAt: parseDate(json['created_at'] as String?),
       updatedAt: parseDate(json['updated_at'] as String?),
     );
@@ -124,6 +129,7 @@ class YeastBankEntry {
       'temperature_max': temperatureMax,
       'url': url,
       'notes': notes,
+      'zucht_generationen': zuchtGenerationen,
     };
   }
 }
