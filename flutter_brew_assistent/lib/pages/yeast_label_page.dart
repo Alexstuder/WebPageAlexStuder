@@ -7,6 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../models/yeast_bank_entry.dart';
 import '../services/yeast_bank_service.dart';
 import '../utils/clipboard_utils.dart';
+import '../utils/download_utils.dart';
 import 'dart:typed_data';
 
 class YeastLabelPage extends StatefulWidget {
@@ -111,6 +112,33 @@ $generation. Generation
           const SnackBar(content: Text('Text kopiert (Bild-Copy fehlgeschlagen)')),
         );
       }
+    }
+  }
+
+  Future<void> _downloadLabel() async {
+    try {
+      final boundary = _globalKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (byteData != null) {
+        final Uint8List pngBytes = byteData.buffer.asUint8List();
+        final fileName = 'hefe_etikett_${widget.entry.brand}_${widget.entry.strain}.png'
+            .replaceAll(' ', '_')
+            .toLowerCase();
+            
+        downloadBytes(pngBytes, fileName);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download gestartet: $fileName')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Download error: $e');
     }
   }
 
@@ -273,10 +301,20 @@ $generation. Generation
                   Positioned(
                     bottom: 4,
                     right: 4,
-                    child: IconButton(
-                      icon: const Icon(Icons.copy, size: 18, color: Colors.grey),
-                      onPressed: _copyLabel,
-                      tooltip: 'Etikett kopieren (Bild)',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.download, size: 18, color: Colors.blueGrey),
+                          onPressed: _downloadLabel,
+                          tooltip: 'Etikett herunterladen',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 18, color: Colors.grey),
+                          onPressed: _copyLabel,
+                          tooltip: 'Etikett kopieren (Bild)',
+                        ),
+                      ],
                     ),
                   ),
                 ],
