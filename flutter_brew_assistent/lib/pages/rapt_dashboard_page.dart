@@ -37,7 +37,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
   double? _latestBattery;
   double? _delta24h;
   String? _generatedAt;
-  
+  String? _currentProfileName;
 
   @override
   void initState() {
@@ -249,6 +249,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       _latestBattery = battery;
       _og = og;
       _delta24h = delta;
+      _currentProfileName = last['profileName'] ?? last['ProfileName'];
     });
   }
 
@@ -354,9 +355,9 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                  }
                )
             ] else ...[
-                const Text(
-                  'RAPT Temperature Controller',
-                  style: TextStyle(
+                Text(
+                  _currentProfileName ?? 'RAPT Temperature Controller',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
