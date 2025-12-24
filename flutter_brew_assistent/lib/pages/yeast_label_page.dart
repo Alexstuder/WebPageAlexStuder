@@ -8,7 +8,7 @@ import '../models/yeast_bank_entry.dart';
 import '../services/yeast_bank_service.dart';
 import '../utils/clipboard_utils.dart';
 import '../utils/download_utils.dart';
-import 'dart:typed_data';
+// unnecessary_import fixed
 
 class YeastLabelPage extends StatefulWidget {
   final YeastBankEntry entry;

@@ -2,6 +2,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 import 'package:web/web.dart' as web;
+import 'package:flutter/foundation.dart';
 
 Future<void> copyImageToClipboard(Uint8List bytes) async {
   try {
@@ -16,7 +17,7 @@ Future<void> copyImageToClipboard(Uint8List bytes) async {
     
     await web.window.navigator.clipboard.write([clipboardItem].toJS).toDart;
   } catch (e) {
-    print('Web Clipboard Error: $e');
+    debugPrint('Web Clipboard Error: $e');
     rethrow;
   }
 }
