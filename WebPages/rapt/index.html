@@ -1102,10 +1102,45 @@
       });
       const validAbv = abvSeries.filter(v => Number.isFinite(v));
       const abvMax = validAbv.length ? Math.max(...validAbv) : 0;
-      const velocityData = rows.map(r => {
-        const v = Number(r?.gravityVelocity);
-        return Number.isFinite(v) ? -v : null;
+      const velocityData = rows.map((r, i) => {
+        // Berechne Geschwindigkeit über ein Fenster von ca. 12 Stunden für eine deutlich glattere Kurve
+        const windowMs = 12 * 60 * 60 * 1000;
+        const tEnd = new Date(r.createdOn || r.startDate).getTime();
+        if (Number.isNaN(tEnd)) return null;
+
+        let startIdx = i;
+        for (let j = i - 1; j >= 0; j--) {
+          const tj = new Date(rows[j].createdOn || rows[j].startDate).getTime();
+          if (Number.isNaN(tj)) continue;
+          startIdx = j;
+          if (tj <= tEnd - windowMs) break;
+        }
+
+        if (startIdx === i) return 0;
+
+        const rStart = rows[startIdx];
+        const t1 = new Date(rStart.createdOn || rStart.startDate).getTime();
+        const dtDays = (tEnd - t1) / (1000 * 60 * 60 * 24);
+
+        if (dtDays < 0.05) return 0; // Vermeide Rauschen bei zu kurzen Intervallen
+
+        const g1 = normalizeGravity(rStart.gravity);
+        const g2 = normalizeGravity(r.gravity);
+        if (g1 === null || g2 === null) return 0;
+
+        const dg = (g1 - g2) * 1000; // Punkte (z.B. 1.080 -> 1.070 = 10 Punkte)
+        let vel = dg / dtDays;
+
+        // Kleiner Rauschfilter: Werte unter 0.3 Punkte/Tag als 0 werten, wenn am Anfang
+        if (vel < 0.3 && i < rows.length * 0.2) vel = 0;
+
+        return vel > 0 ? vel : 0;
       });
+
+      const validVelocities = velocityData.filter(v => typeof v === 'number' && Number.isFinite(v));
+      const maxVelValue = validVelocities.length ? Math.max(...validVelocities) : 10;
+      // Runde auf die nächste volle 5er Stelle für eine sauberere Achse
+      const velocityMaxScale = Math.max(5, Math.ceil((maxVelValue * 1.2) / 5) * 5);
 
       const datasets = [
         {
@@ -1157,9 +1192,9 @@
           backgroundColor: 'rgba(161, 98, 7, 0.1)',
           yAxisID: 'yVelocity',
           fill: false,
-          tension: 0.25,
+          tension: 0, // Keine Glättung, um Unterschwinger unter 0 zu vermeiden
           spanGaps: true,
-          borderWidth: 1,
+          borderWidth: 1.5,
           pointRadius: 0,
           pointHitRadius: 8,
           pointHoverRadius: 4
@@ -1179,7 +1214,7 @@
           responsive: true,
           maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
-          layout: { padding: { top: 28 } },
+          layout: { padding: { top: 28, bottom: 12 } },
           plugins: {
             legend: { position: 'bottom', labels: { color: '#f1f5f9', usePointStyle: true, pointStyle: 'line', boxWidth: 36 } },
             tooltip: {
@@ -1231,11 +1266,13 @@
             },
             yVelocity: {
               type: 'linear',
-              position: 'right', // Stacked on right with others
+              position: 'right',
+              min: 0,
+              max: velocityMaxScale,
               grid: { drawOnChartArea: false },
-              ticks: { color: '#a16207' },
-              title: { display: true, text: 'Vel', color: '#a16207' },
-              display: false // Hide axis to avoid clutter, but show line? Or show nicely?
+              ticks: { color: '#a16207', padding: 8 },
+              title: { display: true, text: 'Punkte/Tag', color: '#a16207' },
+              display: true
             },
             yAbv: {
               type: 'linear',

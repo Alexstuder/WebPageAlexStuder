@@ -1987,6 +1987,8 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   Text('Volumen: ${kettle.volumeLiters!.toStringAsFixed(1)} L'),
                 if (kettle.postBoilLossLiters != null)
                   Text('Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
+                if (kettle.boilOffPercentage != null)
+                  Text('Boil-off: ${kettle.boilOffPercentage!.toStringAsFixed(1)} %'),
                 if ((kettle.notes ?? '').isNotEmpty)
                   Text(
                     kettle.notes!,
@@ -2020,6 +2022,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     );
     final postBoilLossCtrl = TextEditingController(
       text: editing?.postBoilLossLiters?.toString() ?? '',
+    );
+    final boilOffCtrl = TextEditingController(
+      text: editing?.boilOffPercentage?.toString() ?? '',
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool isDefault = editing?.isDefault ?? false;
@@ -2097,6 +2102,30 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   onChanged: (value) =>
                       setState(() => hasCondenserHat = value ?? false),
                 ),
+                if (hasCondenserHat)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 32.0, bottom: 12.0),
+                    child: TextField(
+                      controller: boilOffCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Boil-off (%)',
+                        suffixIcon: Tooltip(
+                          message:
+                              'Prozentualer Verdampfungsverlust während des\nKochens pro Stunde. Dieser Wert ist\nspezifisch für dein System und die\nverwendete Heizleistung.',
+                          triggerMode: TooltipTriggerMode.tap,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E293B),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          textStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                          child: const Icon(Icons.info_outline, size: 20),
+                        ),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
                 CheckboxListTile(
                   value: isDefault,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -2138,6 +2167,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       isDefault: isDefault,
       volumeLiters: _parseDouble(volumeCtrl.text),
       postBoilLossLiters: _parseDouble(postBoilLossCtrl.text),
+      boilOffPercentage: _parseDouble(boilOffCtrl.text),
       hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );

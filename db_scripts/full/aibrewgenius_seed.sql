@@ -95,7 +95,7 @@ INSERT INTO aibrewgenius.batches (id, user_profile_id, brewfather_id, name, batc
 -- Data for Name: brew_kettles; Type: TABLE DATA; Schema: aibrewgenius; Owner: supabase_admin
 --
 
-INSERT INTO aibrewgenius.brew_kettles (id, user_profile_id, brand, model, is_default, volume_liters, post_boil_loss_liters, has_condenser_hat, notes, created_at, updated_at) VALUES ('04914a2f-0b73-40a5-80e0-37515c190478', 'self_hosted_profile', 'Brewtools', 'B40', true, 40, 4, true, NULL, '2025-11-17 15:32:03.603097+00', '2025-12-25 07:23:50.149646+00');
+INSERT INTO aibrewgenius.brew_kettles (id, user_profile_id, brand, model, is_default, volume_liters, post_boil_loss_liters, boil_off_percentage, has_condenser_hat, notes, created_at, updated_at) VALUES ('04914a2f-0b73-40a5-80e0-37515c190478', 'self_hosted_profile', 'Brewtools', 'B40', true, 40, 4, 0, true, NULL, '2025-11-17 15:32:03.603097+00', '2025-12-25 07:23:50.149646+00');
 
 
 --

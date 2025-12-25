@@ -39,6 +39,7 @@ CREATE TABLE aibrewgenius.brew_kettles (
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   volume_liters DOUBLE PRECISION,
   post_boil_loss_liters DOUBLE PRECISION DEFAULT 0,
+  boil_off_percentage DOUBLE PRECISION DEFAULT 0,
   has_condenser_hat BOOLEAN NOT NULL DEFAULT FALSE,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
