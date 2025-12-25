@@ -2069,7 +2069,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                 TextField(
                   controller: postBoilLossCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Post-Boil Prozessverlust (Trub + Kühler)',
+                    labelText: 'Post-Boil Prozessverlust (L)',
                     suffixIcon: Tooltip(
                       message:
                           'Volumenverlust zwischen Kochende und Gärtank\ndurch bewusst zurückgelassenen Trub im Kessel\nsowie Restwürze in Gegenstromkühler, Schläuchen\nund Pumpe. Dieser Verlust ist qualitätsbedingt\nund wird nicht in den Gärtank übernommen.',
@@ -2472,7 +2472,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                 TextField(
                   controller: fermentationLossCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Gärverlust (Hefe- und Trubabzug)',
+                    labelText: 'Gärverlust (Hefe- und Trub in L)',
                     suffixIcon: Tooltip(
                       message:
                           'Volumenverlust im Fermenter durch abgesetzte\nHefe und Trub. Umfasst das bewusst nicht\nmitübertragene Sediment beim Abfüllen oder\nUmdrücken in Keg bzw. Flaschen und dient der\nSicherstellung von Klarheit und Stabilität\ndes Bieres.',

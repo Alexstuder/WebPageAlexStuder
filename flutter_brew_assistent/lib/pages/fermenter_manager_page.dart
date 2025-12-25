@@ -193,7 +193,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                 TextField(
                   controller: fermentationLossCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Gärverlust (Hefe- und Trubabzug)',
+                    labelText: 'Gärverlust (Hefe- und Trub in L)',
                     suffixIcon: Tooltip(
                       message:
                           'Volumenverlust im Fermenter durch abgesetzte\nHefe und Trub. Umfasst das bewusst nicht\nmitübertragene Sediment beim Abfüllen oder\nUmdrücken in Keg bzw. Flaschen und dient der\nSicherstellung von Klarheit und Stabilität\ndes Bieres.',
