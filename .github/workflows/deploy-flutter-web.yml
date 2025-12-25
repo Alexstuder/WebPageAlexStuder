@@ -90,7 +90,7 @@ jobs:
             docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
 
             # Running Seed
-            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewGeniusLatestSeed.sql
+            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
 
 
       - name: Deploy proxy to VPS

@@ -1,6 +1,5 @@
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
-import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 import 'package:flutter/foundation.dart';
 

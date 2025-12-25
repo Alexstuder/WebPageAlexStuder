@@ -1985,6 +1985,8 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
               children: [
                 if (kettle.volumeLiters != null)
                   Text('Volumen: ${kettle.volumeLiters!.toStringAsFixed(1)} L'),
+                if (kettle.postBoilLossLiters != null)
+                  Text('Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
                 if ((kettle.notes ?? '').isNotEmpty)
                   Text(
                     kettle.notes!,
@@ -2015,6 +2017,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     final modelCtrl = TextEditingController(text: editing?.model ?? '');
     final volumeCtrl = TextEditingController(
       text: editing?.volumeLiters?.toString() ?? '',
+    );
+    final postBoilLossCtrl = TextEditingController(
+      text: editing?.postBoilLossLiters?.toString() ?? '',
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool isDefault = editing?.isDefault ?? false;
@@ -2054,6 +2059,27 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: postBoilLossCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Post-Boil Prozessverlust (Trub + Kühler)',
+                    suffixIcon: Tooltip(
+                      message:
+                          'Volumenverlust zwischen Kochende und Gärtank\ndurch bewusst zurückgelassenen Trub im Kessel\nsowie Restwürze in Gegenstromkühler, Schläuchen\nund Pumpe. Dieser Verlust ist qualitätsbedingt\nund wird nicht in den Gärtank übernommen.',
+                      triggerMode: TooltipTriggerMode.tap,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      textStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                      child: const Icon(Icons.info_outline, size: 20),
+                    ),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -2111,6 +2137,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       model: modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
       isDefault: isDefault,
       volumeLiters: _parseDouble(volumeCtrl.text),
+      postBoilLossLiters: _parseDouble(postBoilLossCtrl.text),
       hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
@@ -2340,6 +2367,9 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                 Text('Kühlung: ${fermenter.hasCooling ? 'Ja' : 'Nein'}'),
                 Text(
                     'Dry-Hopping-Port: ${fermenter.hasDryHoppingPort ? 'Ja' : 'Nein'}'),
+                if (fermenter.fermentationLossLiters != null)
+                  Text(
+                      'Gärverlust: ${fermenter.fermentationLossLiters!.toStringAsFixed(1)} L'),
                 if ((fermenter.notes ?? '').isNotEmpty)
                   Text(
                     fermenter.notes!,
@@ -2365,6 +2395,8 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final typeCtrl = TextEditingController(text: editing?.type ?? '');
     final volumeCtrl =
         TextEditingController(text: editing?.volumeLiters?.toString() ?? '');
+    final fermentationLossCtrl = TextEditingController(
+        text: editing?.fermentationLossLiters?.toString() ?? '');
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool hasHeating = editing?.hasHeating ?? false;
     bool hasCooling = editing?.hasCooling ?? false;
@@ -2402,6 +2434,28 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                   controller: volumeCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Volumen (L)',
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: fermentationLossCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Gärverlust (Hefe- und Trubabzug)',
+                    suffixIcon: Tooltip(
+                      message:
+                          'Volumenverlust im Fermenter durch abgesetzte\nHefe und Trub. Umfasst das bewusst nicht\nmitübertragene Sediment beim Abfüllen oder\nUmdrücken in Keg bzw. Flaschen und dient der\nSicherstellung von Klarheit und Stabilität\ndes Bieres.',
+                      triggerMode: TooltipTriggerMode.tap,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      textStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                      child: const Icon(Icons.info_outline, size: 20),
+                    ),
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -2478,6 +2532,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       brand: brandCtrl.text.trim(),
       type: typeCtrl.text.trim().isEmpty ? null : typeCtrl.text.trim(),
       volumeLiters: _parseDouble(volumeCtrl.text),
+      fermentationLossLiters: _parseDouble(fermentationLossCtrl.text),
       hasHeating: hasHeating,
       hasCooling: hasCooling,
       hasDryHoppingPort: hasDryHopPort,

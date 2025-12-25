@@ -198,10 +198,18 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                 TextField(
                   controller: postBoilLossCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Post-Boil Prozessverlust (L)',
+                    labelText: 'Post-Boil Prozessverlust (Trub + Kühler)',
                     suffixIcon: Tooltip(
-                      message: 'Volumenverlust zwischen Kochende und Gärtank durch bewusst zurückgelassenen Trub im Kessel sowie Restwürze in Gegenstromkühler, Schläuchen und Pumpe. Dieser Verlust ist qualitätsbedingt und wird nicht in den Gärtank übernommen.',
+                      message:
+                          'Volumenverlust zwischen Kochende und Gärtank\ndurch bewusst zurückgelassenen Trub im Kessel\nsowie Restwürze in Gegenstromkühler, Schläuchen\nund Pumpe. Dieser Verlust ist qualitätsbedingt\nund wird nicht in den Gärtank übernommen.',
                       triggerMode: TooltipTriggerMode.tap,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      textStyle: const TextStyle(fontSize: 12, color: Colors.white),
                       child: const Icon(Icons.info_outline, size: 20),
                     ),
                   ),

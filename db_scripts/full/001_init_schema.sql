@@ -38,6 +38,7 @@ CREATE TABLE aibrewgenius.brew_kettles (
   model TEXT,
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   volume_liters DOUBLE PRECISION,
+  post_boil_loss_liters DOUBLE PRECISION DEFAULT 0,
   has_condenser_hat BOOLEAN NOT NULL DEFAULT FALSE,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
@@ -53,6 +54,7 @@ CREATE TABLE aibrewgenius.fermenters (
   has_heating BOOLEAN NOT NULL DEFAULT FALSE,
   has_cooling BOOLEAN NOT NULL DEFAULT FALSE,
   has_dry_hopping_port BOOLEAN NOT NULL DEFAULT FALSE,
+  fermentation_loss_liters DOUBLE PRECISION NOT NULL DEFAULT 0,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
@@ -107,6 +109,7 @@ CREATE TABLE aibrewgenius.yeast_bank_entries (
   temperature_max DOUBLE PRECISION,
   url TEXT,
   notes TEXT,
+  zucht_generationen JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW())
 );
