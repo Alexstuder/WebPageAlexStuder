@@ -2913,31 +2913,22 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                 ],
               ],
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.label_outline, color: Colors.blueAccent),
-                  onPressed: () async {
-                    final updated = await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => YeastLabelPage(entry: entry),
-                      ),
-                    );
-                    if (updated == true) {
-                      _load();
-                    }
-                  },
-                  tooltip: 'Etikette generieren',
-                ),
-                CardActions(
-                  onEdit: () => _openForm(editing: entry),
-                  onDelete: () => _confirmDelete(
-                    'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
-                    () => _deleteEntry(entry),
+            trailing: CardActions(
+              onLabel: () async {
+                final updated = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => YeastLabelPage(entry: entry),
                   ),
-                ),
-              ],
+                );
+                if (updated == true) {
+                  _load();
+                }
+              },
+              onEdit: () => _openForm(editing: entry),
+              onDelete: () => _confirmDelete(
+                'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
+                () => _deleteEntry(entry),
+              ),
             ),
           ),
         );
