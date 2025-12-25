@@ -20,10 +20,6 @@
 
   - defaultExpanded: false
 
-### RAPT PILL Batterie Status anzeigen
-
-  - defaultExpanded: false
-
 ### Eine Notitz oder Anleitungs
 
   - defaultExpanded: false
@@ -31,17 +27,21 @@
     Eine Seite in der zum Beispiel URL von Youtube Videos mit Anleitungen abgespeichert werden könne
     ```
 
-### RAPT Step steuerung
-
-  - defaultExpanded: false
-
 ### RAPT für Flutter Gärprofil darstellen
 
   - defaultExpanded: false
 
-### RAPT Gärprofil aus Rezept generator anlegen
+### Kalender Eintrag für Events : Abfüllen, Lagern, Trinkbereit
 
   - defaultExpanded: false
+
+### Keezer
+
+  - defaultExpanded: false
+    ```md
+    Konfiguratio(Anzahl und Art der Zapfhhähne , Gas)
+    Aktuelle Belegung und berechnung , bis wann nicht mehr geniessbar.
+    ```
 
 ## In Progress
 
@@ -58,6 +58,10 @@
   - defaultExpanded: false
 
 ### RAPT Integration
+
+  - defaultExpanded: false
+
+### RAPT PILL Batterie Status anzeigen
 
   - defaultExpanded: false
 

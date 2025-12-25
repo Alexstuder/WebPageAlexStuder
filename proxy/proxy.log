@@ -1,0 +1,10 @@
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 28 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] No active session in current cache. Skipping backup to preserve previous active state.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=false, override=null, cachedRows=1
+[DEBUG] Reusing cache because no active session and no override.
+Telemetry refresh yielded no valid rows – keeping previous cache.
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.

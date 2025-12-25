@@ -705,7 +705,49 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      final pointsTemp = <FlSpot>[];
      final pointsGravity = <FlSpot>[];
      final pointsAbv = <FlSpot>[];
-     final pointsVelocity = <FlSpot>[];
+      final pointsVelocity = <FlSpot>[];
+     
+     // 1. Calculate Velocity properly from gravity differences
+     for (int i = 0; i < source.length; i++) {
+        final r = source[i];
+        final tEnd = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+        if (tEnd == null) continue;
+        
+        // Find a point about 12 hours ago
+        final windowMs = 12 * 60 * 60 * 1000;
+        int? startIdx;
+        for (int j = i - 1; j >= 0; j--) {
+           final tj = DateTime.tryParse(source[j]['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+           if (tj == null) continue;
+           startIdx = j;
+           if (tj <= tEnd - windowMs) break;
+        }
+        
+        if (startIdx != null && startIdx != i) {
+           final rStart = source[startIdx];
+           final t1 = DateTime.tryParse(rStart['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+           if (t1 != null) {
+              final dtDays = (tEnd - t1) / (1000 * 60 * 60 * 24);
+              if (dtDays >= 0.05) {
+                 double g1 = (rStart['gravity'] as num?)?.toDouble() ?? 0;
+                 double g2 = (r['gravity'] as num?)?.toDouble() ?? 0;
+                 if (g1 > 500) g1 /= 1000;
+                 if (g2 > 500) g2 /= 1000;
+                 
+                 final dg = (g1 - g2) * 1000;
+                 double vel = dg / dtDays;
+                 
+                 // Noise filter
+                 if (vel < 0.3 && i < source.length * 0.2) vel = 0;
+                 if (vel < 0) vel = 0;
+                 
+                 pointsVelocity.add(FlSpot(tEnd, vel));
+              }
+           }
+        } else {
+           pointsVelocity.add(FlSpot(tEnd, 0));
+        }
+     }
      
      // Store raw gravity values for ABV calculation
      final rawGravities = <double>[];
@@ -716,17 +758,11 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         double? grav = (r['gravity'] as num?)?.toDouble(); // typically 1.0xx
         if (grav != null && grav > 500) grav = grav / 1000.0;
         
-        // Velocity (often negative, so we invert for visual "activity")
-        double? vel = (r['gravityVelocity'] as num?)?.toDouble();
-
         if (t != null) {
            if (temp != null) pointsTemp.add(FlSpot(t, temp));
            if (grav != null) {
               pointsGravity.add(FlSpot(t, grav));
               rawGravities.add(grav);
-           }
-           if (vel != null) {
-              pointsVelocity.add(FlSpot(t, -vel));
            }
         }
      }
@@ -778,77 +814,76 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
      }
      minAbv = -0.5; 
      maxAbv += 1.0;
-
+ 
      double minVel = 0;
-     double maxVel = 50; 
+     double maxVel = 10.0; 
      if (pointsVelocity.isNotEmpty) {
-        minVel = pointsVelocity.map((e) => e.y).reduce(min);
-        maxVel = pointsVelocity.map((e) => e.y).reduce(max);
+        final actualMax = pointsVelocity.map((e) => e.y).reduce(max);
+        maxVel = (actualMax * 1.2 / 5).ceil() * 5.0; // Dynamic scale with buffer, rounded to 5
+        if (maxVel < 5) maxVel = 5;
      }
-     if (minVel > 0) minVel = 0;
-     maxVel += 5;
      
      // Normalizers
      double normalizeG(double g) {
         if (maxGrav == minGrav) return minTemp + (maxTemp - minTemp)/2;
         return (g - minGrav) / (maxGrav - minGrav) * (maxTemp - minTemp) + minTemp;
      }
-
+ 
      double normalizeAbv(double a) {
         if (maxAbv == minAbv) return minTemp + (maxTemp - minTemp)/2;
         return (a - minAbv) / (maxAbv - minAbv) * (maxTemp - minTemp) + minTemp;
      }
-
-     double normalizeVel(double v) {
-        if (maxVel == minVel) return minTemp + (maxTemp - minTemp)/2;
-        return (v - minVel) / (maxVel - minVel) * (maxTemp - minTemp) + minTemp;
-     }
-
-     final normalizedGravityPoints = pointsGravity.map((e) => FlSpot(e.x, normalizeG(e.y))).toList();
-     final normalizedAbvPoints = pointsAbv.map((e) => FlSpot(e.x, normalizeAbv(e.y))).toList();
-     final normalizedVelocityPoints = pointsVelocity.map((e) => FlSpot(e.x, normalizeVel(e.y))).toList();
-     
-     return LineChart(
-        LineChartData(
-           minY: minTemp,
-           maxY: maxTemp,
-           minX: pointsTemp.isNotEmpty ? pointsTemp.first.x : (pointsGravity.isNotEmpty ? pointsGravity.first.x : (pointsAbv.isNotEmpty ? pointsAbv.first.x : 0)),
-           maxX: pointsTemp.isNotEmpty ? pointsTemp.last.x : (pointsGravity.isNotEmpty ? pointsGravity.last.x : (pointsAbv.isNotEmpty ? pointsAbv.last.x : 0)),
-           lineBarsData: [
-              // Temp (Index 0)
-              LineChartBarData(
-                 spots: pointsTemp,
-                 color: Colors.blue,
-                 isCurved: true,
-                 dotData: const FlDotData(show: false),
-                 belowBarData: BarAreaData(show: true, color: Colors.blue.withValues(alpha: 0.1)),
-              ),
-              // Gravity (Index 1)
-              LineChartBarData(
-                 spots: normalizedGravityPoints,
-                 color: Colors.red,
-                 isCurved: true,
-                 dotData: const FlDotData(show: false),
-                 belowBarData: BarAreaData(show: true, color: Colors.red.withValues(alpha: 0.1)),
-              ),
-              // Alcohol (Index 2)
-              LineChartBarData(
-                 spots: normalizedAbvPoints,
-                 color: Colors.amber,
-                 isCurved: true,
-                 dotData: const FlDotData(show: false),
-                 belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.1)),
-              ),
-              // Velocity (Index 3)
-              LineChartBarData(
-                 spots: normalizedVelocityPoints,
-                 color: Colors.brown, // Or similar to screenshot
-                 isCurved: true,
-                 dotData: const FlDotData(show: false),
-                 belowBarData: BarAreaData(show: false),
-                 barWidth: 1.5,
-              ),
-           ],
+ 
+      double normalizeVel(double v) {
+         if (maxVel == minVel) return minTemp + (maxTemp - minTemp)/2;
+         return (v - minVel) / (maxVel - minVel) * (maxTemp - minTemp) + minTemp;
+      }
+ 
+      final normalizedGravityPoints = pointsGravity.map((e) => FlSpot(e.x, normalizeG(e.y))).toList();
+      final normalizedAbvPoints = pointsAbv.map((e) => FlSpot(e.x, normalizeAbv(e.y))).toList();
+      final normalizedVelocityPoints = pointsVelocity.map((e) => FlSpot(e.x, normalizeVel(e.y))).toList();
+      
+      return LineChart(
+         LineChartData(
+            minY: minTemp,
+            maxY: maxTemp,
+            minX: pointsTemp.isNotEmpty ? pointsTemp.first.x : (pointsGravity.isNotEmpty ? pointsGravity.first.x : (pointsAbv.isNotEmpty ? pointsAbv.first.x : 0)),
+            maxX: pointsTemp.isNotEmpty ? pointsTemp.last.x : (pointsGravity.isNotEmpty ? pointsGravity.last.x : (pointsAbv.isNotEmpty ? pointsAbv.last.x : 0)),
+            lineBarsData: [
+               // Temp (Index 0)
+               LineChartBarData(
+                  spots: pointsTemp,
+                  color: Colors.blue,
+                  isCurved: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(show: true, color: Colors.blue.withValues(alpha: 0.1)),
+               ),
+               // Gravity (Index 1)
+               LineChartBarData(
+                  spots: normalizedGravityPoints,
+                  color: Colors.red,
+                  isCurved: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(show: true, color: Colors.red.withValues(alpha: 0.1)),
+               ),
+               // Alcohol (Index 2)
+               LineChartBarData(
+                  spots: normalizedAbvPoints,
+                  color: Colors.amber,
+                  isCurved: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.1)),
+               ),
+               // Velocity (Index 3)
+               LineChartBarData(
+                  spots: normalizedVelocityPoints,
+                  color: Colors.brown, 
+                  isCurved: false, // Linear to prevent undershooting 0
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(show: false),
+                  barWidth: 1.5,
+               ),
+            ],
            titlesData: FlTitlesData(
               bottomTitles: AxisTitles(
                  sideTitles: SideTitles(

@@ -1009,16 +1009,45 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
      final pointsAbv = <FlSpot>[];
      final pointsVelocity = <FlSpot>[];
 
-     for (final r in source) {
-        final t = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+     // 1. Calculate Velocity properly from gravity differences
+     for (int i = 0; i < source.length; i++) {
+        final r = source[i];
+        final tEnd = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+        if (tEnd == null) continue;
         
-        // Velocity (often negative, so we invert for visual "activity")
-        double? vel = (r['gravityVelocity'] as num?)?.toDouble();
-
-        if (t != null) {
-           if (vel != null) {
-              pointsVelocity.add(FlSpot(t, -vel));
+        // Find a point about 12 hours ago
+        final windowMs = 12 * 60 * 60 * 1000;
+        int? startIdx;
+        for (int j = i - 1; j >= 0; j--) {
+           final tj = DateTime.tryParse(source[j]['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+           if (tj == null) continue;
+           startIdx = j;
+           if (tj <= tEnd - windowMs) break;
+        }
+        
+        if (startIdx != null && startIdx != i) {
+           final rStart = source[startIdx];
+           final t1 = DateTime.tryParse(rStart['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
+           if (t1 != null) {
+              final dtDays = (tEnd - t1) / (1000 * 60 * 60 * 24);
+              if (dtDays >= 0.05) {
+                 double g1 = (rStart['gravity'] as num?)?.toDouble() ?? 0;
+                 double g2 = (r['gravity'] as num?)?.toDouble() ?? 0;
+                 if (g1 > 500) g1 /= 1000;
+                 if (g2 > 500) g2 /= 1000;
+                 
+                 final dg = (g1 - g2) * 1000;
+                 double vel = dg / dtDays;
+                 
+                 // Noise filter
+                 if (vel < 0.3 && i < source.length * 0.2) vel = 0;
+                 if (vel < 0) vel = 0;
+                 
+                 pointsVelocity.add(FlSpot(tEnd, vel));
+              }
            }
+        } else {
+           pointsVelocity.add(FlSpot(tEnd, 0));
         }
      }
 
@@ -1051,13 +1080,12 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
      maxAbv += 1.0;
 
      double minVel = 0;
-     double maxVel = 50; 
+     double maxVel = 10.0; 
      if (pointsVelocity.isNotEmpty) {
-        minVel = pointsVelocity.map((e) => e.y).reduce(min);
-        maxVel = pointsVelocity.map((e) => e.y).reduce(max);
+        final actualMax = pointsVelocity.map((e) => e.y).reduce(max);
+        maxVel = (actualMax * 1.2 / 5).ceil() * 5.0; // Dynamic scale with buffer, rounded to 5
+        if (maxVel < 5) maxVel = 5;
      }
-     if (minVel > 0) minVel = 0;
-     maxVel += 5;
      
      double normalizeAbv(double a) {
         if (maxAbv == minAbv) return minTemp + (maxTemp - minTemp)/2;
@@ -1165,8 +1193,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                     LineChartBarData(
                        spots: pointsVelocity.map((s) => FlSpot(s.x, normalizeVel(s.y))).toList(),
                        color: Colors.purple.withValues(alpha: 0.5),
-                       barWidth: 1,
-                       isCurved: true,
+                       barWidth: 1.5,
+                       isCurved: false, // Keine Glättung gegen Unterschwinger
                        dotData: const FlDotData(show: false),
                        belowBarData: BarAreaData(show: true, color: Colors.purple.withValues(alpha: 0.1)),
                     ),

@@ -1,0 +1,123 @@
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 11 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=181
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=186
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=191
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=195
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=199
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=204
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=208
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=213
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=217
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=222
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=227
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=231
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=236
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=240
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=244
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=249
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=253
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=258
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=263
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=267
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=272
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=276
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=281
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=285
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
