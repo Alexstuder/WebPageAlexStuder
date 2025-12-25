@@ -119,6 +119,8 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
               children: [
                 if (kettle.volumeLiters != null)
                   Text('Volumen: ${kettle.volumeLiters!.toStringAsFixed(1)} L'),
+                if (kettle.postBoilLossLiters != null)
+                  Text('Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
                 if ((kettle.notes ?? '').isNotEmpty)
                   Text(
                     kettle.notes!,
@@ -149,6 +151,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     final modelCtrl = TextEditingController(text: editing?.model ?? '');
     final volumeCtrl = TextEditingController(
       text: editing?.volumeLiters?.toString() ?? '',
+    );
+    final postBoilLossCtrl = TextEditingController(
+      text: editing?.postBoilLossLiters?.toString() ?? '',
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool isDefault = editing?.isDefault ?? false;
@@ -188,6 +193,19 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: postBoilLossCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Post-Boil Prozessverlust (L)',
+                    suffixIcon: Tooltip(
+                      message: 'Volumenverlust zwischen Kochende und Gärtank durch bewusst zurückgelassenen Trub im Kessel sowie Restwürze in Gegenstromkühler, Schläuchen und Pumpe. Dieser Verlust ist qualitätsbedingt und wird nicht in den Gärtank übernommen.',
+                      triggerMode: TooltipTriggerMode.tap,
+                      child: const Icon(Icons.info_outline, size: 20),
+                    ),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -245,6 +263,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       model: modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
       isDefault: isDefault,
       volumeLiters: _parseDouble(volumeCtrl.text),
+      postBoilLossLiters: _parseDouble(postBoilLossCtrl.text),
       hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );

@@ -6,6 +6,7 @@ class BrewKettle {
     this.model,
     this.isDefault = false,
     this.volumeLiters,
+    this.postBoilLossLiters,
     this.hasCondenserHat = false,
     this.notes,
     this.createdAt,
@@ -18,6 +19,7 @@ class BrewKettle {
   final String? model;
   final bool isDefault;
   final double? volumeLiters;
+  final double? postBoilLossLiters;
   final bool hasCondenserHat;
   final String? notes;
   final DateTime? createdAt;
@@ -30,6 +32,7 @@ class BrewKettle {
     String? model,
     bool? isDefault,
     double? volumeLiters,
+    double? postBoilLossLiters,
     bool? hasCondenserHat,
     String? notes,
     DateTime? createdAt,
@@ -42,6 +45,7 @@ class BrewKettle {
       model: model ?? this.model,
       isDefault: isDefault ?? this.isDefault,
       volumeLiters: volumeLiters ?? this.volumeLiters,
+      postBoilLossLiters: postBoilLossLiters ?? this.postBoilLossLiters,
       hasCondenserHat: hasCondenserHat ?? this.hasCondenserHat,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
@@ -59,6 +63,7 @@ class BrewKettle {
       model: json['model'] as String?,
       isDefault: (json['is_default'] as bool?) ?? false,
       volumeLiters: (json['volume_liters'] as num?)?.toDouble(),
+      postBoilLossLiters: (json['post_boil_loss_liters'] as num?)?.toDouble(),
       hasCondenserHat: (json['has_condenser_hat'] as bool?) ?? false,
       notes: json['notes'] as String?,
       createdAt: parseDate(json['created_at'] as String?),
@@ -74,6 +79,7 @@ class BrewKettle {
       'model': model,
       'is_default': isDefault,
       'volume_liters': volumeLiters,
+      'post_boil_loss_liters': postBoilLossLiters,
       'has_condenser_hat': hasCondenserHat,
       'notes': notes,
     };
