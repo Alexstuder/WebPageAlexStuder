@@ -40,7 +40,7 @@ jobs:
         working-directory: flutter_brew_assistent
 
       - name: Build Flutter web
-        run: flutter build web --wasm --base-href /brew_app/ --dart-define=PROXY_URL=${{ secrets.PROXY_URL }}
+        run: flutter build web --release --base-href /brew_app/ --dart-define=PROXY_URL=${{ secrets.PROXY_URL }}
         working-directory: flutter_brew_assistent
 
       - name: Prepare SSH key
