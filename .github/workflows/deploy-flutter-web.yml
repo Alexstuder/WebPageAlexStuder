@@ -80,6 +80,26 @@ jobs:
             db_scripts/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/db_scripts/
 
+      - name: Deploy Nginx configuration to VPS
+        run: |
+          PORT=${SSH_PORT:-22}
+          rsync -avz \
+            -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" \
+            infra/nginx/vhost_nginx.conf \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/vhost_nginx.conf
+
+      - name: Apply Nginx configuration and reload
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Move config to the correct Plesk location and reload
+            sudo mv /tmp/vhost_nginx.conf /var/www/vhosts/system/alexstuder.ch/conf/vhost_nginx.conf
+            sudo nginx -t && sudo systemctl reload nginx
+
       - name: Run DB Init and Seed (Manual Only)
         if: github.event.inputs.update_db == 'true'
         uses: appleboy/ssh-action@master
