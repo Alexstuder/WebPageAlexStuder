@@ -5,6 +5,12 @@ on:
     branches:
       - main        # bei Bedarf ändern
   workflow_dispatch:
+    inputs:
+      update_db:
+        description: 'Update Database (Init & Seed) - DANGER: CRYSTAL CLEAR DATA LOSS!'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-deploy:
@@ -19,7 +25,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.38.5'
 
       - name: Create Flutter .env
         run: |
@@ -74,7 +80,8 @@ jobs:
             db_scripts/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/db_scripts/
 
-      - name: Run DB Init and Seed
+      - name: Run DB Init and Seed (Manual Only)
+        if: github.event.inputs.update_db == 'true'
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -82,15 +89,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            # Retrieve DB Password directly from running container
-            DB_PASS=$(docker exec supabase_db_supabase-instance printenv POSTGRES_PASSWORD)
+            # Use Supabase CLI style on VPS if possible, or direct docker if container exists
+            # For now, keeping the pattern but ensuring it's manual and can be adjusted
+            DB_PASS=$(docker exec supabase_db_supabase printenv POSTGRES_PASSWORD)
             
-            # Container: supabase_db_supabase-instance
-            # Running Init Schema (DANGER: Drops Schema!)
-            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+            # Running Init Schema
+            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
 
             # Running Seed
-            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase-instance psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
+            docker exec -e PGPASSWORD=$DB_PASS -i supabase_db_supabase psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
 
 
       - name: Deploy proxy to VPS
