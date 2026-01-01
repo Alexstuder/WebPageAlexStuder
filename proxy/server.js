@@ -49,60 +49,83 @@ loadTelemetryCacheFromDisk();
 loadControllersCacheFromDisk();
 
 const server = http.createServer(async (req, res) => {
-  setCorsHeaders(req, res);
+  try {
+    console.log(`[Proxy] Incoming Request: ${req.method} ${req.url}`);
+    setCorsHeaders(req, res);
 
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
-  const url = new URL(req.url, `http://${req.headers.host}`);
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-  if (url.pathname === '/api/rapt/hydrometers' && req.method === 'GET') {
-    await handleRaptHydrometersRequest(res);
-    return;
-  }
-  if (url.pathname === '/api/rapt/hydrometer-telemetry' && req.method === 'GET') {
-    await handleDirectHydrometerTelemetryRequest(req, res);
-    return;
-  }
+    if (url.pathname === '/' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'Proxy is running', version: '0.1.0' }));
+      return;
+    }
 
-  if (url.pathname === '/api/brew' && req.method === 'POST') {
-    await handleBrewRequest(req, res);
-    return;
-  }
-  if (url.pathname === '/api/shop-search' && req.method === 'POST') {
-    await handleShopSearchRequest(req, res);
-    return;
-  }
-  if (url.pathname === '/api/rapt/token' && req.method === 'POST') {
-    await handleRaptTokenRequest(res);
-    return;
-  }
-  if (url.pathname === '/api/rapt/profiles' && req.method === 'GET') {
-    await handleRaptProfilesRequest(res);
-    return;
-  }
-  if (url.pathname === '/api/rapt/telemetry' && req.method === 'GET') {
-    await handleRaptTelemetryRequest(req, res);
-    return;
-  }
-  if (url.pathname === '/api/rapt/telemetry/start-override') {
-    await handleRaptStartOverrideRequest(req, res);
-    return;
-  }
-  if (url.pathname === '/api/cache/telemetry' && req.method === 'GET') {
-    await handleTelemetryCacheResponse(res);
-    return;
-  }
-  if (url.pathname === '/api/cache/controllers' && req.method === 'GET') {
-    await handleControllerCacheResponse(res);
-    return;
-  }
+    if (url.pathname === '/api/rapt/hydrometers' && req.method === 'GET') {
+      await handleRaptHydrometersRequest(res);
+      return;
+    }
+    if (url.pathname === '/api/rapt/hydrometer-telemetry' && req.method === 'GET') {
+      await handleDirectHydrometerTelemetryRequest(req, res);
+      return;
+    }
 
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Not found' }));
+    if (url.pathname === '/api/brew' && req.method === 'POST') {
+      await handleBrewRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/shop-search' && req.method === 'POST') {
+      await handleShopSearchRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/rapt/token' && req.method === 'POST') {
+      await handleRaptTokenRequest(res);
+      return;
+    }
+    if (url.pathname === '/api/rapt/profiles' && req.method === 'GET') {
+      await handleRaptProfilesRequest(res);
+      return;
+    }
+    if (url.pathname === '/api/rapt/telemetry' && req.method === 'GET') {
+      await handleRaptTelemetryRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/rapt/telemetry/start-override') {
+      await handleRaptStartOverrideRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/cache/telemetry' && req.method === 'GET') {
+      await handleTelemetryCacheResponse(res);
+      return;
+    }
+    if (url.pathname === '/api/cache/controllers' && req.method === 'GET') {
+      await handleControllerCacheResponse(res);
+      return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found' }));
+  } catch (err) {
+    console.error('[Proxy] Unhandled Request Error:', err);
+    try {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          error: 'Internal Proxy Error',
+          message: err.message,
+          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        }));
+      }
+    } catch (innerErr) {
+      console.error('[Proxy] Fatal error during error response:', innerErr);
+    }
+  }
 });
 
 server.listen(PORT, () => {
@@ -128,8 +151,9 @@ function setCorsHeaders(req, res) {
           ? requestOrigin
           : ALLOWED_ORIGINS[0] || '*';
   res.setHeader('Access-Control-Allow-Origin', resolved);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Vary', 'Origin');
 }
 
@@ -440,10 +464,13 @@ async function handleRaptTelemetryRequest(req, res) {
     const payload = {
       ...payloadData,
       persistedStartDate: persistedRaptStartDate,
-      resolvedStartDate: effectiveStartOverride || payloadData.startDate || null,
+      resolvedStartDate: (effectiveStartOverride || (payloadData && payloadData.startDate)) || null,
     };
 
-    console.log(`[Proxy] Final Response Rows: ${payload.rows ? payload.rows.length : 0} (First Row Error: ${payload.rows && payload.rows[0] ? payload.rows[0].error : 'none'})`);
+    console.log(`[Proxy] Final Response Rows: ${payload.rows ? payload.rows.length : 0}`);
+    if (payload.rows && payload.rows.length > 0 && payload.rows[0].error) {
+      console.log(`[Proxy] First Row Error: ${payload.rows[0].error}`);
+    }
 
     respondJson(res, 200, payload);
   } catch (error) {
@@ -697,18 +724,31 @@ function loadControllersCacheFromDisk() {
 
 async function ensureTelemetryCache(options = {}) {
   const { force = false, startDateOverride = null } = options;
+
   if (startDateOverride) {
     if (!force && telemetryCache && telemetryCache.requestedStartDate === startDateOverride) {
       return telemetryCache;
     }
     return refreshTelemetryCache(startDateOverride);
   }
-  const cacheAge = Date.now() - telemetryCacheTimestamp;
+
   if (force || !telemetryCache) {
     if (!telemetryCachePromise) {
-      telemetryCachePromise = refreshTelemetryCache().finally(() => {
-        telemetryCachePromise = null;
-      });
+      console.log(`[Proxy] Starting telemetry refresh (force=${force})...`);
+      telemetryCachePromise = refreshTelemetryCache()
+        .then(data => {
+          console.log('[Proxy] Telemetry refresh successful.');
+          return data;
+        })
+        .catch(err => {
+          console.error('[Proxy] Telemetry refresh failed in promise:', err.message);
+          throw err;
+        })
+        .finally(() => {
+          telemetryCachePromise = null;
+        });
+    } else {
+      console.log('[Proxy] Telemetry refresh already in progress, joining existing promise.');
     }
     return telemetryCachePromise;
   }

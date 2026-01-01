@@ -121,6 +121,9 @@ class _OverviewTabState extends State<_OverviewTab> {
                     title: Text(widget.recipe.zutaten.yeast.name),
                     subtitle: Text('${widget.recipe.zutaten.yeast.type} • ${widget.recipe.zutaten.yeast.amount}'),
                     leading: const Icon(Icons.opacity),
+                    trailing: widget.recipe.zutaten.yeast.procurementNeeded
+                        ? const Chip(label: Text('Beschaffung nötig!'), backgroundColor: Colors.orangeAccent)
+                        : const Chip(label: Text('Vorhanden'), backgroundColor: Colors.greenAccent),
                   ),
 
                   const SizedBox(height: 16),
@@ -172,7 +175,9 @@ class _OverviewTabState extends State<_OverviewTab> {
                     const SizedBox(height: 16),
                     _buildSectionTitle('Schönungsmittel'),
                     ...widget.recipe.zutaten.finings.map((f) => ListTile(
-                      title: Text(f.name),
+                      title: Text('${f.name} (${f.purpose})'),
+                      subtitle: Text('Phase: ${f.phase}\nMenge: ${f.amount}\n${f.applicationDetail}'),
+                      isThreeLine: true,
                       trailing: f.procurementNeeded 
                         ? const Chip(label: Text('Beschaffung nötig!'), backgroundColor: Colors.orangeAccent)
                         : const Chip(label: Text('Vorhanden'), backgroundColor: Colors.greenAccent),
@@ -308,8 +313,20 @@ class _ProcessTab extends StatelessWidget {
           ...recipe.prozessdaten.fermentation.steps.map((step) => ListTile(
             leading: const Icon(Icons.thermostat),
             title: Text(step.phase),
-
-            subtitle: Text(step.note.isNotEmpty ? step.note : 'Keine besonderen Hinweise'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (step.pressure > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 2),
+                    child: Text(
+                      'Druck: ${step.pressure.toStringAsFixed(1)} bar${step.pressureReason.isNotEmpty ? ' (${step.pressureReason})' : ''}',
+                      style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                Text(step.note.isNotEmpty ? step.note : 'Keine besonderen Hinweise'),
+              ],
+            ),
             trailing: Text('${step.temp} °C / ${step.days} Tage'),
           )),
         ],
@@ -353,6 +370,20 @@ class _PackagingTab extends StatelessWidget {
               title: const Text('Zwangskarbonisierung (Keg)'),
               subtitle: Text('Spundungsdruck (bei ${pack.kegTemp.toStringAsFixed(1)} °C)'),
               trailing: Text('${pack.kegPressure.toStringAsFixed(1)} bar'),
+            ),
+          
+          if (pack.carbonationDurationDays > 0)
+            ListTile(
+              leading: const Icon(Icons.timer_outlined),
+              title: const Text('Karbonisierungsdauer'),
+              trailing: Text('${pack.carbonationDurationDays} Tage'),
+            ),
+          
+          if (pack.servingGasRecommendation.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.gas_meter_outlined),
+              title: const Text('Empfohlenes Ausschankgas'),
+              subtitle: Text(pack.servingGasRecommendation),
             ),
 
           const Divider(height: 32),

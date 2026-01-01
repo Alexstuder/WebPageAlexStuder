@@ -102,14 +102,21 @@ class Yeast {
   final String name;
   final String type;
   final String amount;
+  final bool procurementNeeded;
 
-  Yeast({required this.name, required this.type, required this.amount});
+  Yeast({
+    required this.name,
+    required this.type,
+    required this.amount,
+    required this.procurementNeeded,
+  });
 
   factory Yeast.fromJson(Map<String, dynamic> json) {
     return Yeast(
       name: json['Name'] ?? '',
       type: json['Typ'] ?? '',
       amount: json['Menge_Packungen_oder_ml'] ?? '',
+      procurementNeeded: json['Beschaffung_Notwendig'] ?? false,
     );
   }
 }
@@ -158,13 +165,28 @@ class SpecialIngredient {
 
 class FiningAgentRef {
   final String name;
+  final String amount;
+  final String phase;
+  final String purpose;
+  final String applicationDetail;
   final bool procurementNeeded;
 
-  FiningAgentRef({required this.name, required this.procurementNeeded});
+  FiningAgentRef({
+    required this.name,
+    required this.amount,
+    required this.phase,
+    required this.purpose,
+    required this.applicationDetail,
+    required this.procurementNeeded,
+  });
 
   factory FiningAgentRef.fromJson(Map<String, dynamic> json) {
     return FiningAgentRef(
       name: json['Name'] ?? '',
+      amount: json['Menge'] ?? '',
+      phase: json['Phase'] ?? '',
+      purpose: json['Zweck'] ?? '',
+      applicationDetail: json['Anwendung_Detail'] ?? '',
       procurementNeeded: json['Beschaffung_Notwendig'] ?? false,
     );
   }
@@ -274,15 +296,26 @@ class FermentationStep {
   final String phase;
   final double temp;
   final int days;
+  final double pressure;
+  final String pressureReason;
   final String note;
 
-  FermentationStep({required this.phase, required this.temp, required this.days, required this.note});
+  FermentationStep({
+    required this.phase,
+    required this.temp,
+    required this.days,
+    required this.pressure,
+    required this.pressureReason,
+    required this.note,
+  });
 
   factory FermentationStep.fromJson(Map<String, dynamic> json) {
     return FermentationStep(
       phase: json['Phase'] ?? '',
       temp: (json['Temperatur_C'] as num?)?.toDouble() ?? 0.0,
       days: (json['Dauer_Tage'] as num?)?.toInt() ?? 0,
+      pressure: (json['Druck_bar'] as num?)?.toDouble() ?? 0.0,
+      pressureReason: json['Druck_Begruendung'] ?? '',
       note: json['Hinweis'] ?? '',
     );
   }
@@ -298,6 +331,8 @@ class PackagingPlan {
   final double storageTemp;
   final int storageDurationWeeks;
   final String maturationNote;
+  final String servingGasRecommendation;
+  final int carbonationDurationDays;
 
   PackagingPlan({
     required this.type,
@@ -309,6 +344,8 @@ class PackagingPlan {
     required this.storageTemp,
     required this.storageDurationWeeks,
     required this.maturationNote,
+    required this.servingGasRecommendation,
+    required this.carbonationDurationDays,
   });
 
   factory PackagingPlan.fromJson(Map<String, dynamic> json) {
@@ -322,6 +359,8 @@ class PackagingPlan {
       storageTemp: (json['Lagerung_Temperatur_C'] as num?)?.toDouble() ?? 0.0,
       storageDurationWeeks: (json['Lagerung_Dauer_Wochen'] as num?)?.toInt() ?? 0,
       maturationNote: json['Reifungshinweis'] ?? '',
+      servingGasRecommendation: json['Empfohlenes_Ausschankgas'] ?? '',
+      carbonationDurationDays: (json['Karbonisierungsdauer_Tage'] as num?)?.toInt() ?? 0,
     );
   }
 }

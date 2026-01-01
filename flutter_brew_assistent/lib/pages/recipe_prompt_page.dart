@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -7,9 +8,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/openai_service.dart';
 import '../services/packaging_profile_service.dart';
 import '../services/brew_kettle_service.dart';
+import '../services/fermenter_service.dart';
 import '../services/fining_agents_service.dart';
+import '../services/yeast_bank_service.dart';
 import '../services/user_profile_service.dart';
 import '../models/packaging_profile.dart';
+import '../models/brew_kettle.dart';
+import '../models/fermenter.dart';
 import '../models/ai_recipe.dart';
 import 'recipe_result_page.dart';
 import 'user_profile_page.dart';
@@ -35,6 +40,8 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   String? _imageName;
   String? _imageMime;
   bool _isSearchingShops = false;
+  String? _lastGeneratedPrompt;
+  AiRecipe? _lastGeneratedRecipe;
 
   @override
   void initState() {
@@ -59,6 +66,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _lastGeneratedPrompt = null;
       _response = null;
     });
 
@@ -78,7 +86,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       double? kegStorageTemp;
       bool foundDefaultPackaging = false;
       bool foundDefaultKettle = false;
-      bool foundFining = false;
+      bool foundDefaultFermenter = false;
+      BrewKettle? defaultKettle;
+      Fermenter? defaultFermenter;
 
       try {
         final packagingService = PackagingProfileService();
@@ -170,30 +180,32 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       String brewingEquipmentInfo = 'Kein spezifisches Equipment angegeben.';
       try {
         final kettleService = BrewKettleService();
-        final kettles =
-            await kettleService.fetchKettles(UserProfileService.defaultProfileId);
+        final kettles = await kettleService.fetchKettles(UserProfileService.defaultProfileId);
         foundDefaultKettle = kettles.any((k) => k.isDefault);
         if (kettles.isNotEmpty) {
-          final defaultKettle = kettles.firstWhere(
-            (k) => k.isDefault,
-            orElse: () => kettles.first,
-          );
-          final vol = defaultKettle.volumeLiters != null
-              ? '${defaultKettle.volumeLiters}L'
-              : 'Unbekannt';
-          brewingEquipmentInfo =
-              'Marke: ${defaultKettle.brand}, Modell: ${defaultKettle.model ?? ""}, Volumen: $vol';
-          if (defaultKettle.notes != null &&
-              defaultKettle.notes!.isNotEmpty) {
-            brewingEquipmentInfo += ', Notizen: ${defaultKettle.notes}';
-          }
-           if (defaultKettle.hasCondenserHat) {
-            brewingEquipmentInfo +=
-                ', Kondensator Hut vorhanden (Verdunstung reduziert)';
-          }
+          defaultKettle = kettles.firstWhere((k) => k.isDefault, orElse: () => kettles.first);
+          brewingEquipmentInfo = 'Marke: ${defaultKettle.brand}, Modell: ${defaultKettle.model ?? ""}, Volumen: ${defaultKettle.volumeLiters}L';
+          if (defaultKettle.hasCondenserHat) brewingEquipmentInfo += ', Kondensator Hut vorhanden';
         }
       } catch (e) {
         debugPrint('Error fetching brew kettles: $e');
+      }
+
+      // --- 3.5 Fetch Fermenter ---
+      String fermenterInfo = 'Kein spezifischer Fermenter angegeben.';
+      try {
+        final fermenterService = FermenterService();
+        final fermenters = await fermenterService.fetchFermenters(UserProfileService.defaultProfileId);
+        foundDefaultFermenter = fermenters.any((f) => f.isDefault);
+        if (fermenters.isNotEmpty) {
+          defaultFermenter = fermenters.firstWhere((f) => f.isDefault, orElse: () => fermenters.first);
+          fermenterInfo = 'Marke: ${defaultFermenter.brand}, Gärverlust: ${defaultFermenter.fermentationLossLiters}L';
+          if (defaultFermenter.canPressurize) {
+            fermenterInfo += ', Druckvergärung möglich';
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching fermenters: $e');
       }
 
       // --- 4. Fetch Fining Agents (Schönungsmittel) ---
@@ -218,56 +230,74 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         }
 
         if (available.isNotEmpty) {
-          foundFining = true;
           finingAgentsInfo = available.map((a) => '- $a').join('\n');
         }
       } catch (e) {
         debugPrint('Error fetching fining agents: $e');
       }
 
-
+      // --- 4.5 Fetch Yeast Bank (Hefe-Bestand) ---
+      String yeastInventoryInfo = 'Keine Hefe im Bestand gefunden.';
+      try {
+        final yeastService = YeastBankService();
+        final entries = await yeastService.fetchEntries(UserProfileService.defaultProfileId);
+        if (entries.isNotEmpty) {
+          yeastInventoryInfo = entries.map((y) {
+            String s = '- ${y.brand} ${y.strain}';
+            if (y.productId != null) s += ' (${y.productId})';
+            if (y.form != null) s += ' [${y.form}]';
+            if (y.inventory != null) s += ' - Bestand: ${y.inventory} ${y.unit ?? "Pck."}';
+            return s;
+          }).join('\n');
+        }
+      } catch (e) {
+        debugPrint('Error fetching yeast bank: $e');
+      }
 
       // --- Check for missing defaults ---
       final missingDefaults = <String>[];
       if (!foundDefaultPackaging) missingDefaults.add('Verpackungsprofil (Favorit)');
       if (!foundDefaultKettle) missingDefaults.add('Brauanlage (Favorit)');
-      if (!foundFining) missingDefaults.add('Schönungsmittel (keine ausgewählt)');
+      if (!foundDefaultFermenter) missingDefaults.add('Fermenter (Favorit)');
 
       if (missingDefaults.isNotEmpty) {
         if (!mounted) return;
         final proceed = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Fehlende Favoriten/Informationen'),
-            content: Text(
-                'Für ein präzises Rezept fehlen folgende Informationen (Favoriten):\n\n${missingDefaults.map((e) => '- $e').join('\n')}\n\nOhne diese Angaben muss improvisiert werden (Standardwerte).'),
+            title: const Text('Information'),
+            content: Text('Für ein präzises Rezept fehlen Favoriten:\n\n${missingDefaults.map((e) => '- $e').join('\n')}\n\nEs wird mit Standardwerten improvisiert.'),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Abbrechen'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Trotzdem erstellen'),
-              ),
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Abbrechen')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Trotzdem erstellen')),
             ],
           ),
         );
-
-        if (proceed != true) {
-          setState(() => _isLoading = false);
-          return;
-        }
+        if (proceed != true) { setState(() => _isLoading = false); return; }
       }
 
-      // --- 5. Build Final Prompt ---
+      // --- 5. Internal Volume Math (Math-First Approach) ---
+      final fermLoss = defaultFermenter?.fermentationLossLiters ?? 0.0;
+      final pBoilLoss = defaultKettle?.postBoilLossLiters ?? 0.0;
+      final bOffPct = defaultKettle?.boilOffPercentage ?? 10.0;
+
+      // --- 6. Build Final Prompt ---
       final fullPrompt = template
           .replaceAll('{{description}}', userInput)
-          .replaceAll('{{targetVolume}}', targetVolume.toString())
+          .replaceAll('{{targetVolume}}', targetVolume.toStringAsFixed(1))
+          .replaceAll('{{fermentationLoss}}', fermLoss.toStringAsFixed(1))
+          .replaceAll('{{postBoilLoss}}', pBoilLoss.toStringAsFixed(1))
+          .replaceAll('{{boilOffPercentage}}', bOffPct.toStringAsFixed(1))
           .replaceAll('{{packaging_info}}', packagingInfo)
           .replaceAll('{{brewing_equipment}}', brewingEquipmentInfo)
+          .replaceAll('{{fermenter_info}}', fermenterInfo)
           .replaceAll('{{fining_agents}}', finingAgentsInfo)
+          .replaceAll('{{yeast_inventory}}', yeastInventoryInfo)
           .replaceAll('{{json_template}}', jsonTemplate);
+
+      setState(() {
+        _lastGeneratedPrompt = fullPrompt;
+      });
 
       final attachment = _buildAttachment();
       final recipeJsonString = await _service.brewRecipe(
@@ -283,6 +313,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       
       setState(() {
         _isLoading = false;
+        _lastGeneratedRecipe = recipe;
         _response = recipeJsonString; // Save raw response
       });
 
@@ -510,10 +541,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final media = MediaQuery.of(context);
-    // final bool isWide = media.size.width >= 720;
-
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('AiBrewGenius'),
@@ -574,8 +601,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                       minLines: 3,
                       textInputAction: TextInputAction.newline,
                       decoration: InputDecoration(
-                        hintText:
-                            'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
+                        hintText: 'Beschreibe deinen Wunsch-Sud (Stil, Aromen, ABV …)',
                         errorText: _error,
                       ),
                     ),
@@ -588,16 +614,12 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
                               : const Icon(Icons.auto_awesome),
-                          label: Text(_isLoading
-                              ? 'Zaubere Rezept …'
-                              : 'Rezept generieren'),
+                          label: Text(_isLoading ? 'Zaubere Rezept …' : 'Rezept generieren'),
                           style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 24),
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -606,30 +628,53 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                           tooltip: 'Bild hochladen (z.B. Etikett, Bierglas...)',
                           icon: const Icon(Icons.image),
                         ),
-                        if (_imageName != null) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _imageName!,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
+                        if (_imageBytes != null)
                           IconButton(
                             onPressed: _isLoading ? null : _clearImage,
-                            icon: const Icon(Icons.close, size: 16),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            icon: const Icon(Icons.close, color: Colors.redAccent),
+                            tooltip: 'Bild entfernen',
                           ),
-                        ],
                       ],
                     ),
+                    if (_imageBytes != null) ...[
+                      const SizedBox(height: 12),
+                      _ImagePreview(
+                        bytes: _imageBytes!,
+                        isWide: MediaQuery.of(context).size.width >= 720,
+                        fileName: _imageName,
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+                    if (_lastGeneratedRecipe != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RecipeResultPage(recipe: _lastGeneratedRecipe!),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long),
+                          label: const Text('Letztes Rezept anzeigen'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.amberAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                    
+                    if (_lastGeneratedPrompt != null)
+                      _PromptPreview(prompt: _lastGeneratedPrompt!),
+
                     if (_response != null) ...[
                       const SizedBox(height: 24),
                       const Divider(),
                       const SizedBox(height: 16),
-                      Text('Ergebnis:',
-                          style: Theme.of(context).textTheme.titleLarge),
+                      Text('Ergebnis (JSON):', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -638,22 +683,15 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.white12),
                         ),
-                        child: Text(
-                          _response!,
-                          style: const TextStyle(
-                              fontFamily: 'monospace', fontSize: 13),
-                        ),
+                        child: Text(_response!, style: const TextStyle(fontFamily: 'monospace', fontSize: 13)),
                       ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _searchShopsForIngredients,
-                            icon: const Icon(Icons.store),
-                            label: const Text('Zutaten einkaufen'),
-                          ),
-                        ],
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _isLoading || _isSearchingShops ? null : _searchShopsForIngredients,
+                        icon: _isSearchingShops
+                             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                             : const Icon(Icons.shopping_cart),
+                        label: Text(_isSearchingShops ? 'Suche...' : 'Zutaten im Shop suchen'),
                       ),
                     ],
                   ],
@@ -661,24 +699,6 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
               ),
             ),
           ),
-          if (_isLoading) ...[
-            const ModalBarrier(dismissible: false, color: Colors.black54),
-            const Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('AI braut dein Rezept ...'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -822,5 +842,103 @@ class _ShopCard extends StatelessWidget {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+class _ImagePreview extends StatelessWidget {
+  const _ImagePreview({
+    required this.bytes,
+    required this.isWide,
+    this.fileName,
+  });
+
+  final Uint8List bytes;
+  final bool isWide;
+  final String? fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF0F172A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : MediaQuery.of(context).size.width;
+                final ratio = isWide ? 16 / 9 : 4 / 3;
+                final double targetHeight = math.min(availableWidth / ratio, isWide ? 360 : 280);
+                return SizedBox(
+                  height: targetHeight,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.none,
+                  ),
+                );
+              },
+            ),
+          ),
+          if ((fileName ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Text(
+                fileName!,
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromptPreview extends StatelessWidget {
+  final String prompt;
+  const _PromptPreview({required this.prompt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF0F172A),
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Generierter Prompt (für ChatGPT):',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  prompt,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.white54),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

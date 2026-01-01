@@ -9,6 +9,7 @@ class Fermenter {
     this.hasHeating = false,
     this.hasCooling = false,
     this.hasDryHoppingPort = false,
+    this.canPressurize = false,
     this.fermentationLossLiters,
     this.notes,
     this.createdAt,
@@ -24,6 +25,7 @@ class Fermenter {
   final bool hasHeating;
   final bool hasCooling;
   final bool hasDryHoppingPort;
+  final bool canPressurize;
   final double? fermentationLossLiters;
   final String? notes;
   final DateTime? createdAt;
@@ -39,6 +41,7 @@ class Fermenter {
     bool? hasHeating,
     bool? hasCooling,
     bool? hasDryHoppingPort,
+    bool? canPressurize,
     double? fermentationLossLiters,
     String? notes,
     DateTime? createdAt,
@@ -54,6 +57,7 @@ class Fermenter {
       hasHeating: hasHeating ?? this.hasHeating,
       hasCooling: hasCooling ?? this.hasCooling,
       hasDryHoppingPort: hasDryHoppingPort ?? this.hasDryHoppingPort,
+      canPressurize: canPressurize ?? this.canPressurize,
       fermentationLossLiters:
           fermentationLossLiters ?? this.fermentationLossLiters,
       notes: notes ?? this.notes,
@@ -75,6 +79,7 @@ class Fermenter {
       hasHeating: (json['has_heating'] as bool?) ?? false,
       hasCooling: (json['has_cooling'] as bool?) ?? false,
       hasDryHoppingPort: (json['has_dry_hopping_port'] as bool?) ?? false,
+      canPressurize: (json['can_pressurize'] as bool?) ?? false,
       fermentationLossLiters:
           (json['fermentation_loss_liters'] as num?)?.toDouble(),
       notes: json['notes'] as String?,
@@ -94,6 +99,7 @@ class Fermenter {
       'has_heating': hasHeating,
       'has_cooling': hasCooling,
       'has_dry_hopping_port': hasDryHoppingPort,
+      'can_pressurize': canPressurize,
       'fermentation_loss_liters': fermentationLossLiters,
       'notes': notes,
     };

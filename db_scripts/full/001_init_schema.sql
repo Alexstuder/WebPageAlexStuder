@@ -55,6 +55,7 @@ CREATE TABLE aibrewgenius.fermenters (
   has_heating BOOLEAN NOT NULL DEFAULT FALSE,
   has_cooling BOOLEAN NOT NULL DEFAULT FALSE,
   has_dry_hopping_port BOOLEAN NOT NULL DEFAULT FALSE,
+  can_pressurize BOOLEAN NOT NULL DEFAULT FALSE,
   fermentation_loss_liters DOUBLE PRECISION NOT NULL DEFAULT 0,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT TIMEZONE('utc', NOW()),

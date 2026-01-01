@@ -27,7 +27,8 @@
       "Hersteller": "",
       "Typ": "Obergaerig / Untergaerig",
       "Form": "Trocken / Fluessig",
-      "Menge_Packungen_oder_ml": ""
+      "Menge_Packungen_oder_ml": "",
+      "Beschaffung_Notwendig": false
     },
     "Wasserprofil_Zielwerte": {
       "Kalzium_Ca_mg_L": 0,
@@ -88,6 +89,8 @@
           "Phase": "",
           "Temperatur_C": 0.0,
           "Dauer_Tage": 0,
+          "Druck_bar": 0.0,
+          "Druck_Begruendung": "",
           "Hinweis": ""
         }
       ],
@@ -96,6 +99,8 @@
     "Abfuell_und_Lagerungsplan": {
       "Abfuellung_Typ": "Flasche / Keg / Beides",
       "Karbonisierung_Ziel_CO2_g_L": 0.0,
+      "Karbonisierungsdauer_Tage": 0,
+      "Empfohlenes_Ausschankgas": "CO2 / Nitro / Mix",
       "Keg_Druck_bar": 0.0,
       "Keg_Karbonisierung_Temp_C": 0.0,
       "Flaschen_Zucker_g_pro_L": 0.0,

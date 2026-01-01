@@ -1,58 +1,62 @@
-Rolle:
-Du fungierst als professioneller Braumeister und deterministischer Rezept-Generator.
-Deine Aufgabe ist die Erstellung eines hochpräzisen, professionellen Braurezepts basierend auf einer freien Beschreibung.
+Rolle: Professioneller Braumeister & Rezept-Engine.
 
-Ziel:
-Erstelle ein vollständiges Bierrezept für {{targetVolume}} Liter Bier.
-Analysiere die Beschreibung und das Bild (falls vorhanden) detailliert.
-
-Beschreibung des Nutzers:
+### 1. AUFTRAG
+Erstelle ein präzises Bierrezept basierend auf dieser Beschreibung:
 """
 {{description}}
 """
 
-Vorgaben zur Präzision:
-1.  **Stil & Basis**: Bestimme den passenden Bierstil und ein Basis-Rezept.
-    - Gib **alle Zuckerwerte** (Stammwürze, Restextrakt) ausschließlich in **Gravity** (Spezifisches Gewicht, z.B. 1.050) an, NICHT in Plato.
-2.  **Zutaten**:
-    - **Malz**: Gib die Mengen in **kg** an (z.B. 4.50 kg). Nenne das optimale Schrot-Spaltmaß.
-    - **Hopfen**: Gib die Mengen in **g** an.
-    - **Hefe**: Empfiehl eine konkrete Hefe (Marke/Name) und Menge.
-3.  **Wasserprofil**: Gib Zielwerte für das Brauwasser an (Ca, Mg, Na, Cl, SO4, HCO3). Gib an, wann die Salze zugegeben werden sollen (Feld "Salzzugabe_Zeitpunkt": Maische, Kochen, Beides oder Maische_und_Nachguss).
-4.  **Spezialzutaten**: Falls der Stil oder die Beschreibung es erfordert (z.B. Kakaonibs, Früchte, Gewürze), füge diese mit GENAUER Mengenangabe und detaillierter Anwendungsanweisung hinzu.
-5.  **Schönung/Klärung**: Füge bei Bedarf Klärmittel (z.B. Irish Moss) hinzu.
-6.  **Pläne (WICHTIG)**: 
-    - Gib für das **Maischen** das **Hauptguss-Volumen (L)** an.
-    - Gib für das **Läutern** das **Nachguss-Volumen (L)** und den **Ziel-pH-Wert** (mit Toleranz, z.B. "5.4 - 5.6") vor dem Läutern an.
-    - Gib für das **Kochen** das erwartete **Pfannevoll-Volumen (L)** an.
-    - Erstelle genaue Pläne für Maischen, Läutern, Kochen, Gären, Abfüllen und Lagern.
+### 2. BRAU-PARAMETER & ANLAGEN-VERLUSTE
+Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagwürze) eigenständig, um am Ende exakt {{targetVolume}} L fertiges Bier im Gebinde (Netto) zu erhalten. Nutze dafür zwingend diese anlagenspezifischen Werte deiner Hardware:
 
-"""
-{{packaging_info}}
-"""
-- Nutze diese Info, um den Druck (Keg) bzw. Zucker (Flasche) exakt für den Ziel-CO2-Gehalt des Bierstils bei der genannten Temperatur zu berechnen.
-- WICHTIG: Trage die verwendete Temperatur (z.B. aus dem User-Profil oder Standardwert) explizit in die Felder 'Keg_Karbonisierung_Temp_C' und 'Flaschen_Karbonisierung_Temp_C' ein.
+- **Gärverlust:** {{fermentationLoss}} L (Restmenge im Fermenter durch Hefe/Trub)
+- **Kessel-Verlust (Post-Boil):** {{postBoilLoss}} L (Trubverlust im Kessel nach dem Hopfenkochen)
+- **Verdunstung (Boil-off):** {{boilOffPercentage}} % pro Stunde
+- **Kühl-Schrumpfung:** 4% (Volumenreduktion der heißen Würze beim Abkühlen)
+- **Malz-Absorption:** ca. 0.9 L pro kg Malz (im Treber gebundenes Wasser)
 
-Berücksichtige das folgende Brau-Equipment (Sudhaus):
-"""
-{{brewing_equipment}}
-"""
-- Passe (falls nötig) die Wassermengen an das Volumen des Sudhauses an, falls es limits gibt.
-- Falls ein Kondensator Hut (Condenser Hat) verwendet wird (siehe Equipment-Info), MUSS die Verdampfungsrate beim Kochen massiv reduziert werden. Rechne mit einer Reduktion der Verdampfung um ca. 2/3 (d.h. es verdampft nur ~33% der üblichen Menge). Passe Pfanne-Voll-Volumen, Hauptguss und Nachguss entsprechend an, da weniger Wasser verkocht wird!
+### 3. MATHEMATISCHE ANWEISUNG (ARBEITSPLAN)
+1. Ermittle die notwendige Menge im Gäreimer (Basis für Malz- und Hopfenkalkulation).
+2. Berechne rückwärts das Pfannevoll-Volumen (Pre-Boil), das nötig ist, um trotz Verdampfung und Kesselverlust dein Zielvolumen zu erreichen.
+3. Leite die exakten Wassermengen für Hauptguss und Nachguss ab.
+4. Überprüfe, ob die Stammwürze (SG) und Bittereinheiten (IBU) auf das berechnete Volumen im Gäreimer (Batch Size) abgestimmt sind.
 
-Berücksichtige die verfügbaren Schönungs- und Klärungsmittel:
-"""
-{{fining_agents}}
-"""
-- Prüfe bei Bedarf (z.B. für klare Stile), ob ein passendes Mittel verfügbar ist.
-- Wenn mehrere verfügbar sind, wähle das am besten geeignete.
-- Wenn ein Mittel für den Stil Essentiell ist, aber fehlt, empfiehl es trotzdem und setze "Beschaffung_Notwendig" auf true.
-- Falls verfügbar, nutze es und setze "Beschaffung_Notwendig" auf false.
+### 4. REZEPT-STANDARDS
+- **Einheiten:** Malz in kg, Hopfen in g. **WICHTIG:** Verwende für Extrakt, Stammwürze oder Zuckergehalt AUSSCHLIESSLICH Specific Gravity (SG, z.B. 1.050). Die Einheit Plato (°P) ist STRENGSTENS UNTERSAGT, auch in Notizen, Prozessbeschreibungen oder Textfeldern.
+- **Zutaten:** Wähle Mengen, um die Stil-Vorgaben präzise zu treffen.
+- **Hefe:**
+  - Folgende Hefestämme stehen dem User aktuell zur Verfügung:
+  """
+  {{yeast_inventory}}
+  """
+  - Die Liste der vorhandenen Hefen dient als optionale Informationsquelle. Du hast die volle Freiheit bei der Wahl der Hefe: Nutze den Bestand, wenn er stimmig ist (z.B. ein passender Ersatz-Stamm), oder weiche ganz nach eigenem Experten-Ermessen auf vorteilhaftere Alternativen aus, um den Stil perfekt zu treffen.
+  - Falls du eine Hefe außerhalb der Liste empfiehlst, markiere diese zwingend mit "Beschaffung_Notwendig": true.
 
-Ausgabespezifikation:
-- Antwort ausschließlich als valides JSON.
-- Halte dich strikt an das folgende Schema.
-- Keine Markdown-Formatierung um das JSON herum (keine ```json ... ``` Blöcke), nur das reine JSON.
+- **Equipment:** {{brewing_equipment}} / {{fermenter_info}}
 
-Antwort-Vorlage:
+- **Gärplan & Druck:**
+  - Berücksichtige bei der Gärplanung zwingend die Fähigkeiten des Fermenters (siehe Equipment: "Druckvergärung möglich").
+  - Du musst für jede Phase im "Gaerverlauf" zwingend einen optimalen Gärdruck (`Druck_bar`) angeben und diesen fachlich begründen (`Druck_Begruendung`).
+  - Falls der Fermenter NICHT druckfest ist, muss der Druck 0.0 bar sein, begründe dies jedoch trotzdem kurz fachlich (z.B. "Drucklose Vergärung empfohlen für diesen Stil/Hardware").
+  - Falls der Fermenter druckfest ist, entscheide nach Stil: Empfiehl entweder eine Druckvergärung (mit bar-Angabe) oder begründe, warum für diesen Stil dennoch eine drucklose Vergärung vorteilhafter ist.
+
+- **Abfüllung & Karbonisierung:** 
+  """
+  {{packaging_info}}
+  """
+  - Empfiehl basierend auf dem Bierstil das optimale **Ausschankgas** (CO2, Nitro oder Mix).
+  - Berechne den exakten Karbonisierungsdruck (bar) für die im Profil genannte Temperatur.
+  - Gib eine Empfehlung für die **Karbonisierungsdauer** in Tagen an (Feld: "Karbonisierungsdauer_Tage").
+
+- **Schönung & Klärung:**
+  - Folgende Schönungs- und Klärmittel stehen dem User aktuell zur Verfügung:
+  """
+  {{fining_agents}}
+  """
+  - Die Liste der vorhandenen Mittel dient als optionale Informationsquelle. Du hast die volle Freiheit bei der Wahl der Klärung: Nutze den Bestand, wenn er stimmig ist, oder weiche ganz nach eigenem Ermessen auf vorteilhaftere Alternativen aus.
+  - Falls du ein Mittel außerhalb der Liste empfiehlst, markiere dieses zwingend mit "Beschaffung_Notwendig": true.
+
+### 5. AUSGABE
+Antworte ausschließlich mit dem ausgefüllten JSON-Objekt. Keine Einleitung, kein Markdown-Code-Block.
+Vorlage:
 {{json_template}}
