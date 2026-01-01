@@ -5,17 +5,23 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class OpenAIService {
+  static const String _defaultProxyBase = 'http://localhost:3000/api';
+
   OpenAIService()
-      : _brewEndpoint = Uri.parse(
-          dotenv.env['PROXY_URL'] ?? 'http://localhost:3000/api/brew',
-        ),
-        _shopEndpoint = _deriveShopEndpoint(
-          Uri.parse(
-              dotenv.env['PROXY_URL'] ?? 'http://localhost:3000/api/brew'),
-        );
+      : _brewEndpoint = _deriveEndpoint('brew'),
+        _shopEndpoint = _deriveEndpoint('shop-search');
 
   final Uri _brewEndpoint;
   final Uri _shopEndpoint;
+
+  static Uri _deriveEndpoint(String path) {
+    final String baseUrl = dotenv.env['PROXY_URL'] ?? _defaultProxyBase;
+    // Remove trailing slash if present to avoid double slashes
+    final normalizedBase = baseUrl.endsWith('/') 
+        ? baseUrl.substring(0, baseUrl.length - 1) 
+        : baseUrl;
+    return Uri.parse('$normalizedBase/$path');
+  }
 
   Future<String> brewRecipe(
     String userPrompt, {
