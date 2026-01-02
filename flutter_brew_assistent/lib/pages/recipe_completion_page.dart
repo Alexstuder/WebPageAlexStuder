@@ -245,16 +245,12 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
               icon: Icons.save,
               onPressed: _isGenerating ? null : () async {
                 try {
-                  final userId = Supabase.instance.client.auth.currentUser?.id;
-                  if (userId == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Nicht eingeloggt. Bitte melden Sie sich an.')),
-                    );
-                    return;
-                  }
+                  // In self-hosted mode without auth, we use the default profile ID directly
+                  // This matches UserProfileService.defaultProfileId
+                  const userId = 'self_hosted_profile';
 
                   await Supabase.instance.client.from('ai_generated_recipes').insert({
-                    'user_id': userId,
+                    'user_profile_id': userId,
                     'name': widget.recipe.basisBier,
                     'style': widget.recipe.bierTyp,
                     'recipe_data': widget.recipe.toJson(),

@@ -375,10 +375,10 @@ CREATE POLICY "Anyone can upload an avatar."
 DROP POLICY IF EXISTS "Anyone can update an avatar." ON storage.objects;
 CREATE POLICY "Anyone can update an avatar."
   ON storage.objects FOR UPDATE
-  USING ( bucket_id = 'avatars' );-- Create table for storing AI generated recipes
-CREATE TABLE IF NOT EXISTS public.ai_generated_recipes (
+  USING ( bucket_id = 'avatars' );-- Create table for storing AI generated recipes in the correct schema
+CREATE TABLE aibrewgenius.ai_generated_recipes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_profile_id TEXT NOT NULL REFERENCES aibrewgenius.user_profiles(id) ON DELETE CASCADE,
     name TEXT,
     style TEXT,
     recipe_data JSONB,
@@ -386,26 +386,18 @@ CREATE TABLE IF NOT EXISTS public.ai_generated_recipes (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Trigger for updated_at
+CREATE TRIGGER ai_generated_recipes_set_updated_at
+BEFORE UPDATE ON aibrewgenius.ai_generated_recipes
+FOR EACH ROW
+EXECUTE FUNCTION aibrewgenius.set_updated_at();
+
 -- Enable RLS
-ALTER TABLE public.ai_generated_recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aibrewgenius.ai_generated_recipes ENABLE ROW LEVEL SECURITY;
 
--- Create policies
-CREATE POLICY "Users can view their own generated recipes" 
-    ON public.ai_generated_recipes 
-    FOR SELECT 
-    USING (auth.uid() = user_id);
+-- Allow access for anon role (app standard behavior)
+CREATE POLICY "Allow full access" ON aibrewgenius.ai_generated_recipes FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Users can insert their own generated recipes" 
-    ON public.ai_generated_recipes 
-    FOR INSERT 
-    WITH CHECK (auth.uid() = user_id);
+-- Grant privileges
+GRANT ALL ON TABLE aibrewgenius.ai_generated_recipes TO anon, authenticated, service_role;
 
-CREATE POLICY "Users can update their own generated recipes" 
-    ON public.ai_generated_recipes 
-    FOR UPDATE 
-    USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own generated recipes" 
-    ON public.ai_generated_recipes 
-    FOR DELETE 
-    USING (auth.uid() = user_id);
