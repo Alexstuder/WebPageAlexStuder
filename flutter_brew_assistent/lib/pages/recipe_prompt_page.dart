@@ -19,6 +19,7 @@ import '../models/ai_recipe.dart';
 import 'recipe_result_page.dart';
 import 'user_profile_page.dart';
 import '../widgets/user_name_banner.dart';
+import '../models/image_attachment.dart';
 
 class RecipePromptPage extends StatefulWidget {
   const RecipePromptPage({super.key});
@@ -308,6 +309,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       // Parse JSON
       final recipeMap = jsonDecode(recipeJsonString);
       final recipe = AiRecipe.fromJson(recipeMap);
+      if (attachment != null) {
+        recipe.sourceImage = attachment;
+      }
 
       if (!mounted) return;
       
@@ -403,9 +407,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
     }
   }
 
-  RecipeImageAttachment? _buildAttachment() {
+  ImageAttachment? _buildAttachment() {
     if (_imageBytes == null || _imageMime == null) return null;
-    return RecipeImageAttachment(
+    return ImageAttachment(
       bytes: _imageBytes!,
       mimeType: _imageMime!,
       fileName: _imageName,

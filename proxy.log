@@ -1,0 +1,216 @@
+
+> proxy:watch
+> npm --prefix proxy run dev
+
+
+> brew-proxy@0.1.0 dev
+> nodemon server.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 45 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 0 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 55 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 50 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 50 minutes.

@@ -100,6 +100,18 @@ const server = http.createServer(async (req, res) => {
       await handleRaptStartOverrideRequest(req, res);
       return;
     }
+    if (url.pathname === '/api/chat' && req.method === 'POST') {
+      await handleChatRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/picture' && req.method === 'POST') {
+      await handleGenerateImageRequest(req, res);
+      return;
+    }
+    if (url.pathname === '/api/proxy-image' && req.method === 'GET') {
+      await handleProxyImageRequest(req, res);
+      return;
+    }
     if (url.pathname === '/api/cache/telemetry' && req.method === 'GET') {
       await handleTelemetryCacheResponse(res);
       return;
@@ -155,6 +167,208 @@ function setCorsHeaders(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Vary', 'Origin');
+}
+
+async function handleChatRequest(req, res) {
+  try {
+    const body = await readBody(req);
+    const data = JSON.parse(body || '{}');
+    const prompt = typeof data.prompt === 'string' ? data.prompt.trim() : '';
+    const rawImage = data && typeof data === 'object' ? data.image : null;
+    const imageBase64 =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.data === 'string'
+        ? rawImage.data
+        : null;
+    const imageMime =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.mime_type === 'string'
+        ? rawImage.mime_type
+        : null;
+
+    if (!prompt) {
+      respondJson(res, 400, { error: 'Prompt is required.' });
+      return;
+    }
+
+    const userContent = [{ type: 'text', text: prompt }];
+    if (imageBase64 && imageMime) {
+      userContent.push({
+        type: 'image_url',
+        image_url: { url: `data:${imageMime};base64,${imageBase64}` },
+      });
+    }
+
+    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'Du bist ein nützlicher Assistent für einen Braumeister. Antworte präzise auf seine Fragen oder Anweisungen.',
+          },
+          { role: 'user', content: userContent },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    const payload = await openAiResponse.json();
+    if (!openAiResponse.ok) {
+      respondJson(res, openAiResponse.status, {
+        error: payload?.error?.message || 'OpenAI API request failed.',
+      });
+      return;
+    }
+
+    const content = payload.choices?.[0]?.message?.content;
+    if (!content) {
+      respondJson(res, 502, { error: 'Antwort von OpenAI unvollständig.' });
+      return;
+    }
+
+    respondJson(res, 200, { result: content.trim() });
+  } catch (error) {
+    console.error('Proxy error:', error);
+    respondJson(res, 500, { error: 'Interner Proxy-Fehler.' });
+  }
+}
+
+async function handleGenerateImageRequest(req, res) {
+  try {
+    const body = await readBody(req);
+    const data = JSON.parse(body || '{}');
+    const prompt = typeof data.prompt === 'string' ? data.prompt.trim() : '';
+    const rawImage = data && typeof data === 'object' ? data.image : null;
+    const imageBase64 =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.data === 'string'
+        ? rawImage.data
+        : null;
+    const imageMime =
+      rawImage && typeof rawImage === 'object' && typeof rawImage.mime_type === 'string'
+        ? rawImage.mime_type
+        : null;
+
+    if (!prompt) {
+      respondJson(res, 400, { error: 'Prompt is required.' });
+      return;
+    }
+
+    // --- Step 1: Refine Prompt with GPT-4o ---
+    // We want a perfect DALL-E prompt that describes a professional, atmospheric beer shot.
+    const userContent = [
+      {
+        type: 'text',
+        text: `Erstelle einen detaillierten, englischen DALL-E 3 Prompt basierend auf dieser Beschreibung: "${prompt}". 
+               Das Ziel ist eine professionelle Produktfotografie eines Bieres. 
+               Antworte NUR mit dem englischen Prompt für DALL-E.`,
+      },
+    ];
+
+    if (imageBase64 && imageMime) {
+      userContent.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${imageMime};base64,${imageBase64}`,
+        },
+      });
+      userContent[0].text += " Nutze das beigefügte Bild als visuelle Vorlage für Komposition, Glasform oder Atmosphäre, aber passe es an das beschriebene Bier an.";
+    }
+
+    const refineResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: userContent }],
+        temperature: 0.7,
+      }),
+    });
+
+    const refinePayload = await refineResponse.json();
+    const refinedPrompt = refinePayload.choices?.[0]?.message?.content?.trim();
+
+    if (!refinedPrompt) {
+      respondJson(res, 502, { error: 'Prompt-Refinement fehlgeschlagen.', details: refinePayload });
+      return;
+    }
+
+    // --- Step 2: Generate Image with DALL-E 3 ---
+    const dallEResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: refinedPrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'hd',
+      }),
+    });
+
+    const dallEPayload = await dallEResponse.json();
+
+    if (!dallEResponse.ok) {
+      console.error('DALL-E API error:', dallEResponse.status, dallEPayload);
+      respondJson(res, dallEResponse.status, {
+        error: dallEPayload?.error?.message || 'DALL-E generation failed.',
+      });
+      return;
+    }
+
+    const imageUrl = dallEPayload.data?.[0]?.url;
+    if (!imageUrl) {
+      respondJson(res, 502, { error: 'Kein Bild-URL von DALL-E erhalten.' });
+      return;
+    }
+
+    respondJson(res, 200, { result: imageUrl });
+  } catch (error) {
+    console.error('Proxy error:', error);
+    respondJson(res, 500, { error: 'Interner Proxy-Fehler.' });
+  }
+}
+
+async function handleProxyImageRequest(req, res) {
+  try {
+    const urlParts = new URL(req.url, `http://${req.headers.host}`);
+    const imageUrl = urlParts.searchParams.get('url');
+
+    if (!imageUrl) {
+      respondJson(res, 400, { error: 'URL is required.' });
+      return;
+    }
+
+    const imageResponse = await fetch(imageUrl);
+
+    if (!imageResponse.ok) {
+      respondJson(res, imageResponse.status, { error: 'Failed to fetch image from source.' });
+      return;
+    }
+
+    const contentType = imageResponse.headers.get('content-type') || 'image/png';
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=3600',
+    });
+
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    res.end(Buffer.from(arrayBuffer));
+
+  } catch (error) {
+    console.error('Proxy image error:', error);
+    respondJson(res, 500, { error: 'Interner Proxy-Fehler beim Laden des Bildes.' });
+  }
 }
 
 async function handleBrewRequest(req, res) {

@@ -1,3 +1,5 @@
+import 'image_attachment.dart';
+
 class AiRecipe {
   final String basisBier;
   final String bierTyp;
@@ -7,6 +9,7 @@ class AiRecipe {
   final Ingredients zutaten;
   final ProcessData prozessdaten;
   final List<String> notizen;
+  ImageAttachment? sourceImage;
 
   AiRecipe({
     required this.basisBier,
@@ -17,6 +20,7 @@ class AiRecipe {
     required this.zutaten,
     required this.prozessdaten,
     required this.notizen,
+    this.sourceImage,
   });
 
   factory AiRecipe.fromJson(Map<String, dynamic> json) {

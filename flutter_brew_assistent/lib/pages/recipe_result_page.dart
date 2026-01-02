@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ai_recipe.dart';
+import 'recipe_completion_page.dart';
 import '../models/water_profile.dart';
 import '../services/water_profile_service.dart';
 import '../services/user_profile_service.dart';
@@ -17,12 +18,39 @@ class RecipeResultPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(recipe.basisBier),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.list), text: 'Übersicht'),
-              Tab(icon: Icon(Icons.timelapse), text: 'Brauprozess'),
-              Tab(icon: Icon(Icons.local_drink), text: 'Abfüllung'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: TabBar(
+                    tabs: [
+                      Tab(icon: Icon(Icons.list), text: 'Übersicht'),
+                      Tab(icon: Icon(Icons.timelapse), text: 'Brauprozess'),
+                      Tab(icon: Icon(Icons.local_drink), text: 'Abfüllung'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RecipeCompletionPage(recipe: recipe),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle_outline, size: 20),
+                    label: const Text('Abschliessen'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.greenAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         body: TabBarView(

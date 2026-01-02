@@ -1,31 +1,59 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import '../models/image_attachment.dart';
 
 class OpenAIService {
   static const String _defaultProxyBase = 'http://localhost:3000/api';
 
   OpenAIService()
       : _brewEndpoint = _deriveEndpoint('brew'),
-        _shopEndpoint = _deriveEndpoint('shop-search');
+        _shopEndpoint = _deriveEndpoint('shop-search'),
+        _chatEndpoint = _deriveEndpoint('chat'),
+        _imageEndpoint = _deriveEndpoint('picture');
 
   final Uri _brewEndpoint;
   final Uri _shopEndpoint;
+  final Uri _chatEndpoint;
+  final Uri _imageEndpoint;
+
+  String get proxyBaseUrl {
+    String baseUrl = const String.fromEnvironment('PROXY_URL', defaultValue: '');
+    if (baseUrl.isEmpty) {
+      baseUrl = dotenv.env['PROXY_URL'] ?? _defaultProxyBase;
+    }
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
+    return baseUrl;
+  }
 
   static Uri _deriveEndpoint(String path) {
-    final String baseUrl = dotenv.env['PROXY_URL'] ?? _defaultProxyBase;
-    // Remove trailing slash if present to avoid double slashes
-    final normalizedBase = baseUrl.endsWith('/') 
-        ? baseUrl.substring(0, baseUrl.length - 1) 
-        : baseUrl;
-    return Uri.parse('$normalizedBase/$path');
+    // 1. Try dart-define (usually from CI/CD or local flutter run)
+    // 2. Try dotenv (usually from local .env file)
+    // 3. Fallback to default
+    String baseUrl = const String.fromEnvironment('PROXY_URL', defaultValue: '');
+    if (baseUrl.isEmpty) {
+      baseUrl = dotenv.env['PROXY_URL'] ?? _defaultProxyBase;
+    }
+
+    // Remove trailing slash
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
+
+    // Check if the baseUrl already ends with the path (e.g. if someone put .../api/brew in .env)
+    // To be safe, check for the path with a leading slash
+    if (baseUrl.endsWith('/$path')) {
+      return Uri.parse(baseUrl);
+    }
+
+    return Uri.parse('$baseUrl/$path');
   }
 
   Future<String> brewRecipe(
     String userPrompt, {
-    RecipeImageAttachment? attachment,
+    ImageAttachment? attachment,
   }) async {
     if (userPrompt.trim().isEmpty) {
       throw Exception('Bitte gib eine Beschreibung ein.');
@@ -77,32 +105,54 @@ class OpenAIService {
     return ShopSearchResponse.fromJson(decoded);
   }
 
-  static Uri _deriveShopEndpoint(Uri brew) {
-    final segments = List<String>.from(brew.pathSegments);
-    if (segments.isNotEmpty) {
-      segments.removeLast();
+  Future<String> generalChat(String prompt, {ImageAttachment? attachment}) async {
+    final response = await http.post(
+      _chatEndpoint,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'prompt': prompt,
+        if (attachment != null) 'image': attachment.toJson(),
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final message =
+          response.body.isNotEmpty ? response.body : 'Unbekannter Fehler';
+      throw Exception('Chat-Anfrage fehlgeschlagen: $message');
     }
-    segments.add('shop-search');
-    return brew.replace(pathSegments: segments);
+
+    final Map<String, dynamic> decoded =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    return (decoded['result'] as String? ?? '').trim();
   }
-}
 
-class RecipeImageAttachment {
-  const RecipeImageAttachment({
-    required this.bytes,
-    required this.mimeType,
-    this.fileName,
-  });
+  Future<String> generateImage(String prompt, {ImageAttachment? attachment}) async {
+    final response = await http.post(
+      _imageEndpoint,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'prompt': prompt,
+        if (attachment != null) 'image': attachment.toJson(),
+      }),
+    );
 
-  final Uint8List bytes;
-  final String mimeType;
-  final String? fileName;
+    if (response.statusCode != 200) {
+      final message =
+          response.body.isNotEmpty ? response.body : 'Unbekannter Fehler';
+      throw Exception('Bildgenerierung fehlgeschlagen: $message');
+    }
 
-  Map<String, dynamic> toJson() => <String, dynamic>{
-        'data': base64Encode(bytes),
-        'mime_type': mimeType,
-        if (fileName != null) 'file_name': fileName,
-      };
+    final Map<String, dynamic> decoded =
+        jsonDecode(response.body) as Map<String, dynamic>;
+    final imageUrl = decoded['result'] as String?;
+    
+    if (imageUrl == null || imageUrl.isEmpty) {
+      throw Exception('Keine Bild-URL vom Proxy erhalten.');
+    }
+    
+    return imageUrl;
+  }
+
 }
 
 class ShopSearchResponse {

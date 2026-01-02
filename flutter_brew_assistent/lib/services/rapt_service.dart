@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 class RaptService {
@@ -7,10 +8,23 @@ class RaptService {
 
   // Use PROXY_URL from build environment (passed via --dart-define in CI/CD)
   // Fallback to localhost:3000 for local development if not set.
-  static const String proxyBaseUrl = String.fromEnvironment(
-    'PROXY_URL', 
-    defaultValue: 'http://localhost:3000/api'
-  );
+  // Use PROXY_URL from build environment or dotenv
+  static String get proxyBaseUrl {
+    String baseUrl = const String.fromEnvironment('PROXY_URL', defaultValue: '');
+    if (baseUrl.isEmpty) {
+      // Try to get from dotenv if available (it might not be initialized yet in a static context, 
+      // so we use a fallback)
+      try {
+        baseUrl = dotenv.env['PROXY_URL'] ?? 'http://localhost:3000/api';
+      } catch (_) {
+        baseUrl = 'http://localhost:3000/api';
+      }
+    }
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 1);
+    }
+    return baseUrl;
+  }
   
   final String userId;
   final String apiKey;
