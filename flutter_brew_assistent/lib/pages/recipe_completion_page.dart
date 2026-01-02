@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/ai_recipe.dart';
 import '../services/openai_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RecipeCompletionPage extends StatefulWidget {
@@ -239,13 +240,38 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
             const Divider(),
             const SizedBox(height: 16),
             
-            _CompletionButton(
+              _CompletionButton(
               label: 'Rezept abspeichern',
               icon: Icons.save,
-              onPressed: _isGenerating ? null : () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Rezept wird gespeichert...')),
-                );
+              onPressed: _isGenerating ? null : () async {
+                try {
+                  final userId = Supabase.instance.client.auth.currentUser?.id;
+                  if (userId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Nicht eingeloggt. Bitte melden Sie sich an.')),
+                    );
+                    return;
+                  }
+
+                  await Supabase.instance.client.from('ai_generated_recipes').insert({
+                    'user_id': userId,
+                    'name': widget.recipe.basisBier,
+                    'style': widget.recipe.bierTyp,
+                    'recipe_data': widget.recipe.toJson(),
+                  });
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Rezept erfolgreich gespeichert!')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Fehler beim Speichern: $e')),
+                    );
+                  }
+                }
               },
             ),
             const SizedBox(height: 16),

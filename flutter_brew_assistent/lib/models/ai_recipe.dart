@@ -35,6 +35,20 @@ class AiRecipe {
       notizen: (json['Notizen'] as List?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'basis_bier': basisBier,
+      'bier_typ': bierTyp,
+      'stammwuerze_sg': stammwuerzeSg,
+      'restextrakt_sg': restextraktSg,
+      'alkoholgehalt_vol_prozent': alkoholgehalt,
+      'Zutaten': zutaten.toJson(),
+      'Prozessdaten': prozessdaten.toJson(),
+      'Notizen': notizen,
+      // Source image is typically not part of the recipe JSON structure for AI but kept here for app logic
+    };
+  }
 }
 
 class Ingredients {
@@ -64,6 +78,17 @@ class Ingredients {
       finings: (json['Klaer_und_Schonungsmittel'] as List?)?.map((e) => FiningAgentRef.fromJson(e)).toList() ?? [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Original_Malz': malts.map((e) => e.toJson()).toList(),
+      'Original_Hopfen': hops.map((e) => e.toJson()).toList(),
+      'Original_Hefe': yeast.toJson(),
+      'Wasserprofil_Zielwerte': water.toJson(),
+      'Spezialzutaten': specials.map((e) => e.toJson()).toList(),
+      'Klaer_und_Schonungsmittel': finings.map((e) => e.toJson()).toList(),
+    };
+  }
 }
 
 class Malt {
@@ -79,6 +104,14 @@ class Malt {
       amountKg: (json['Menge_kg'] as num?)?.toDouble() ?? 0.0,
       crushGap: (json['Optimales_Schrot_Spaltmass_mm'] as num?)?.toDouble() ?? 1.2,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Name': name,
+      'Menge_kg': amountKg,
+      'Optimales_Schrot_Spaltmass_mm': crushGap,
+    };
   }
 }
 
@@ -99,6 +132,16 @@ class Hop {
       use: json['Einsatz'] ?? '',
       timeMin: (json['Zeit_min'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Sortenname': name,
+      'Alpha_Saeure': alpha,
+      'Menge_g': amountG,
+      'Einsatz': use,
+      'Zeit_min': timeMin,
+    };
   }
 }
 
@@ -122,6 +165,15 @@ class Yeast {
       amount: json['Menge_Packungen_oder_ml'] ?? '',
       procurementNeeded: json['Beschaffung_Notwendig'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Name': name,
+      'Typ': type,
+      'Menge_Packungen_oder_ml': amount,
+      'Beschaffung_Notwendig': procurementNeeded,
+    };
   }
 }
 
@@ -147,6 +199,18 @@ class WaterProfileTargets {
       saltTiming: json['Salzzugabe_Zeitpunkt'] ?? 'Maische',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Kalzium_Ca_mg_L': ca,
+      'Magnesium_Mg_mg_L': mg,
+      'Natrium_Na_mg_L': na,
+      'Chlorid_Cl_mg_L': cl,
+      'Sulfat_SO4_mg_L': so4,
+      'Hydrogencarbonat_HCO3_mg_L': hco3,
+      'Salzzugabe_Zeitpunkt': saltTiming,
+    };
+  }
 }
 
 class SpecialIngredient {
@@ -164,6 +228,15 @@ class SpecialIngredient {
       unit: json['Einheit'] ?? '',
       detail: json['Anwendung_Detail'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Name': name,
+      'Menge': amount,
+      'Einheit': unit,
+      'Anwendung_Detail': detail,
+    };
   }
 }
 
@@ -194,6 +267,17 @@ class FiningAgentRef {
       procurementNeeded: json['Beschaffung_Notwendig'] ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Name': name,
+      'Menge': amount,
+      'Phase': phase,
+      'Zweck': purpose,
+      'Anwendung_Detail': applicationDetail,
+      'Beschaffung_Notwendig': procurementNeeded,
+    };
+  }
 }
 
 class ProcessData {
@@ -220,6 +304,16 @@ class ProcessData {
       packaging: PackagingPlan.fromJson(json['Abfuell_und_Lagerungsplan'] ?? {}),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Maischeplan': mash.toJson(),
+      'Laeuterungsplan': lauter.toJson(),
+      'Kochplan': boil.toJson(),
+      'Gaerungsplan': fermentation.toJson(),
+      'Abfuell_und_Lagerungsplan': packaging.toJson(),
+    };
+  }
 }
 
 class MashPlan {
@@ -235,6 +329,14 @@ class MashPlan {
       mashInTemp: (json['Einmaischtemperatur_C'] as num?)?.toDouble() ?? 0.0,
       steps: (json['Rasten'] as List?)?.map((e) => MashStep.fromJson(e)).toList() ?? [],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Hauptguss_L': mashWaterL,
+      'Einmaischtemperatur_C': mashInTemp,
+      'Rasten': steps.map((e) => e.toJson()).toList(),
+    };
   }
 }
 
@@ -252,6 +354,14 @@ class MashStep {
       duration: (json['Dauer_min'] as num?)?.toInt() ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Stufe': stage,
+      'Temperatur_C': temp,
+      'Dauer_min': duration,
+    };
+  }
 }
 
 class LauterPlan {
@@ -265,6 +375,13 @@ class LauterPlan {
       spargeWaterL: (json['Nachgusswasser_Menge_L'] as num?)?.toDouble() ?? 0.0,
       targetPh: json['Ziel_pH_vor_Laeutern'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Nachgusswasser_Menge_L': spargeWaterL,
+      'Ziel_pH_vor_Laeutern': targetPh,
+    };
   }
 }
 
@@ -280,6 +397,13 @@ class BoilPlan {
       duration: (json['Gesamte_Kochdauer_min'] as num?)?.toInt() ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Pfannevoll_Tatsaechlich_L': preBoilVolumeL,
+      'Gesamte_Kochdauer_min': duration,
+    };
+  }
 }
 
 class FermentationPlan {
@@ -293,6 +417,13 @@ class FermentationPlan {
       pitchTemp: (json['Hefe_Anstelltemperatur_C'] as num?)?.toDouble() ?? 0.0,
       steps: (json['Gaerverlauf'] as List?)?.map((e) => FermentationStep.fromJson(e)).toList() ?? [],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Hefe_Anstelltemperatur_C': pitchTemp,
+      'Gaerverlauf': steps.map((e) => e.toJson()).toList(),
+    };
   }
 }
 
@@ -322,6 +453,17 @@ class FermentationStep {
       pressureReason: json['Druck_Begruendung'] ?? '',
       note: json['Hinweis'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Phase': phase,
+      'Temperatur_C': temp,
+      'Dauer_Tage': days,
+      'Druck_bar': pressure,
+      'Druck_Begruendung': pressureReason,
+      'Hinweis': note,
+    };
   }
 }
 
@@ -366,5 +508,21 @@ class PackagingPlan {
       servingGasRecommendation: json['Empfohlenes_Ausschankgas'] ?? '',
       carbonationDurationDays: (json['Karbonisierungsdauer_Tage'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Abfuellung_Typ': type,
+      'Karbonisierung_Ziel_CO2_g_L': co2Target,
+      'Keg_Druck_bar': kegPressure,
+      'Keg_Karbonisierung_Temp_C': kegTemp,
+      'Flaschen_Zucker_g_pro_L': bottleSugar,
+      'Flaschen_Karbonisierung_Temp_C': bottleTemp,
+      'Lagerung_Temperatur_C': storageTemp,
+      'Lagerung_Dauer_Wochen': storageDurationWeeks,
+      'Reifungshinweis': maturationNote,
+      'Empfohlenes_Ausschankgas': servingGasRecommendation,
+      'Karbonisierungsdauer_Tage': carbonationDurationDays,
+    };
   }
 }
