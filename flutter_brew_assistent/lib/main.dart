@@ -35,6 +35,7 @@ import 'models/fining_agents.dart';
 import 'pages/integrations_page.dart';
 import 'pages/brewfather_menu_page.dart';
 import 'services/brewfather_service.dart';
+import 'pages/generated_recipes_list_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'widgets/card_actions.dart';
 import 'pages/yeast_label_page.dart';
@@ -851,6 +852,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
             mainAxisExtent: 60,
           ),
           children: [
+            _managerButton(
+              icon: Icons.receipt_long,
+              label: 'Generierte Rezepte',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GeneratedRecipesListPage()),
+              ),
+            ),
             _managerButton(
               icon: Icons.water_drop_outlined,
               label: 'Wasserprofile',

@@ -9,6 +9,7 @@ class AiRecipe {
   final Ingredients zutaten;
   final ProcessData prozessdaten;
   final List<String> notizen;
+  final String? generatedImage;
   ImageAttachment? sourceImage;
 
   AiRecipe({
@@ -21,6 +22,7 @@ class AiRecipe {
     required this.prozessdaten,
     required this.notizen,
     this.sourceImage,
+    this.generatedImage,
   });
 
   factory AiRecipe.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class AiRecipe {
       zutaten: Ingredients.fromJson(json['Zutaten'] ?? {}),
       prozessdaten: ProcessData.fromJson(json['Prozessdaten'] ?? {}),
       notizen: (json['Notizen'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      generatedImage: json['generated_image'],
     );
   }
 

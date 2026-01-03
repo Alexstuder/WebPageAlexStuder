@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../models/ai_recipe.dart';
 import 'recipe_completion_page.dart';
 import '../models/water_profile.dart';
@@ -125,6 +126,20 @@ class _OverviewTabState extends State<_OverviewTab> {
             child: Column(
                crossAxisAlignment: CrossAxisAlignment.start,
                children: [
+                  if (widget.recipe.generatedImage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          base64Decode(widget.recipe.generatedImage!),
+                          height: 250,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   _buildKeyStatsCard(),
                   const SizedBox(height: 16),
                   _buildSectionTitle('Malz & Fermentierbares'),
