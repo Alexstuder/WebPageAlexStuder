@@ -50,7 +50,11 @@ Future<void> main() async {
   if (supabaseUrl == null || supabaseAnonKey == null) {
     throw Exception('Supabase config missing. Check .env');
   }
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+    postgrestOptions: const PostgrestClientOptions(schema: 'aibrewgenius'),
+  );
   runApp(const BrewMateApp());
 }
 

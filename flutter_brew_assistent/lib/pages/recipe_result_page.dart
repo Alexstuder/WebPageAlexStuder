@@ -50,6 +50,7 @@ class RecipeResultPage extends StatelessWidget {
                     ),
                   ),
                 ),
+
               ],
             ),
           ),
@@ -127,16 +128,24 @@ class _OverviewTabState extends State<_OverviewTab> {
                crossAxisAlignment: CrossAxisAlignment.start,
                children: [
                   if (widget.recipe.generatedImage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(
-                          base64Decode(widget.recipe.generatedImage!),
-                          height: 250,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                    Center(
+                      child: FractionallySizedBox(
+                        widthFactor: 0.25, // 25% width
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              base64Decode(widget.recipe.generatedImage!),
+                              width: double.infinity,
+                              fit: BoxFit.fitWidth,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 100, 
+                                alignment: Alignment.center,
+                                child: Text('Bild Fehler: $error', style: const TextStyle(fontSize: 10, color: Colors.red))
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),

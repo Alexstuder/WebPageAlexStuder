@@ -23,6 +23,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
   bool _isGenerating = false;
   String? _generatedImageUrl;
   bool _useSourceImage = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -41,14 +42,14 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     final style = widget.recipe.bierTyp;
     final name = widget.recipe.basisBier;
     
-    String prompt = 'Erstelle ein professionelles Produktfoto für ein Bier \'$name\' im Stil \'$style\'. ';
-    prompt += 'Das Bild zeigt das Bier in einem passenden Glas, appetitlich und frisch in Szene gesetzt. ';
-    prompt += 'Die Umgebung ist atmosphärisch passend, aber nicht ablenkend. ';
+    String prompt = "Erstelle ein professionelles Produktfoto für ein Bier '$name' im Stil '$style'. ";
+    prompt += 'Das Bild zeigt das Bier in einem mit dem Biernamen angeschriebenen und passenden Glas, appetitlich und frisch in Szene gesetzt. ';
+    prompt += 'Die Umgebung ist atmosphärisch passend, vielleicht mit einem kleinen Einblick in eine zum Bier passende Stadt aber nicht ablenkend. ';
     prompt += '\n\nSTRIKT FOR BREWFATHER-APP OPTIMIEREN:\n';
     prompt += '1. FORMAT & AUFLÖSUNG: Quadratisch (1:1), 1200x1200px (mind. 800x800px).\n';
-    prompt += '2. DATEIGRÖSSEN-OPTIMIERUNG (<5MB): Nutze klare Flächen und starke Kontraste. Vermeide unnötiges visuelles Rauschen ("Noise"), um eine gute JPG/PNG-Komprimierung zu gewährleisten.\n';
+    prompt += "2. DATEIGRÖSSEN-OPTIMIERUNG (<5MB): Nutze klare Flächen und starke Kontraste. Vermeide unnötiges visuelles Rauschen ('Noise'), um eine gute JPG/PNG-Komprimierung zu gewährleisten.\n";
     prompt += '3. INHALT: Bier im passenden Glas, zentral platziert (Safe-Zone für Cropping!), professioneller RGB-Stil.\n';
-    prompt += '4. NO-GOS: Kein Text, keine Rahmen, keine Transparenz.';
+    prompt += '4. NO-GOS: kein Rahmen, keine Transparenz.';
     
     return prompt;
   }
@@ -111,8 +112,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
         if (response.statusCode == 200) {
            final image = img.decodeImage(response.bodyBytes);
            if (image != null) {
-             // Resize to max 512px
-             final resized = img.copyResize(image, width: 512); 
+             // Resize to max 256px (Quarter of pixel count vs 512px)
+             final resized = img.copyResize(image, width: 256); 
              // Convert to JPG with 65% quality
              final jpg = img.encodeJpg(resized, quality: 65);
              base64Image = base64Encode(jpg);
@@ -123,8 +124,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       }
     }
 
-    // 1. Insert Main Recipe
-    final recipeRes = await client.from('ai_generated_recipes').insert({
+    // 1. Insert Main Recipe with all lists as JSONB
+    await client.from('ai_generated_recipes_v2').insert({
       'user_profile_id': userId,
       'basis_bier': r.basisBier,
       'bier_typ': r.bierTyp,
@@ -133,11 +134,13 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'alkoholgehalt': r.alkoholgehalt,
       'notizen': r.notizen,
       'generated_image': base64Image,
+      
       // Yeast (1:1)
       'yeast_name': r.zutaten.yeast.name,
       'yeast_type': r.zutaten.yeast.type,
       'yeast_amount': r.zutaten.yeast.amount,
       'yeast_procurement_needed': r.zutaten.yeast.procurementNeeded,
+      
       // Water (1:1)
       'water_ca': r.zutaten.water.ca,
       'water_mg': r.zutaten.water.mg,
@@ -146,7 +149,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'water_so4': r.zutaten.water.so4,
       'water_hco3': r.zutaten.water.hco3,
       'water_salt_timing': r.zutaten.water.saltTiming,
-      // Process 1:1
+      
+      // Process Data (1:1)
       'mash_water_l': r.prozessdaten.mash.mashWaterL,
       'mash_in_temp_c': r.prozessdaten.mash.mashInTemp,
       'lauter_sparge_water_l': r.prozessdaten.lauter.spargeWaterL,
@@ -154,7 +158,6 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'boil_pre_vol_l': r.prozessdaten.boil.preBoilVolumeL,
       'boil_duration_min': r.prozessdaten.boil.duration,
       'fermentation_pitch_temp_c': r.prozessdaten.fermentation.pitchTemp,
-      // Packaging 1:1
       'packaging_type': r.prozessdaten.packaging.type,
       'packaging_co2_target': r.prozessdaten.packaging.co2Target,
       'packaging_keg_pressure': r.prozessdaten.packaging.kegPressure,
@@ -166,89 +169,50 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'packaging_maturation_note': r.prozessdaten.packaging.maturationNote,
       'packaging_serving_gas': r.prozessdaten.packaging.servingGasRecommendation,
       'packaging_carb_days': r.prozessdaten.packaging.carbonationDurationDays,
-    }).select('id').single();
 
-    final recipeId = recipeRes['id'] as String;
+      // Arrays (JSONB)
+      'malts': r.zutaten.malts.map((m) => {
+        'name': m.name,
+        'amount_kg': m.amountKg,
+        'crush_gap_mm': m.crushGap,
+      }).toList(),
+      'hops': r.zutaten.hops.map((h) => {
+        'name': h.name,
+        'alpha_acid': h.alpha,
+        'amount_g': h.amountG,
+        'use_type': h.use,
+        'time_min': h.timeMin,
+      }).toList(),
+      'specials': r.zutaten.specials.map((s) => {
+        'name': s.name,
+        'amount': s.amount,
+        'unit': s.unit,
+        'detail': s.detail,
+      }).toList(),
+      'finings': r.zutaten.finings.map((f) => {
+        'name': f.name,
+        'amount': f.amount,
+        'phase': f.phase, 
+        'purpose': f.purpose,
+        'detail': f.applicationDetail,
+        'procurement_needed': f.procurementNeeded,
+      }).toList(),
+      'mash_steps': r.prozessdaten.mash.steps.map((s) => {
+        'stage': s.stage,
+        'temp_c': s.temp,
+        'duration_min': s.duration,
+      }).toList(),
+      'fermentation_steps': r.prozessdaten.fermentation.steps.map((s) => {
+        'phase': s.phase,
+        'temp_c': s.temp,
+        'days': s.days,
+        'pressure_bar': s.pressure,
+        'pressure_note': s.pressureReason,
+        'note': s.note,
+      }).toList(),
+    });
 
-    // 2. Insert Lists
-    final futures = <Future>[];
 
-    if (r.zutaten.malts.isNotEmpty) {
-      futures.add(client.from('ai_recipe_malts').insert(
-        r.zutaten.malts.map((m) => {
-          'recipe_id': recipeId,
-          'name': m.name,
-          'amount_kg': m.amountKg,
-          'crush_gap_mm': m.crushGap,
-        }).toList()
-      ));
-    }
-
-    if (r.zutaten.hops.isNotEmpty) {
-      futures.add(client.from('ai_recipe_hops').insert(
-        r.zutaten.hops.map((h) => {
-          'recipe_id': recipeId,
-          'name': h.name,
-          'alpha_acid': h.alpha,
-          'amount_g': h.amountG,
-          'use_type': h.use,
-          'time_min': h.timeMin,
-        }).toList()
-      ));
-    }
-
-    if (r.zutaten.specials.isNotEmpty) {
-      futures.add(client.from('ai_recipe_specials').insert(
-        r.zutaten.specials.map((s) => {
-          'recipe_id': recipeId,
-          'name': s.name,
-          'amount': s.amount,
-          'unit': s.unit,
-          'detail': s.detail,
-        }).toList()
-      ));
-    }
-      
-    if (r.zutaten.finings.isNotEmpty) {
-      futures.add(client.from('ai_recipe_finings').insert(
-        r.zutaten.finings.map((f) => {
-          'recipe_id': recipeId,
-          'name': f.name,
-          'amount': f.amount,
-          'phase': f.phase,
-          'purpose': f.purpose,
-          'detail': f.applicationDetail,
-          'procurement_needed': f.procurementNeeded,
-        }).toList()
-      ));
-    }
-      
-    if (r.prozessdaten.mash.steps.isNotEmpty) {
-      final steps = r.prozessdaten.mash.steps.asMap().entries.map((e) => {
-        'recipe_id': recipeId,
-        'step_order': e.key,
-        'stage': e.value.stage,
-        'temp_c': e.value.temp,
-        'duration_min': e.value.duration,
-      }).toList();
-      futures.add(client.from('ai_recipe_mash_steps').insert(steps));
-    }
-
-    if (r.prozessdaten.fermentation.steps.isNotEmpty) {
-       final steps = r.prozessdaten.fermentation.steps.asMap().entries.map((e) => {
-        'recipe_id': recipeId,
-        'step_order': e.key,
-        'phase': e.value.phase,
-        'temp_c': e.value.temp,
-        'days': e.value.days,
-        'pressure_bar': e.value.pressure,
-        'pressure_note': e.value.pressureReason,
-        'note': e.value.note,
-      }).toList();
-      futures.add(client.from('ai_recipe_fermentation_steps').insert(steps));
-    }
-
-    await Future.wait(futures);
   }
 
   @override
@@ -306,66 +270,58 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
 
             const SizedBox(height: 16),
             
-            if (_generatedImageUrl != null) ...[
+            if (_generatedImageUrl != null || widget.recipe.generatedImage != null) ...[
               const Text(
                 'Generiertes Bild:',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 500),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
-                  ),
-                  child: Image.network(
-                    '${_openAIService.proxyBaseUrl}/proxy-image?url=${Uri.encodeComponent(_generatedImageUrl!)}',
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return SizedBox(
-                        height: 300,
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const CircularProgressIndicator(),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Lade Bild: ${loadingProgress.cumulativeBytesLoaded ~/ 1024} KB',
-                                style: const TextStyle(fontSize: 12),
+              Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.25,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
+                      ),
+                  child: _generatedImageUrl != null 
+                    ? Image.network(
+                        '${_openAIService.proxyBaseUrl}/proxy-image?url=${Uri.encodeComponent(_generatedImageUrl!)}',
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Lade Bild: ${loadingProgress.cumulativeBytesLoaded ~/ 1024} KB',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 200,
-                        color: Colors.red.withValues(alpha: 0.1),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                              const SizedBox(height: 8),
-                              const Text('Bild konnte nicht geladen werden.'),
-                              TextButton(
-                                onPressed: _generateImage,
-                                child: const Text('Erneut versuchen'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
+                      )
+                    : Image.memory(
+                        base64Decode(widget.recipe.generatedImage!),
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => _buildErrorWidget(),
+                      ),
+                    ),
                   ),
                 ),
               ),
+            ],
+            if (_generatedImageUrl != null) ...[
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -411,10 +367,12 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
             const Divider(),
             const SizedBox(height: 16),
             
-              _CompletionButton(
-              label: 'Rezept abspeichern',
+            _CompletionButton(
+              label: _isSaving ? 'Speichere...' : 'Rezept abspeichern',
               icon: Icons.save,
-              onPressed: _isGenerating ? null : () async {
+              isLoading: _isSaving,
+              onPressed: (_isGenerating || _isSaving) ? null : () async {
+                setState(() => _isSaving = true);
                 try {
                   await _saveRecipeNormalized();
 
@@ -422,8 +380,11 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Rezept erfolgreich gespeichert!')),
                     );
+                    // Close the page to prevent re-saving and return to previous screen (e.g. list or wizard)
+                    Navigator.of(context).pop();
                   }
                 } catch (e) {
+                  setState(() => _isSaving = false);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Fehler beim Speichern: $e')),
@@ -451,6 +412,26 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
                   const SnackBar(content: Text('In BeerXML transformieren...')),
                 );
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _buildErrorWidget() {
+    return Container(
+      height: 200,
+      color: Colors.red.withValues(alpha: 0.1),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 8),
+            const Text('Bild konnte nicht geladen werden.'),
+            TextButton(
+              onPressed: _generateImage,
+              child: const Text('Erneut generieren'),
             ),
           ],
         ),

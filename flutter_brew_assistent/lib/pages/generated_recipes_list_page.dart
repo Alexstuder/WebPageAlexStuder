@@ -14,7 +14,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
   final _supabase = Supabase.instance.client;
 
   Stream<List<Map<String, dynamic>>> _recipesStream() {
-    return _supabase.from('ai_generated_recipes').stream(primaryKey: ['id']).order('created_at', ascending: false).map((recipes) {
+    return _supabase.from('ai_generated_recipes_v2').stream(primaryKey: ['id']).order('created_at', ascending: false).map((recipes) {
        // Since stream() doesn't support deep joins easily with realtime, we might need to fetch details on demand or accept that we only have the main table first.
        // However, the user wants the list. The list mainly needs the name and style.
        // The details are fetched on Tap? No, the OnTap logic I wrote assumes 'row' has everything.
@@ -68,30 +68,67 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
               return ListTile(
                 title: Text(row['basis_bier'] ?? 'Unbenannt'),
                 subtitle: Text('${row['bier_typ']} • ${date.day}.${date.month}.${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.grey),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Rezept löschen?'),
+                            content: const Text('Möchtest du dieses Rezept wirklich unwiderruflich löschen?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false), // Abbrechen
+                                child: const Text('Abbrechen'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true), // Löschen
+                                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                child: const Text('Löschen'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true) {
+                          try {
+                            await _supabase.from('ai_generated_recipes_v2').delete().eq('id', row['id']);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Rezept gelöscht.')),
+                              );
+                            }
+                          } catch (e) {
+                             if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Fehler beim Löschen: $e')),
+                              );
+                            }
+                          }
+                        }
+                      },
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 16),
+                  ],
+                ),
                 onTap: () async {
                    try {
-                     // Fetch full details for this ID
-                     final fullData = await _supabase.from('ai_generated_recipes').select('''
-                        *,
-                        ai_recipe_malts(*),
-                        ai_recipe_hops(*),
-                        ai_recipe_specials(*),
-                        ai_recipe_finings(*),
-                        ai_recipe_mash_steps(*),
-                        ai_recipe_fermentation_steps(*)
-                     ''').eq('id', row['id']).single();
+                     final r = await _supabase
+                         .from('ai_generated_recipes_v2')
+                         .select()
+                         .eq('id', row['id'])
+                         .single();
 
-                     // Normalize the returned data (Supabase returns List for 1:N relations)
-                     final r = fullData;
-
-                     final malts = (r['ai_recipe_malts'] as List?)?.map((m) => {
+                     final malts = (r['malts'] as List?)?.map((m) => {
                        'Name': m['name'],
                        'Menge_kg': m['amount_kg'],
                        'Optimales_Schrot_Spaltmass_mm': m['crush_gap_mm'],
                      }).toList();
 
-                     final hops = (r['ai_recipe_hops'] as List?)?.map((h) => {
+                     final hops = (r['hops'] as List?)?.map((h) => {
                        'Sortenname': h['name'],
                        'Alpha_Saeure': h['alpha_acid'],
                        'Menge_g': h['amount_g'],
@@ -99,14 +136,14 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                        'Zeit_min': h['time_min'],
                      }).toList();
 
-                     final specials = (r['ai_recipe_specials'] as List?)?.map((s) => {
+                     final specials = (r['specials'] as List?)?.map((s) => {
                        'Name': s['name'],
                        'Menge': s['amount'],
                        'Einheit': s['unit'],
                        'Anwendung_Detail': s['detail'],
                      }).toList();
 
-                     final finings = (r['ai_recipe_finings'] as List?)?.map((f) => {
+                     final finings = (r['finings'] as List?)?.map((f) => {
                        'Name': f['name'],
                        'Menge': f['amount'],
                        'Phase': f['phase'],
@@ -115,16 +152,21 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                        'Beschaffung_Notwendig': f['procurement_needed'],
                      }).toList();
                      
-                     final mashSteps = (r['ai_recipe_mash_steps'] as List?)
-                         ?..sort((a,b) => (a['step_order'] as int).compareTo(b['step_order'] as int));
+                     // In denormalized structure, the list might already be ordered if saved ordered.
+                     // But sorting again is safer. However, we don't have 'step_order' field saved in the new JSON?
+                     // Wait, in Step 595 I removed step_order from the JSON map!
+                     // 'stage': s.stage... NO step_order.
+                     // But List order is preserved in JSON.
+                     // So we don't need to sort by a missing key 'step_order'.
+                     
+                     final mashSteps = (r['mash_steps'] as List?);
                      final mashStepsMapped = mashSteps?.map((ms) => {
                        'Stufe': ms['stage'],
                        'Temperatur_C': ms['temp_c'],
                        'Dauer_min': ms['duration_min'],
                      }).toList();
 
-                     final fermSteps = (r['ai_recipe_fermentation_steps'] as List?)
-                         ?..sort((a,b) => (a['step_order'] as int).compareTo(b['step_order'] as int));
+                     final fermSteps = (r['fermentation_steps'] as List?);
                      final fermStepsMapped = fermSteps?.map((fs) => {
                        'Phase': fs['phase'],
                        'Temperatur_C': fs['temp_c'],
