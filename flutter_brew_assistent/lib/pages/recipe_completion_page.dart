@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'dart:convert';
+import '../services/user_profile_service.dart';
 
 class RecipeCompletionPage extends StatefulWidget {
   final AiRecipe recipe;
@@ -23,6 +24,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
   final OpenAIService _openAIService = OpenAIService();
   bool _isGenerating = false;
   String? _generatedImageUrl;
+  String? _processedBase64Image;
   bool _useSourceImage = false;
   bool _isSaving = false;
 
@@ -94,37 +96,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     final client = Supabase.instance.client;
 
     // Process image if available
-    String? base64Image;
-    if (_generatedImageUrl != null) {
-      try {
-        // Use the proxy-image URL if it's the one we are displaying, or standard URL?
-        // _generatedImageUrl holds the direct OpenAI URL usually.
-        // However, if we use a proxy in the app, we might want to fetch via that?
-        // Standard OpenAI URL is fine if we are on the server/client that has access.
-        // Since we are in the browser, CORS might be an issue if we fetch directly from OpenAI blob URL.
-        // But the OpenAIService returns the direct URL.
-        // Let's try fetching. The proxy is used for display because of CORS.
-        // So we should probably use the proxy URL for fetching bytes too if we are on web.
-        // _openAIService.proxyBaseUrl -> http://localhost:3000
-        
-        final urlToFetch = '${_openAIService.proxyBaseUrl}/proxy-image?url=${Uri.encodeComponent(_generatedImageUrl!)}';
-        
-        final response = await http.get(Uri.parse(urlToFetch));
-        if (response.statusCode == 200) {
-           final image = img.decodeImage(response.bodyBytes);
-           if (image != null) {
-             // Resize to max 256px (Quarter of pixel count vs 512px)
-             final resized = img.copyResize(image, width: 256); 
-             // Convert to JPG with 65% quality
-             final jpg = img.encodeJpg(resized, quality: 65);
-             base64Image = base64Encode(jpg);
-           }
-        }
-      } catch (e) {
-        debugPrint('Image processing failed: $e');
-      }
-    }
-
+    await _ensureBase64Image();
+    
     // 1. Prepare/Upsert Main Recipe
     final Map<String, dynamic> data = {
       'user_profile_id': userId,
@@ -134,7 +107,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'restextrakt_sg': r.restextraktSg,
       'alkoholgehalt': r.alkoholgehalt,
       'notizen': r.notizen,
-      'generated_image': base64Image,
+      'generated_image': _processedBase64Image ?? widget.recipe.generatedImage,
       
       // Yeast (1:1)
       'yeast_name': r.zutaten.yeast.name,
@@ -218,8 +191,54 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     }
 
     await client.from('ai_generated_recipes_v2').upsert(data);
+  }
 
+  Future<void> _ensureBase64Image() async {
+    // Falls schon verarbeitet oder gar keine neue URL da, nichts tun
+    if (_processedBase64Image != null || _generatedImageUrl == null) return;
 
+    try {
+      final urlToFetch = '${_openAIService.proxyBaseUrl}/proxy-image?url=${Uri.encodeComponent(_generatedImageUrl!)}';
+      final response = await http.get(Uri.parse(urlToFetch));
+      
+      if (response.statusCode == 200) {
+        final image = img.decodeImage(response.bodyBytes);
+        if (image != null) {
+          final resized = img.copyResize(image, width: 256);
+          final jpg = img.encodeJpg(resized, quality: 65);
+          _processedBase64Image = base64Encode(jpg);
+        }
+      }
+    } catch (e) {
+      debugPrint('Image processing failed: $e');
+    }
+  }
+
+  Future<void> _handleBrewfatherExport() async {
+    setState(() => _isSaving = true);
+    await _ensureBase64Image();
+    
+    String? authorName;
+    try {
+      final profile = await UserProfileService().fetchDefaultProfile();
+      authorName = profile?.name;
+    } catch (_) {}
+
+    setState(() => _isSaving = false);
+
+    final finalImage = _processedBase64Image ?? widget.recipe.generatedImage;
+    final recipeToExport = finalImage != null 
+        ? widget.recipe.copyWith(generatedImage: finalImage)
+        : widget.recipe;
+
+    if (!mounted) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => JsonExportPage(
+        recipe: recipeToExport,
+        author: authorName,
+      )),
+    );
   }
 
   @override
@@ -384,11 +403,10 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
                   await _saveRecipeNormalized();
 
                   if (context.mounted) {
+                    setState(() => _isSaving = false);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Rezept erfolgreich gespeichert!')),
                     );
-                    // Close the page to prevent re-saving and return to previous screen (e.g. list or wizard)
-                    Navigator.of(context).pop();
                   }
                 } catch (e) {
                   setState(() => _isSaving = false);
@@ -404,11 +422,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
             _CompletionButton(
               label: 'In Brewfather.json transformieren',
               icon: Icons.code,
-              onPressed: _isGenerating ? null : () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => JsonExportPage(recipe: widget.recipe)),
-                );
-              },
+              onPressed: _isGenerating ? null : _handleBrewfatherExport,
             ),
             const SizedBox(height: 16),
             _CompletionButton(

@@ -1,15 +1,18 @@
-
 import 'dart:convert';
+import 'dart:js_interop';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart'; // Falls vorhanden, sonst entfernen
+import 'package:web/web.dart' as web;
+import 'package:url_launcher/url_launcher.dart'; 
 import '../models/ai_recipe.dart';
 import '../services/brewfather_transformer_service.dart';
 
 class JsonExportPage extends StatefulWidget {
   final AiRecipe recipe;
+  final String? author;
 
-  const JsonExportPage({super.key, required this.recipe});
+  const JsonExportPage({super.key, required this.recipe, this.author});
 
   @override
   State<JsonExportPage> createState() => _JsonExportPageState();
@@ -22,14 +25,14 @@ class _JsonExportPageState extends State<JsonExportPage> {
   @override
   void initState() {
     super.initState();
-    final map = BrewfatherTransformerService.transform(widget.recipe);
+    final map = BrewfatherTransformerService.transform(widget.recipe, author: widget.author);
     _jsonString = const JsonEncoder.withIndent('  ').convert(map);
     
     // Generate filename: Brewfather_RECIPE_Name_Date.json
     final date = DateTime.now();
-    final dateStr = "${date.year}${date.month.toString().padLeft(2,'0')}${date.day.toString().padLeft(2,'0')}";
+    final dateStr = '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
     final cleanName = widget.recipe.basisBier.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-    _fileName = "Brewfather_RECIPE_${cleanName}_$dateStr.json";
+    _fileName = 'Brewfather_RECIPE_${cleanName}_$dateStr.json';
   }
 
   @override
@@ -38,12 +41,7 @@ class _JsonExportPageState extends State<JsonExportPage> {
       appBar: AppBar(
         title: const Text('Brewfather Export'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.copy),
-            tooltip: 'In Zwischenablage kopieren',
-            onPressed: _copyToClipboard,
-          ),
-          // Download Button (Primär für Web via Data URI oder Fallback)
+          // Download Button
           IconButton(
             icon: const Icon(Icons.download),
             tooltip: 'Download JSON',
@@ -57,9 +55,9 @@ class _JsonExportPageState extends State<JsonExportPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              color: Colors.blueGrey.withOpacity(0.1),
+              color: Colors.blueGrey.withValues(alpha: 0.1),
               child: SelectableText(
-                "Dateiname: $_fileName\n\nKlicke auf 'Kopieren' um den Inhalt in Brewfather > Import Recipe > Text/Paste einzufügen.",
+                'Dateiname: $_fileName\n\nSpeichere das JSON über den Download-Button oben rechts ab, um die Datei danach in Brewfather importieren zu können.',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -86,17 +84,31 @@ class _JsonExportPageState extends State<JsonExportPage> {
     );
   }
 
-  void _copyToClipboard() {
-    Clipboard.setData(ClipboardData(text: _jsonString));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('JSON kopiert! Öffne Brewfather und füge es ein.')),
-    );
-  }
-
   Future<void> _download() async {
     try {
-      // Data URI erstellen
-      // encodeComponent ist wichtig für Sonderzeichen
+      if (kIsWeb) {
+        // Optimierter Web-Download via package:web
+        final bytes = utf8.encode(_jsonString);
+        final array = Uint8List.fromList(bytes);
+        final blob = web.Blob([array.toJS].toJS, web.BlobPropertyBag(type: 'application/json'));
+        final url = web.URL.createObjectURL(blob);
+        
+        final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+        anchor.href = url;
+        anchor.download = _fileName;
+        anchor.click();
+        
+        web.URL.revokeObjectURL(url);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Download gestartet!')),
+          );
+        }
+        return;
+      }
+
+      // Fallback für Nicht-Web (z.B. Desktop/Mobile) via url_launcher
       final dataUri = Uri.dataFromString(
         _jsonString,
         mimeType: 'application/json',
@@ -106,15 +118,14 @@ class _JsonExportPageState extends State<JsonExportPage> {
       if (await canLaunchUrl(dataUri)) {
         await launchUrl(dataUri);
       } else {
-        // Fallback: Clipboard info
-        if(mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Download nicht unterstützt. Bitte "Kopieren" nutzen.')),
-           );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Download auf dieser Plattform leider nicht unterstützt.')),
+          );
         }
       }
     } catch (e) {
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
     }

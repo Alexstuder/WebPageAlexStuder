@@ -1,10 +1,9 @@
 
-import 'dart:convert';
 import '../models/ai_recipe.dart';
 
 class BrewfatherTransformerService {
   
-  static Map<String, dynamic> transform(AiRecipe recipe) {
+  static Map<String, dynamic> transform(AiRecipe recipe, {String? author}) {
     // Basic defaults
     const double batchSizeVal = 20.0; // Standard falls nicht anders definiert
     const double efficiencyVal = 72.0; 
@@ -14,134 +13,164 @@ class BrewfatherTransformerService {
     if (totalGrainKg == 0) totalGrainKg = 1.0; // Prevent div by zero
 
     return {
-      "_versionNumber": 1,
-      "_init": true,
-      "_type": "recipe",
-      "name": recipe.basisBier,
-      "author": "AI Brew Genius",
-      "type": "All Grain",
-      "batchSize": batchSizeVal, 
-      "boilTime": recipe.prozessdaten.boil.duration,
-      "efficiency": efficiencyVal,
-      "notes": _buildNotes(recipe),
+      '_versionNumber': 1,
+      '_init': true,
+      '_type': 'recipe',
+      'ibuFormula': 'tinseth',
+      'fgFormula': 'normal',
+      'name': recipe.basisBier,
+      'author': author ?? 'AI Brew Genius',
+      'tags': ['AI Brew Genius'],
+      'searchTags': ['AI Brew Genius'],
+      'type': 'All Grain',
+      'batchSize': batchSizeVal,
+      'boilTime': recipe.prozessdaten.boil.duration,
+      'efficiency': efficiencyVal,
+      'mashEfficiency': efficiencyVal,
+      'brewhouseEfficiency': efficiencyVal,
+      'equipment': {
+        'name': 'AI Generated Profile',
+        'efficiency': efficiencyVal / 100, // 0.72
+        'batchSize': batchSizeVal,
+        'boilTime': recipe.prozessdaten.boil.duration,
+        'boilOffPerHr': 0.01,
+        'postBoilKettleVol': 0,
+        'fermenterVolume': 0,
+        'bottlingVolume': 0,
+        'fermenterLossEstimate': 0,
+        'evaporationRate': 0,
+      },
+      'notes': _buildNotes(recipe),
       
       // Style
-      "style": {
-        "name": recipe.bierTyp,
-        "category": "Custom", 
-        "styleGuide": "Custom",
-        "type": "Beer",
+      'style': {
+        'name': recipe.bierTyp,
+        'category': 'Custom', 
+        'styleGuide': 'Custom',
+        'type': 'Beer',
       },
 
       // Fermentables (Malts)
-      "fermentables": recipe.zutaten.malts.map((m) {
+      'fermentables': recipe.zutaten.malts.map((m) {
         return {
-          "name": m.name,
-          "amount": m.amountKg,
-          "unit": "kg",
-          "type": "Grain", // Generic
-          "percentage": (m.amountKg / totalGrainKg) * 100,
-          "_id": "generate_${DateTime.now().microsecondsSinceEpoch}_${m.name.hashCode}", // Pseudo Unique ID
+          'name': m.name,
+          'amount': m.amountKg,
+          'unit': 'kg',
+          'type': 'Grain',
+          'percentage': (m.amountKg / totalGrainKg) * 100,
+          '_id': 'generate_${DateTime.now().microsecondsSinceEpoch}_${m.name.hashCode}',
         };
       }).toList(),
 
       // Hops
-      "hops": recipe.zutaten.hops.map((h) {
+      'hops': recipe.zutaten.hops.map((h) {
         return {
-          "name": h.name,
-          "amount": h.amountG,
-          "unit": "g",
-          "alpha": h.alpha,
-          "use": _mapHopUse(h.use),
-          "time": h.timeMin,
-          "type": "Pellet", // Default assumption
-          "_id": "generate_${DateTime.now().microsecondsSinceEpoch}_${h.name.hashCode}",
+          'name': h.name,
+          'amount': h.amountG,
+          'unit': 'g',
+          'alpha': h.alpha,
+          'use': _mapHopUse(h.use),
+          'time': h.timeMin,
+          'type': 'Pellet',
+          '_id': 'generate_${DateTime.now().microsecondsSinceEpoch}_${h.name.hashCode}',
         };
       }).toList(),
 
       // Yeasts
-      "yeasts": [
+      'yeasts': [
         {
-          "name": recipe.zutaten.yeast.name,
-          "amount": 1, // Defaulting to 1 unit/package as AI text is string
-          "unit": "pkg",
-          "type": _mapYeastType(recipe.zutaten.yeast.type),
-           "_id": "generate_${DateTime.now().microsecondsSinceEpoch}_yeast",
+          'name': recipe.zutaten.yeast.name,
+          'amount': 1,
+          'unit': 'pkg',
+          'type': _mapYeastType(recipe.zutaten.yeast.type),
+           '_id': 'generate_${DateTime.now().microsecondsSinceEpoch}_yeast',
         }
       ],
 
       // Mash Steps
-      "mash": {
-        "name": "AI Generated Mash Profile",
-        "steps": recipe.prozessdaten.mash.steps.map((s) {
+      'mash': {
+        'name': 'AI Generated Mash Profile',
+        'steps': recipe.prozessdaten.mash.steps.map((s) {
            return {
-             "name": s.stage,
-             "stepTemp": s.temp,
-             "stepTime": s.duration,
-             "type": "Temperature",
+             'name': s.stage,
+             'stepTemp': s.temp,
+             'stepTime': s.duration,
+             'type': 'Temperature',
            };
         }).toList(),
       },
 
       // Fermentation
-      "fermentation": {
-        "name": "AI Generated Fermentation Profile",
-        "steps": recipe.prozessdaten.fermentation.steps.map((s) {
+      'fermentation': {
+        'name': 'AI Generated Fermentation Profile',
+        'steps': recipe.prozessdaten.fermentation.steps.map((s) {
           return {
-            "name": s.phase,
-            "temp": s.temp,
-            "time": s.days,
-            "type": "Ale", // Brewfather uses generic types often, but custom steps work too
+            'name': s.phase,
+            'temp': s.temp,
+            'time': s.days,
+            'type': 'Ale',
           };
         }).toList(),
       },
 
       // Water Target Profile
-      "water": {
-         "target": {
-            "name": "AI Target Profile",
-            "ca": recipe.zutaten.water.ca,
-            "mg": recipe.zutaten.water.mg,
-            "na": recipe.zutaten.water.na,
-            "cl": recipe.zutaten.water.cl,
-            "so4": recipe.zutaten.water.so4,
-            "hco3": recipe.zutaten.water.hco3,
-         }
+      'water': {
+        'target': {
+          'name': 'AI Target Profile',
+          'ca': recipe.zutaten.water.ca,
+          'mg': recipe.zutaten.water.mg,
+          'na': recipe.zutaten.water.na,
+          'cl': recipe.zutaten.water.cl,
+          'so4': recipe.zutaten.water.so4,
+          'hco3': recipe.zutaten.water.hco3,
+        }
       },
 
+      // Image Fields
+      'thumb': recipe.generatedImage != null
+          ? 'data:image/jpeg;base64,${recipe.generatedImage}'
+          : null,
+      'image': recipe.generatedImage != null
+          ? 'data:image/jpeg;base64,${recipe.generatedImage}'
+          : null,
+      'img': recipe.generatedImage != null
+          ? 'data:image/jpeg;base64,${recipe.generatedImage}'
+          : null,
+
       // Metadata
-      "_timestamp": DateTime.now().toIso8601String(),
+      '_timestamp': DateTime.now().toIso8601String(),
+      '_timestamp_ms': DateTime.now().millisecondsSinceEpoch,
     };
   }
 
   static String _buildNotes(AiRecipe recipe) {
     final buffer = StringBuffer();
-    buffer.writeln("Generiertes Rezept für: ${recipe.bierTyp}");
-    buffer.writeln("Stammwürze: ${recipe.stammwuerzeSg} SG");
-    buffer.writeln("Alkohol: ${recipe.alkoholgehalt} %");
+    buffer.writeln('Generiertes Rezept für: ${recipe.bierTyp}');
+    buffer.writeln('Stammwürze: ${recipe.stammwuerzeSg} SG');
+    buffer.writeln('Alkohol: ${recipe.alkoholgehalt} %');
     buffer.writeln();
-    buffer.writeln("Notizen:");
+    buffer.writeln('Notizen:');
     for (var n in recipe.notizen) {
-      buffer.writeln("- $n");
+      buffer.writeln('- $n');
     }
     return buffer.toString();
   }
 
   static String _mapHopUse(String use) {
     final u = use.toLowerCase();
-    if (u.contains("kochen") || u.contains("boil") || u.contains("würze")) return "Boil";
-    if (u.contains("whirlpool")) return "Aroma";
-    if (u.contains("stopfen") || u.contains("dry")) return "Dry Hop";
-    if (u.contains("vorderwürze") || u.contains("first")) return "First Wort";
-    if (u.contains("maische") || u.contains("mash")) return "Mash";
-    return "Boil"; // Default
+    if (u.contains('kochen') || u.contains('boil') || u.contains('würze')) return 'Boil';
+    if (u.contains('whirlpool')) return 'Aroma';
+    if (u.contains('stopfen') || u.contains('dry')) return 'Dry Hop';
+    if (u.contains('vorderwürze') || u.contains('first')) return 'First Wort';
+    if (u.contains('maische') || u.contains('mash')) return 'Mash';
+    return 'Boil'; // Default
   }
 
   static String _mapYeastType(String type) {
     final t = type.toLowerCase();
-    if (t.contains("lager") || t.contains("unter")) return "Lager";
-    if (t.contains("ale") || t.contains("ober")) return "Ale";
-    if (t.contains("hefe") || t.contains("weizen")) return "Wheat";
-    return "Ale"; // Default
+    if (t.contains('lager') || t.contains('unter')) return 'Lager';
+    if (t.contains('ale') || t.contains('ober')) return 'Ale';
+    if (t.contains('hefe') || t.contains('weizen')) return 'Wheat';
+    return 'Ale'; // Default
   }
 }

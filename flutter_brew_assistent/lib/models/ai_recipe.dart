@@ -27,6 +27,34 @@ class AiRecipe {
     this.generatedImage,
   });
 
+  AiRecipe copyWith({
+    String? id,
+    String? basisBier,
+    String? bierTyp,
+    double? stammwuerzeSg,
+    double? restextraktSg,
+    double? alkoholgehalt,
+    Ingredients? zutaten,
+    ProcessData? prozessdaten,
+    List<String>? notizen,
+    ImageAttachment? sourceImage,
+    String? generatedImage,
+  }) {
+    return AiRecipe(
+      id: id ?? this.id,
+      basisBier: basisBier ?? this.basisBier,
+      bierTyp: bierTyp ?? this.bierTyp,
+      stammwuerzeSg: stammwuerzeSg ?? this.stammwuerzeSg,
+      restextraktSg: restextraktSg ?? this.restextraktSg,
+      alkoholgehalt: alkoholgehalt ?? this.alkoholgehalt,
+      zutaten: zutaten ?? this.zutaten,
+      prozessdaten: prozessdaten ?? this.prozessdaten,
+      notizen: notizen ?? this.notizen,
+      sourceImage: sourceImage ?? this.sourceImage,
+      generatedImage: generatedImage ?? this.generatedImage,
+    );
+  }
+
   factory AiRecipe.fromJson(Map<String, dynamic> json) {
     return AiRecipe(
       id: json['id'] as String?,
