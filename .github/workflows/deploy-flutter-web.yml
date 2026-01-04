@@ -21,6 +21,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Check for DB Script Changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            db:
+              - 'db_scripts/**'
+              - 'flutter_brew_assistent/db_scripts/**'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -100,8 +109,8 @@ jobs:
             sudo mv /tmp/vhost_nginx.conf /var/www/vhosts/system/alexstuder.ch/conf/vhost_nginx.conf
             sudo nginx -t && sudo systemctl reload nginx
 
-      - name: Run DB Init and Seed (Manual Only)
-        if: github.event.inputs.update_db == 'true'
+      - name: Run DB Init and Seed (Manual or Auto-Detected)
+        if: github.event.inputs.update_db == 'true' || steps.changes.outputs.db == 'true'
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
