@@ -109,20 +109,17 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            # DEBUGGING MODE
-            echo "--- Debugging User Info ---"
-            id
-            cat /etc/passwd | grep postgres || echo "User postgres not found in /etc/passwd"
+            # Use correct Docker Container Name found via Debugging: supabase_db_supabase-instance
+            CONTAINER_NAME="supabase_db_supabase-instance"
             
-            echo "--- Debugging Docker Info ---"
-            docker ps || echo "Docker not accessible or not running"
+            # Fetch DB Password from Container Env
+            DB_PASS=$(docker exec $CONTAINER_NAME printenv POSTGRES_PASSWORD)
             
-            echo "--- Debugging PostgreSQL Process ---"
-            ps aux | grep postgres || echo "No postgres process running"
-            
-            # Commenting out actual execution until we know the environment
-            # sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
-            # sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
+            # Running Init Schema
+            docker exec -e PGPASSWORD=$DB_PASS -i $CONTAINER_NAME psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+
+            # Running Seed
+            docker exec -e PGPASSWORD=$DB_PASS -i $CONTAINER_NAME psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
 
 
       - name: Deploy proxy to VPS
