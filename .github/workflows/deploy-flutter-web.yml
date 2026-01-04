@@ -109,13 +109,20 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            # Using native local PostgreSQL (via sudo -u postgres)
+            # DEBUGGING MODE
+            echo "--- Debugging User Info ---"
+            id
+            cat /etc/passwd | grep postgres || echo "User postgres not found in /etc/passwd"
             
-            # Running Init Schema
-            sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
-
-            # Running Seed
-            sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
+            echo "--- Debugging Docker Info ---"
+            docker ps || echo "Docker not accessible or not running"
+            
+            echo "--- Debugging PostgreSQL Process ---"
+            ps aux | grep postgres || echo "No postgres process running"
+            
+            # Commenting out actual execution until we know the environment
+            # sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/001_init_schema.sql
+            # sudo -u postgres psql -d postgres -f ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
 
 
       - name: Deploy proxy to VPS
