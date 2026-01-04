@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/ai_recipe.dart';
 import '../services/openai_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'json_export_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
@@ -404,8 +405,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
               label: 'In Brewfather.json transformieren',
               icon: Icons.code,
               onPressed: _isGenerating ? null : () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('In Brewfather.json transformieren...')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => JsonExportPage(recipe: widget.recipe)),
                 );
               },
             ),
