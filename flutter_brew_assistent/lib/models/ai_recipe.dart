@@ -1,6 +1,7 @@
 import 'image_attachment.dart';
 
 class AiRecipe {
+  final int? id;
   final String basisBier;
   final String bierTyp;
   final double? stammwuerzeSg;
@@ -13,6 +14,7 @@ class AiRecipe {
   ImageAttachment? sourceImage;
 
   AiRecipe({
+    this.id,
     required this.basisBier,
     required this.bierTyp,
     this.stammwuerzeSg,
@@ -27,6 +29,7 @@ class AiRecipe {
 
   factory AiRecipe.fromJson(Map<String, dynamic> json) {
     return AiRecipe(
+      id: json['id'] as int?,
       basisBier: json['basis_bier'] ?? '',
       bierTyp: json['bier_typ'] ?? '',
       stammwuerzeSg: (json['stammwuerze_sg'] as num?)?.toDouble(),

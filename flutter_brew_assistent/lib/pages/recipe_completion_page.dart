@@ -124,8 +124,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       }
     }
 
-    // 1. Insert Main Recipe with all lists as JSONB
-    await client.from('ai_generated_recipes_v2').insert({
+    // 1. Prepare/Upsert Main Recipe
+    final Map<String, dynamic> data = {
       'user_profile_id': userId,
       'basis_bier': r.basisBier,
       'bier_typ': r.bierTyp,
@@ -210,7 +210,13 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
         'pressure_note': s.pressureReason,
         'note': s.note,
       }).toList(),
-    });
+    };
+
+    if (widget.recipe.id != null) {
+      data['id'] = widget.recipe.id;
+    }
+
+    await client.from('ai_generated_recipes_v2').upsert(data);
 
 
   }

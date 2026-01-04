@@ -177,6 +177,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                      }).toList();
 
                      final recipeMap = {
+                       'id': r['id'],
                        'basis_bier': r['basis_bier'],
                        'bier_typ': r['bier_typ'],
                        'stammwuerze_sg': r['stammwuerze_sg'],
