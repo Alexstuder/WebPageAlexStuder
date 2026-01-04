@@ -820,3 +820,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "aibrewgenius" GRANT SELE
 
 -- Enable Realtime for ai_generated_recipes_v2
 ALTER PUBLICATION supabase_realtime ADD TABLE aibrewgenius.ai_generated_recipes_v2;
+ALTER PUBLICATION supabase_realtime ADD TABLE aibrewgenius.batches;
+ALTER PUBLICATION supabase_realtime ADD TABLE aibrewgenius.recipes;
+ALTER PUBLICATION supabase_realtime ADD TABLE aibrewgenius.fermenter_controllers;
