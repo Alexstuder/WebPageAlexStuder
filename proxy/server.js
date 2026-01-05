@@ -204,7 +204,7 @@ async function handleChatRequest(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -285,7 +285,7 @@ async function handleGenerateImageRequest(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: userContent }],
         temperature: 0.7,
       }),
@@ -311,7 +311,7 @@ async function handleGenerateImageRequest(req, res) {
         prompt: refinedPrompt,
         n: 1,
         size: '1024x1024',
-        quality: 'hd',
+        quality: 'standard',
       }),
     });
 
@@ -391,37 +391,26 @@ async function handleBrewRequest(req, res) {
       return;
     }
 
-    const userContent = [
-      {
-        type: 'input_text',
-        text: prompt,
-      },
-    ];
-
+    const userContent = [{ type: 'text', text: prompt }];
     if (imageBase64 && imageMime) {
       userContent.push({
-        type: 'input_image',
-        image_url: `data:${imageMime};base64,${imageBase64}`,
+        type: 'image_url',
+        image_url: { url: `data:${imageMime};base64,${imageBase64}` },
       });
     }
 
-    const openAiResponse = await fetch('https://api.openai.com/v1/responses', {
+    const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-5.1',
-        input: [
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        messages: [
           {
             role: 'system',
-            content: [
-              {
-                type: "input_text", text: "Du bist ein professioneller Brau-Assistent. Befolge strikt die Anweisungen im User-Prompt zur Erstellung detaillierter Bierrezepte inklusive aller Prozessschritte.",
-
-              },
-            ],
+            content: "Du bist ein professioneller Brau-Assistent. Befolge strikt die Anweisungen im User-Prompt zur Erstellung detaillierter Bierrezepte inklusive aller Prozessschritte.",
           },
           {
             role: 'user',
@@ -479,6 +468,12 @@ async function handleShopSearchRequest(req, res) {
 
 function extractResponseText(payload) {
   if (!payload || typeof payload !== 'object') return '';
+
+  // Standard Chat Completions Format
+  if (payload.choices && payload.choices[0] && payload.choices[0].message) {
+    return payload.choices[0].message.content || '';
+  }
+
   const textParts = [];
   const outputs = Array.isArray(payload.output) ? payload.output : [];
   outputs.forEach(item => {

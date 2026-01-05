@@ -1,9 +1,17 @@
 {
   "basis_bier": "Aus Beschreibung abgeleitet",
   "bier_typ": "Aus Beschreibung abgeleitet",
+  "bjcp_stil": {
+    "name": "z.B. Märzen",
+    "kategorie": "z.B. Amber Malty European Lager",
+    "kategorie_nummer": "z.B. 6",
+    "stil_buchstabe": "z.B. A",
+    "guide": "BJCP 2021"
+  },
   "stammwuerze_sg": 1.050,
   "restextrakt_sg": 1.010,
   "alkoholgehalt_vol_prozent": 5.0,
+  "ibu": 30,
   "Zutaten": {
     "Original_Malz": [
       {

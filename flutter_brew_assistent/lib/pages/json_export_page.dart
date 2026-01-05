@@ -11,8 +11,14 @@ import '../services/brewfather_transformer_service.dart';
 class JsonExportPage extends StatefulWidget {
   final AiRecipe recipe;
   final String? author;
+  final bool? isPressureOverride;
 
-  const JsonExportPage({super.key, required this.recipe, this.author});
+  const JsonExportPage({
+    super.key,
+    required this.recipe,
+    this.author,
+    this.isPressureOverride,
+  });
 
   @override
   State<JsonExportPage> createState() => _JsonExportPageState();
@@ -25,7 +31,11 @@ class _JsonExportPageState extends State<JsonExportPage> {
   @override
   void initState() {
     super.initState();
-    final map = BrewfatherTransformerService.transform(widget.recipe, author: widget.author);
+    final map = BrewfatherTransformerService.transform(
+      widget.recipe,
+      author: widget.author,
+      isPressure: widget.isPressureOverride,
+    );
     _jsonString = const JsonEncoder.withIndent('  ').convert(map);
     
     // Generate filename: Brewfather_RECIPE_Name_Date.json

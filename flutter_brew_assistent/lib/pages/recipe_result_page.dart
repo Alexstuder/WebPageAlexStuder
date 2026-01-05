@@ -280,6 +280,7 @@ class _OverviewTabState extends State<_OverviewTab> {
             _statItem('Stammwürze', '${widget.recipe.stammwuerzeSg?.toStringAsFixed(3) ?? "-"} SG'),
             _statItem('Restextrakt', '${widget.recipe.restextraktSg?.toStringAsFixed(3) ?? "-"} SG'),
             _statItem('ABV', '${widget.recipe.alkoholgehalt?.toStringAsFixed(1) ?? "-"} %'),
+            _statItem('IBU/EBU', widget.recipe.ibu?.toStringAsFixed(0) ?? '-'),
           ],
         ),
       ),

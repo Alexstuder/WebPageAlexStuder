@@ -4,9 +4,11 @@ class AiRecipe {
   final String? id;
   final String basisBier;
   final String bierTyp;
+  final BjcpStyle? bjcpStyle;
   final double? stammwuerzeSg;
   final double? restextraktSg;
   final double? alkoholgehalt;
+  final double? ibu;
   final Ingredients zutaten;
   final ProcessData prozessdaten;
   final List<String> notizen;
@@ -17,9 +19,11 @@ class AiRecipe {
     this.id,
     required this.basisBier,
     required this.bierTyp,
+    this.bjcpStyle,
     this.stammwuerzeSg,
     this.restextraktSg,
     this.alkoholgehalt,
+    this.ibu,
     required this.zutaten,
     required this.prozessdaten,
     required this.notizen,
@@ -31,9 +35,11 @@ class AiRecipe {
     String? id,
     String? basisBier,
     String? bierTyp,
+    BjcpStyle? bjcpStyle,
     double? stammwuerzeSg,
     double? restextraktSg,
     double? alkoholgehalt,
+    double? ibu,
     Ingredients? zutaten,
     ProcessData? prozessdaten,
     List<String>? notizen,
@@ -44,9 +50,11 @@ class AiRecipe {
       id: id ?? this.id,
       basisBier: basisBier ?? this.basisBier,
       bierTyp: bierTyp ?? this.bierTyp,
+      bjcpStyle: bjcpStyle ?? this.bjcpStyle,
       stammwuerzeSg: stammwuerzeSg ?? this.stammwuerzeSg,
       restextraktSg: restextraktSg ?? this.restextraktSg,
       alkoholgehalt: alkoholgehalt ?? this.alkoholgehalt,
+      ibu: ibu ?? this.ibu,
       zutaten: zutaten ?? this.zutaten,
       prozessdaten: prozessdaten ?? this.prozessdaten,
       notizen: notizen ?? this.notizen,
@@ -60,9 +68,11 @@ class AiRecipe {
       id: json['id'] as String?,
       basisBier: json['basis_bier'] ?? '',
       bierTyp: json['bier_typ'] ?? '',
+      bjcpStyle: json['bjcp_stil'] != null ? BjcpStyle.fromJson(json['bjcp_stil']) : null,
       stammwuerzeSg: (json['stammwuerze_sg'] as num?)?.toDouble(),
       restextraktSg: (json['restextrakt_sg'] as num?)?.toDouble(),
       alkoholgehalt: (json['alkoholgehalt_vol_prozent'] as num?)?.toDouble(),
+      ibu: (json['ibu'] as num?)?.toDouble() ?? (json['EBU'] as num?)?.toDouble(),
       zutaten: Ingredients.fromJson(json['Zutaten'] ?? {}),
       prozessdaten: ProcessData.fromJson(json['Prozessdaten'] ?? {}),
       notizen: (json['Notizen'] as List?)?.map((e) => e.toString()).toList() ?? [],
@@ -74,16 +84,54 @@ class AiRecipe {
     return {
       'basis_bier': basisBier,
       'bier_typ': bierTyp,
+      'bjcp_stil': bjcpStyle?.toJson(),
       'stammwuerze_sg': stammwuerzeSg,
       'restextrakt_sg': restextraktSg,
       'alkoholgehalt_vol_prozent': alkoholgehalt,
+      'ibu': ibu,
       'Zutaten': zutaten.toJson(),
       'Prozessdaten': prozessdaten.toJson(),
       'Notizen': notizen,
-      // Source image is typically not part of the recipe JSON structure for AI but kept here for app logic
     };
   }
 }
+
+class BjcpStyle {
+  final String name;
+  final String category;
+  final String categoryNumber;
+  final String styleLetter;
+  final String guide;
+
+  BjcpStyle({
+    required this.name,
+    required this.category,
+    required this.categoryNumber,
+    required this.styleLetter,
+    required this.guide,
+  });
+
+  factory BjcpStyle.fromJson(Map<String, dynamic> json) {
+    return BjcpStyle(
+      name: json['name'] ?? '',
+      category: json['kategorie'] ?? '',
+      categoryNumber: json['kategorie_nummer'] ?? '',
+      styleLetter: json['stil_buchstabe'] ?? '',
+      guide: json['guide'] ?? 'BJCP 2021',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'kategorie': category,
+      'kategorie_nummer': categoryNumber,
+      'stil_buchstabe': styleLetter,
+      'guide': guide,
+    };
+  }
+}
+
 
 class Ingredients {
   final List<Malt> malts;
@@ -258,9 +306,9 @@ class SpecialIngredient {
   factory SpecialIngredient.fromJson(Map<String, dynamic> json) {
     return SpecialIngredient(
       name: json['Name'] ?? '',
-      amount: json['Menge'] ?? '',
-      unit: json['Einheit'] ?? '',
-      detail: json['Anwendung_Detail'] ?? '',
+      amount: json['Menge_g']?.toString() ?? json['Menge']?.toString() ?? '',
+      unit: json['Einheit'] ?? 'g',
+      detail: json['Einsatzphase'] ?? json['Anwendung_Detail'] ?? '',
     );
   }
 
@@ -295,9 +343,9 @@ class FiningAgentRef {
     return FiningAgentRef(
       name: json['Name'] ?? '',
       amount: json['Menge'] ?? '',
-      phase: json['Phase'] ?? '',
+      phase: json['Phase'] ?? json['Phase / Schritt'] ?? '',
       purpose: json['Zweck'] ?? '',
-      applicationDetail: json['Anwendung_Detail'] ?? '',
+      applicationDetail: json['Hinweis'] ?? json['Anwendung_Detail'] ?? '',
       procurementNeeded: json['Beschaffung_Notwendig'] ?? false,
     );
   }
@@ -332,10 +380,10 @@ class ProcessData {
   factory ProcessData.fromJson(Map<String, dynamic> json) {
     return ProcessData(
       mash: MashPlan.fromJson(json['Maischeplan'] ?? {}),
-      lauter: LauterPlan.fromJson(json['Laeuterungsplan'] ?? {}),
-      boil: BoilPlan.fromJson(json['Kochplan'] ?? {}),
-      fermentation: FermentationPlan.fromJson(json['Gaerungsplan'] ?? {}),
-      packaging: PackagingPlan.fromJson(json['Abfuell_und_Lagerungsplan'] ?? {}),
+      lauter: LauterPlan.fromJson(json['Laeuterungsplan'] ?? json['Laeutern'] ?? {}),
+      boil: BoilPlan.fromJson(json['Kochplan'] ?? json['Kochzeit_und_Kochphasen'] ?? {}),
+      fermentation: FermentationPlan.fromJson(json['Gaerplan'] ?? json['Gaerungsplan'] ?? {}),
+      packaging: PackagingPlan.fromJson(json['Abfuell_und_Lagerungsplan'] ?? json),
     );
   }
 
@@ -358,10 +406,13 @@ class MashPlan {
   MashPlan({required this.mashWaterL, required this.mashInTemp, required this.steps});
 
   factory MashPlan.fromJson(Map<String, dynamic> json) {
+    // If the value passed is actually a list (common if the AI structure is flat), use it
+    final stepsList = json['Rasten'] ?? json['Maischeplan'] ?? (json is List ? json : []);
+    
     return MashPlan(
       mashWaterL: (json['Hauptguss_L'] as num?)?.toDouble() ?? 0.0,
       mashInTemp: (json['Einmaischtemperatur_C'] as num?)?.toDouble() ?? 0.0,
-      steps: (json['Rasten'] as List?)?.map((e) => MashStep.fromJson(e)).toList() ?? [],
+      steps: (stepsList as List?)?.map((e) => MashStep.fromJson(e)).toList() ?? [],
     );
   }
 
@@ -383,7 +434,7 @@ class MashStep {
 
   factory MashStep.fromJson(Map<String, dynamic> json) {
     return MashStep(
-      stage: json['Stufe'] ?? '',
+      stage: json['Phase'] ?? json['Stufe'] ?? json['Name'] ?? '',
       temp: (json['Temperatur_C'] as num?)?.toDouble() ?? 0.0,
       duration: (json['Dauer_min'] as num?)?.toInt() ?? 0,
     );
@@ -427,8 +478,10 @@ class BoilPlan {
 
   factory BoilPlan.fromJson(Map<String, dynamic> json) {
     return BoilPlan(
-      preBoilVolumeL: (json['Pfannevoll_Tatsaechlich_L'] as num?)?.toDouble() ?? 0.0,
-      duration: (json['Gesamte_Kochdauer_min'] as num?)?.toInt() ?? 0,
+      preBoilVolumeL: (json['Pfannevoll_Tatsaechlich_L'] as num?)?.toDouble() ?? 
+                       (json['Vorderwuerze_L'] as num?)?.toDouble() ?? 0.0,
+      duration: (json['Gesamte_Kochdauer_min'] as num?)?.toInt() ?? 
+                (json['Kochzeit_min'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -447,9 +500,12 @@ class FermentationPlan {
   FermentationPlan({required this.pitchTemp, required this.steps});
 
   factory FermentationPlan.fromJson(Map<String, dynamic> json) {
+    // Treat the list directly if it's passed as a list, or look for common keys
+    final stepsList = json['Gaerphase'] ?? json['Gaerverlauf'] ?? json['Gaerungsverlauf'] ?? [];
     return FermentationPlan(
-      pitchTemp: (json['Hefe_Anstelltemperatur_C'] as num?)?.toDouble() ?? 0.0,
-      steps: (json['Gaerverlauf'] as List?)?.map((e) => FermentationStep.fromJson(e)).toList() ?? [],
+      pitchTemp: (json['Hefe_Anstelltemperatur_C'] as num?)?.toDouble() ?? 
+                 (json['Anstelltemperatur_C'] as num?)?.toDouble() ?? 0.0,
+      steps: (stepsList as List?)?.map((e) => FermentationStep.fromJson(e)).toList() ?? [],
     );
   }
 
@@ -480,12 +536,14 @@ class FermentationStep {
 
   factory FermentationStep.fromJson(Map<String, dynamic> json) {
     return FermentationStep(
-      phase: json['Phase'] ?? '',
+      phase: json['Name'] ?? json['Phase'] ?? json['Stufe'] ?? '',
       temp: (json['Temperatur_C'] as num?)?.toDouble() ?? 0.0,
-      days: (json['Dauer_Tage'] as num?)?.toInt() ?? 0,
-      pressure: (json['Druck_bar'] as num?)?.toDouble() ?? 0.0,
+      days: (json['Dauer_Tage'] as num?)?.toInt() ?? 
+            (json['Zeit_Tage'] as num?)?.toInt() ?? 0,
+      pressure: (json['Druck_bar'] as num?)?.toDouble() ?? 
+                (json['CO2_Druck_bar'] as num?)?.toDouble() ?? 0.0,
       pressureReason: json['Druck_Begruendung'] ?? '',
-      note: json['Hinweis'] ?? '',
+      note: json['Hinweis'] ?? json['Notiz'] ?? '',
     );
   }
 
@@ -529,18 +587,30 @@ class PackagingPlan {
   });
 
   factory PackagingPlan.fromJson(Map<String, dynamic> json) {
+    // Merge potential sub-objects from the prompt structure
+    final keg = json['Abfuellung_ins_Keg'] ?? {};
+    final bottle = json['Abfuellung_in_Flaschen'] ?? {};
+    
     return PackagingPlan(
-      type: json['Abfuellung_Typ'] ?? '',
-      co2Target: (json['Karbonisierung_Ziel_CO2_g_L'] as num?)?.toDouble() ?? 0.0,
-      kegPressure: (json['Keg_Druck_bar'] as num?)?.toDouble() ?? 0.0,
-      kegTemp: (json['Keg_Karbonisierung_Temp_C'] as num?)?.toDouble() ?? 0.0,
-      bottleSugar: (json['Flaschen_Zucker_g_pro_L'] as num?)?.toDouble() ?? 0.0,
-      bottleTemp: (json['Flaschen_Karbonisierung_Temp_C'] as num?)?.toDouble() ?? 0.0,
-      storageTemp: (json['Lagerung_Temperatur_C'] as num?)?.toDouble() ?? 0.0,
-      storageDurationWeeks: (json['Lagerung_Dauer_Wochen'] as num?)?.toInt() ?? 0,
-      maturationNote: json['Reifungshinweis'] ?? '',
+      type: json['Abfuellung_Typ'] ?? json['type'] ?? '',
+      co2Target: (json['Karbonisierung_Ziel_CO2_g_L'] as num?)?.toDouble() ?? 
+                 (keg['CO2_Druck_bar'] as num?)?.toDouble() ?? 0.0,
+      kegPressure: (keg['CO2_Druck_bar'] as num?)?.toDouble() ?? 
+                   (json['Keg_Druck_bar'] as num?)?.toDouble() ?? 0.0,
+      kegTemp: (keg['Temperatur_C'] as num?)?.toDouble() ?? 
+               (json['Keg_Karbonisierung_Temp_C'] as num?)?.toDouble() ?? 0.0,
+      bottleSugar: (bottle['Zucker_pro_Flasche_g'] as num?)?.toDouble() ?? 
+                   (json['Flaschen_Zucker_g_pro_L'] as num?)?.toDouble() ?? 0.0,
+      bottleTemp: (bottle['Karbonisierung_Temperatur_C'] as num?)?.toDouble() ?? 
+                  (json['Flaschen_Karbonisierung_Temp_C'] as num?)?.toDouble() ?? 0.0,
+      storageTemp: (bottle['Lager_Temperatur_C'] as num?)?.toDouble() ?? 
+                   (json['Lagerung_Temperatur_C'] as num?)?.toDouble() ?? 0.0,
+      storageDurationWeeks: (keg['Dauer_Tage'] as num?)?.toInt() ?? 
+                             (json['Lagerung_Dauer_Wochen'] as num?)?.toInt() ?? 0,
+      maturationNote: bottle['Hinweis'] ?? json['Reifungshinweis'] ?? '',
       servingGasRecommendation: json['Empfohlenes_Ausschankgas'] ?? '',
-      carbonationDurationDays: (json['Karbonisierungsdauer_Tage'] as num?)?.toInt() ?? 0,
+      carbonationDurationDays: (keg['Dauer_Tage'] as num?)?.toInt() ?? 
+                               (json['Karbonisierungsdauer_Tage'] as num?)?.toInt() ?? 0,
     );
   }
 

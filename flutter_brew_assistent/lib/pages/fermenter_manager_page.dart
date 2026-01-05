@@ -151,7 +151,8 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool hasHeating = editing?.hasHeating ?? false;
     bool hasCooling = editing?.hasCooling ?? false;
-    bool hasDryHopPort = editing?.hasDryHoppingPort ?? false;
+     bool hasDryHopPort = editing?.hasDryHoppingPort ?? false;
+    bool canPressurize = editing?.canPressurize ?? false;
     bool isDefault = editing?.isDefault ?? false;
     String? brandError;
 
@@ -245,6 +246,14 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                       setState(() => hasDryHopPort = value ?? false),
                 ),
                 CheckboxListTile(
+                  value: canPressurize,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Druckvergärung möglich'),
+                  onChanged: (value) =>
+                      setState(() => canPressurize = value ?? false),
+                ),
+                CheckboxListTile(
                   value: isDefault,
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
@@ -287,6 +296,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       hasHeating: hasHeating,
       hasCooling: hasCooling,
       hasDryHoppingPort: hasDryHopPort,
+      canPressurize: canPressurize,
       isDefault: isDefault,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );

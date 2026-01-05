@@ -24,6 +24,9 @@ Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagw�
 ### 4. REZEPT-STANDARDS
 - **Einheiten:** Malz in kg, Hopfen in g. **WICHTIG:** Verwende für Extrakt, Stammwürze oder Zuckergehalt AUSSCHLIESSLICH Specific Gravity (SG, z.B. 1.050). Die Einheit Plato (°P) ist STRENGSTENS UNTERSAGT, auch in Notizen, Prozessbeschreibungen oder Textfeldern.
 - **Zutaten:** Wähle Mengen, um die Stil-Vorgaben präzise zu treffen.
+- **Bierstil & Parameter:** 
+  - Identifiziere zwingend den am besten passenden BJCP 2021 Bierstil basierend auf dem Rezept und trage die Details in das Feld `bjcp_stil` ein.
+  - Berechne die voraussichtliche Bittere des Bieres und trage diese im Feld `ibu` (International Bitterness Units) ein.
 - **Hefe:**
   - Folgende Hefestämme stehen dem User aktuell zur Verfügung:
   """

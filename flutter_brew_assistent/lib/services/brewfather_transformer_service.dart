@@ -3,7 +3,7 @@ import '../models/ai_recipe.dart';
 
 class BrewfatherTransformerService {
   
-  static Map<String, dynamic> transform(AiRecipe recipe, {String? author}) {
+  static Map<String, dynamic> transform(AiRecipe recipe, {String? author, bool? isPressure}) {
     // Basic defaults
     const double batchSizeVal = 20.0; // Standard falls nicht anders definiert
     const double efficiencyVal = 72.0; 
@@ -11,6 +11,9 @@ class BrewfatherTransformerService {
     // Calculate total Grain Amount for percentage calculation (approximate)
     double totalGrainKg = recipe.zutaten.malts.fold(0.0, (sum, m) => sum + m.amountKg);
     if (totalGrainKg == 0) totalGrainKg = 1.0; // Prevent div by zero
+
+    // Fermentation logic
+    final bool fermentationIsPressure = isPressure ?? recipe.prozessdaten.fermentation.steps.any((s) => s.pressure > 0);
 
     return {
       '_versionNumber': 1,
@@ -28,6 +31,21 @@ class BrewfatherTransformerService {
       'efficiency': efficiencyVal,
       'mashEfficiency': efficiencyVal,
       'brewhouseEfficiency': efficiencyVal,
+      'og': recipe.stammwuerzeSg,
+      'fg': recipe.restextraktSg,
+      'ibu': recipe.ibu,
+      'estOg': recipe.stammwuerzeSg,
+      'estFg': recipe.restextraktSg,
+      'estIbu': recipe.ibu,
+      'preBoilGravity': recipe.stammwuerzeSg, // Use OG as a safe fallback if pre-boil is not explicitly provided
+      'postBoilGravity': recipe.stammwuerzeSg,
+      'abv': recipe.alkoholgehalt,
+      'attenuation': (recipe.stammwuerzeSg != null && recipe.restextraktSg != null && recipe.stammwuerzeSg! > 1.0) 
+          ? ((recipe.stammwuerzeSg! - recipe.restextraktSg!) / (recipe.stammwuerzeSg! - 1.0) * 100).roundToDouble()
+          : 0.0,
+      'boilSize': recipe.prozessdaten.boil.preBoilVolumeL > 0 
+          ? recipe.prozessdaten.boil.preBoilVolumeL 
+          : batchSizeVal + 3.0, // Fallback boil size
       'equipment': {
         'name': 'AI Generated Profile',
         'efficiency': efficiencyVal / 100, // 0.72
@@ -44,9 +62,11 @@ class BrewfatherTransformerService {
       
       // Style
       'style': {
-        'name': recipe.bierTyp,
-        'category': 'Custom', 
-        'styleGuide': 'Custom',
+        'name': recipe.bjcpStyle?.name ?? recipe.bierTyp,
+        'category': recipe.bjcpStyle?.category ?? 'Custom',
+        'categoryNumber': recipe.bjcpStyle?.categoryNumber,
+        'styleLetter': recipe.bjcpStyle?.styleLetter,
+        'styleGuide': recipe.bjcpStyle?.guide ?? 'Custom',
         'type': 'Beer',
       },
 
@@ -72,6 +92,7 @@ class BrewfatherTransformerService {
           'use': _mapHopUse(h.use),
           'time': h.timeMin,
           'type': 'Pellet',
+          'ibu': recipe.ibu != null ? (recipe.ibu! / recipe.zutaten.hops.length) : 0,
           '_id': 'generate_${DateTime.now().microsecondsSinceEpoch}_${h.name.hashCode}',
         };
       }).toList(),
@@ -103,15 +124,36 @@ class BrewfatherTransformerService {
       // Fermentation
       'fermentation': {
         'name': 'AI Generated Fermentation Profile',
-        'steps': recipe.prozessdaten.fermentation.steps.map((s) {
+        'isPressure': fermentationIsPressure,
+        'steps': recipe.prozessdaten.fermentation.steps.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final s = entry.value;
+          final type = _mapFermentationStepType(s.phase);
+          
+          // Fallback: If global isPressure but this step has 0, set 1.0 bar for the first step
+          double? stepPressure = s.pressure > 0 ? s.pressure : null;
+          if (stepPressure == null && fermentationIsPressure && (idx == 0 || type == 'Primary')) {
+             stepPressure = 1.0; 
+          }
+
           return {
             'name': s.phase,
             'temp': s.temp,
+            'stepTemp': s.temp,
+            'displayStepTemp': s.temp,
             'time': s.days,
-            'type': 'Ale',
+            'stepTime': s.days,
+            'type': type,
+            'pressure': stepPressure,
+            'displayPressure': stepPressure,
           };
         }).toList(),
       },
+      'primaryTemp': recipe.prozessdaten.fermentation.pitchTemp > 0 
+          ? recipe.prozessdaten.fermentation.pitchTemp 
+          : (recipe.prozessdaten.fermentation.steps.isNotEmpty 
+              ? recipe.prozessdaten.fermentation.steps.first.temp 
+              : 12.0),
 
       // Water Target Profile
       'water': {
@@ -172,5 +214,17 @@ class BrewfatherTransformerService {
     if (t.contains('ale') || t.contains('ober')) return 'Ale';
     if (t.contains('hefe') || t.contains('weizen')) return 'Wheat';
     return 'Ale'; // Default
+  }
+
+  static String _mapFermentationStepType(String phase) {
+    final p = phase.toLowerCase();
+    if (p.contains('haupt') || p.contains('primär')) return 'Primary';
+    if (p.contains('nach') || p.contains('sekundär')) return 'Secondary';
+    if (p.contains('reif') || p.contains('lagern') || p.contains('aging')) return 'Aging';
+    if (p.contains('cold') || p.contains('crash')) return 'Crash';
+    if (p.contains('karbo') || p.contains('condit') || p.contains('flasche')) return 'Conditioning';
+    if (p.contains('tertiär')) return 'Tertiary';
+    
+    return 'Primary'; // Default
   }
 }

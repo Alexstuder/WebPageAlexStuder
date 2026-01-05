@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 import 'dart:convert';
 import '../services/user_profile_service.dart';
+import '../services/fermenter_service.dart';
 
 class RecipeCompletionPage extends StatefulWidget {
   final AiRecipe recipe;
@@ -143,6 +144,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'packaging_maturation_note': r.prozessdaten.packaging.maturationNote,
       'packaging_serving_gas': r.prozessdaten.packaging.servingGasRecommendation,
       'packaging_carb_days': r.prozessdaten.packaging.carbonationDurationDays,
+      'bjcp_stil': r.bjcpStyle?.toJson(),
+      'ibu': r.ibu,
 
       // Arrays (JSONB)
       'malts': r.zutaten.malts.map((m) => {
@@ -219,9 +222,16 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     await _ensureBase64Image();
     
     String? authorName;
+    bool? isPressure;
     try {
-      final profile = await UserProfileService().fetchDefaultProfile();
+      final userService = UserProfileService();
+      final profile = await userService.fetchDefaultProfile();
       authorName = profile?.name;
+      
+      final fermenterService = FermenterService();
+      final fermenters = await fermenterService.fetchFermenters(UserProfileService.defaultProfileId);
+      final defaultFermenter = fermenters.where((f) => f.isDefault).firstOrNull ?? fermenters.firstOrNull;
+      isPressure = defaultFermenter?.canPressurize;
     } catch (_) {}
 
     setState(() => _isSaving = false);
@@ -237,6 +247,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       MaterialPageRoute(builder: (_) => JsonExportPage(
         recipe: recipeToExport,
         author: authorName,
+        isPressureOverride: isPressure,
       )),
     );
   }
