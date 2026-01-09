@@ -23,7 +23,7 @@ SET row_security = off;
 -- PostgreSQL database dump
 --
 
-\restrict weMkMwLqiJn8jr4HfrFHZCTc7KBzHcIWsmn3cKSOFdglTeMMI6GN30ZL1u7LdYQ
+\restrict nEsjJ0KqW9PbovNNwEmsSNKd8gxs7DumtxLyVUKhVbrZZDDmg1OXZgIJ7zp3DPa
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -201,10 +201,50 @@ ALTER TABLE aibrewgenius.hops ENABLE TRIGGER ALL;
 
 ALTER TABLE aibrewgenius.how_to_topics DISABLE TRIGGER ALL;
 
-INSERT INTO aibrewgenius.how_to_topics VALUES ('5677c77f-1d89-498c-850f-62e92c2f42a6', 'self_hosted_profile', 'Brauprozess Übersicht', 'Hier erfährst du alles über den grundlegenden Brauprozess, vom Einmaischen bis zur Abfüllung.', 0, '2026-01-09 10:00:00+00', '2026-01-09 10:00:00+00');
-INSERT INTO aibrewgenius.how_to_topics VALUES ('6299d22b-2e9a-4c9d-961f-73f03d3f53b7', 'self_hosted_profile', 'Wasseraufbereitung', 'Die Wasseraufbereitung ist entscheidend für den Geschmack deines Bieres. Lerne, wie du dein Wasserprofil optimierst.', 1, '2026-01-09 10:00:00+00', '2026-01-09 10:00:00+00');
-INSERT INTO aibrewgenius.how_to_topics VALUES ('7311e33c-3f0b-5d0e-a72a-84a14e4a64c8', 'self_hosted_profile', 'Hefe Management', 'Tipps und Tricks zum Umgang mit Hefe, Starter-Erstellung und Gärführung.', 2, '2026-01-09 10:00:00+00', '2026-01-09 10:00:00+00');
-INSERT INTO aibrewgenius.how_to_topics VALUES ('8422f44d-4a1c-4e1f-b830-95b25f5a75d9', 'self_hosted_profile', 'Reinigung & Hygiene', 'Hygiene ist das A und O beim Brauen. Hier findest du eine Checkliste für die Reinigung deines Equipments.', 3, '2026-01-09 10:00:00+00', '2026-01-09 10:00:00+00');
+INSERT INTO aibrewgenius.how_to_topics VALUES ('424b9e99-d7d6-419e-9df0-9502714b62ad', 'self_hosted_profile', 'Hefe Starter und Anwendung', '
+Kompaktanleitung – 2× 0,5-L-Gläser → Starter + Dekantieren
+
+
+
+Starterwürze auf Vorrat (pro Glas)
+
+	• 400 ml Wasser
+	• 40 g DME extra hell
+	• 0,15–0,18 g Hefenährsalz
+	• Glas handfest schließen
+
+Sterilisation: Dampfkochtopf 121 °C / 15 min
+Lagerung: geschlossen, dunkel, haltbar (Monate–Jahre)
+
+
+
+Starter ansetzen (Anwendung)
+
+	1. 2 Gläser öffnen, in Erlenmeyer kippen (≈ 800 ml).
+	2. Hefe zugeben (Bankhefe vorher auftauen, Glycerin kurz abgießen).
+	3. Rühren bei 18–20 °C für 36–48 h.
+
+
+
+Dekantieren
+
+	4. 12 h bei ~7 °C kaltstellen.
+	5. 90–95 % Überstand abgießen.
+
+
+
+Pitching
+
+	6. Hefeschlamm auf Anstelltemperatur bringen.
+	7. Pitchen (Würze gut belüften).
+
+
+Merke:
+
+	• 2 Gläser = echter Starter (untere sichere Grenze).
+	• Nährsalz nicht überdosieren.
+	• Dekantieren Pflicht für null Geschmackseintrag.
+', 0, '2026-01-09 13:22:45.951093+00', '2026-01-09 13:23:12.625876+00');
 
 
 ALTER TABLE aibrewgenius.how_to_topics ENABLE TRIGGER ALL;
@@ -303,5 +343,5 @@ ALTER TABLE aibrewgenius.yeast_bank_entries ENABLE TRIGGER ALL;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict weMkMwLqiJn8jr4HfrFHZCTc7KBzHcIWsmn3cKSOFdglTeMMI6GN30ZL1u7LdYQ
+\unrestrict nEsjJ0KqW9PbovNNwEmsSNKd8gxs7DumtxLyVUKhVbrZZDDmg1OXZgIJ7zp3DPa
 
