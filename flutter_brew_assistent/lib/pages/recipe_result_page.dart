@@ -399,7 +399,7 @@ class _ProcessTab extends StatelessWidget {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (step.pressure > 0 || recipe.canPressurize)
+                if (step.pressure > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4, bottom: 2),
                     child: Text(
