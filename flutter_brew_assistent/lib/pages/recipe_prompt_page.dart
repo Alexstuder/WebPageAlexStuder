@@ -315,7 +315,9 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       
       // Parse JSON
       final recipeMap = jsonDecode(recipeJsonString);
-      final recipe = AiRecipe.fromJson(recipeMap);
+      final recipe = AiRecipe.fromJson(recipeMap).copyWith(
+        canPressurize: defaultFermenter?.canPressurize ?? false,
+      );
       if (attachment != null) {
         recipe.sourceImage = attachment;
       }

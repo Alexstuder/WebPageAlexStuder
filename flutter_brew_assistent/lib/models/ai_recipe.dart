@@ -13,6 +13,7 @@ class AiRecipe {
   final ProcessData prozessdaten;
   final List<String> notizen;
   final String? generatedImage;
+  final bool canPressurize;
   ImageAttachment? sourceImage;
 
   AiRecipe({
@@ -29,6 +30,7 @@ class AiRecipe {
     required this.notizen,
     this.sourceImage,
     this.generatedImage,
+    this.canPressurize = false,
   });
 
   AiRecipe copyWith({
@@ -45,6 +47,7 @@ class AiRecipe {
     List<String>? notizen,
     ImageAttachment? sourceImage,
     String? generatedImage,
+    bool? canPressurize,
   }) {
     return AiRecipe(
       id: id ?? this.id,
@@ -60,6 +63,7 @@ class AiRecipe {
       notizen: notizen ?? this.notizen,
       sourceImage: sourceImage ?? this.sourceImage,
       generatedImage: generatedImage ?? this.generatedImage,
+      canPressurize: canPressurize ?? this.canPressurize,
     );
   }
 
@@ -77,6 +81,7 @@ class AiRecipe {
       prozessdaten: ProcessData.fromJson(json['Prozessdaten'] ?? {}),
       notizen: (json['Notizen'] as List?)?.map((e) => e.toString()).toList() ?? [],
       generatedImage: json['generated_image'],
+      canPressurize: json['can_pressurize'] ?? false,
     );
   }
 
@@ -92,6 +97,7 @@ class AiRecipe {
       'Zutaten': zutaten.toJson(),
       'Prozessdaten': prozessdaten.toJson(),
       'Notizen': notizen,
+      'can_pressurize': canPressurize,
     };
   }
 }
