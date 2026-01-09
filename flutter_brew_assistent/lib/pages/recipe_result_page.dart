@@ -390,6 +390,18 @@ class _ProcessTab extends StatelessWidget {
 
           const Divider(height: 32),
           _buildSectionTitle('Gärung'),
+          if (recipe.prozessdaten.fermentation.pressureNote.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                recipe.prozessdaten.fermentation.pressureNote,
+                style: const TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.orangeAccent,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           Text('Anstelltemperatur: ${recipe.prozessdaten.fermentation.pitchTemp} °C'),
           const SizedBox(height: 8),
           ...recipe.prozessdaten.fermentation.steps.map((step) => ListTile(

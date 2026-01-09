@@ -502,8 +502,9 @@ class BoilPlan {
 class FermentationPlan {
   final double pitchTemp;
   final List<FermentationStep> steps;
+  final String pressureNote;
 
-  FermentationPlan({required this.pitchTemp, required this.steps});
+  FermentationPlan({required this.pitchTemp, required this.steps, required this.pressureNote});
 
   factory FermentationPlan.fromJson(Map<String, dynamic> json) {
     // Treat the list directly if it's passed as a list, or look for common keys
@@ -512,6 +513,7 @@ class FermentationPlan {
       pitchTemp: (json['Hefe_Anstelltemperatur_C'] as num?)?.toDouble() ?? 
                  (json['Anstelltemperatur_C'] as num?)?.toDouble() ?? 0.0,
       steps: (stepsList as List?)?.map((e) => FermentationStep.fromJson(e)).toList() ?? [],
+      pressureNote: json['Druck_Hinweis'] ?? '',
     );
   }
 
@@ -519,6 +521,7 @@ class FermentationPlan {
     return {
       'Hefe_Anstelltemperatur_C': pitchTemp,
       'Gaerverlauf': steps.map((e) => e.toJson()).toList(),
+      'Druck_Hinweis': pressureNote,
     };
   }
 }
