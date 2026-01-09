@@ -203,6 +203,16 @@ INSERT INTO aibrewgenius.yeast_bank_entries (id, user_profile_id, brewfather_id,
 
 
 --
+-- Data for Name: how_to_topics; Type: TABLE DATA; Schema: aibrewgenius; Owner: -
+--
+
+INSERT INTO aibrewgenius.how_to_topics (id, user_profile_id, title, content, "position", created_at, updated_at) VALUES ('5677c77f-1d89-498c-850f-62e92c2f42a6', 'self_hosted_profile', 'Brauprozess Übersicht', 'Hier erfährst du alles über den grundlegenden Brauprozess, vom Einmaischen bis zur Abfüllung.', 0, '2026-01-09 10:00:00.000000+00', '2026-01-09 10:00:00.000000+00');
+INSERT INTO aibrewgenius.how_to_topics (id, user_profile_id, title, content, "position", created_at, updated_at) VALUES ('6299d22b-2e9a-4c9d-961f-73f03d3f53b7', 'self_hosted_profile', 'Wasseraufbereitung', 'Die Wasseraufbereitung ist entscheidend für den Geschmack deines Bieres. Lerne, wie du dein Wasserprofil optimierst.', 1, '2026-01-09 10:00:00.000000+00', '2026-01-09 10:00:00.000000+00');
+INSERT INTO aibrewgenius.how_to_topics (id, user_profile_id, title, content, "position", created_at, updated_at) VALUES ('7311e33c-3f0b-5d0e-a72a-84a14e4a64c8', 'self_hosted_profile', 'Hefe Management', 'Tipps und Tricks zum Umgang mit Hefe, Starter-Erstellung und Gärführung.', 2, '2026-01-09 10:00:00.000000+00', '2026-01-09 10:00:00.000000+00');
+INSERT INTO aibrewgenius.how_to_topics (id, user_profile_id, title, content, "position", created_at, updated_at) VALUES ('8422f44d-4a1c-4e1f-b830-95b25f5a75d9', 'self_hosted_profile', 'Reinigung & Hygiene', 'Hygiene ist das A und O beim Brauen. Hier findest du eine Checkliste für die Reinigung deines Equipments.', 3, '2026-01-09 10:00:00.000000+00', '2026-01-09 10:00:00.000000+00');
+
+
+--
 -- PostgreSQL database dump complete
 --
 

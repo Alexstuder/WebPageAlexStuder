@@ -40,6 +40,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'widgets/card_actions.dart';
 import 'pages/yeast_label_page.dart';
 import 'pages/recipe_prompt_page.dart';
+import 'pages/how_to_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -730,6 +731,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openHowTo() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const HowToPage(),
+      ),
+    );
+  }
+
   void _openWaterProfileManager() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -892,6 +901,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
               icon: Icons.filter_alt_outlined,
               label: 'Klärmittel / Schönungsmittel',
               onPressed: _openFiningAgentsManager,
+            ),
+            _managerButton(
+              icon: Icons.help_outline,
+              label: "How To's",
+              onPressed: _openHowTo,
             ),
             _managerButton(
               icon: Icons.warehouse_outlined,

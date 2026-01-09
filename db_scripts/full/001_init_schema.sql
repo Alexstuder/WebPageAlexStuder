@@ -794,6 +794,41 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewge
 
 
 
+CREATE TABLE IF NOT EXISTS "aibrewgenius"."how_to_topics" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_profile_id" "text" NOT NULL,
+    "title" "text" NOT NULL,
+    "content" "text",
+    "position" integer DEFAULT 0 NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "aibrewgenius"."how_to_topics" OWNER TO "supabase_admin";
+
+
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_pkey" PRIMARY KEY ("id");
+
+
+CREATE OR REPLACE TRIGGER "how_to_topics_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."how_to_topics" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
+
+
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
+
+
+CREATE POLICY "Allow full access" ON "aibrewgenius"."how_to_topics" TO "anon" USING (true) WITH CHECK (true);
+
+
+ALTER TABLE "aibrewgenius"."how_to_topics" ENABLE ROW LEVEL SECURITY;
+
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "service_role";
+
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "anon";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "authenticated";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "service_role";
