@@ -23,7 +23,7 @@ SET row_security = off;
 -- PostgreSQL database dump
 --
 
-\restrict uaJ7oTEwU8cwsyrERcz8nfGXhR2XwJTmWzFggdk9DzdvCbIFEZFXSowfRfbDQxg
+\restrict weMkMwLqiJn8jr4HfrFHZCTc7KBzHcIWsmn3cKSOFdglTeMMI6GN30ZL1u7LdYQ
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -303,5 +303,5 @@ ALTER TABLE aibrewgenius.yeast_bank_entries ENABLE TRIGGER ALL;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uaJ7oTEwU8cwsyrERcz8nfGXhR2XwJTmWzFggdk9DzdvCbIFEZFXSowfRfbDQxg
+\unrestrict weMkMwLqiJn8jr4HfrFHZCTc7KBzHcIWsmn3cKSOFdglTeMMI6GN30ZL1u7LdYQ
 

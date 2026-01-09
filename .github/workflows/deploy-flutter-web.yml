@@ -109,8 +109,7 @@ jobs:
             sudo mv /tmp/vhost_nginx.conf /var/www/vhosts/system/alexstuder.ch/conf/vhost_nginx.conf
             sudo nginx -t && sudo systemctl reload nginx
 
-      - name: Run DB Init and Seed (Manual or Auto-Detected)
-        if: github.event.inputs.update_db == 'true' || steps.changes.outputs.db == 'true'
+      - name: Run DB Init and Seed (Every Deployment)
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
