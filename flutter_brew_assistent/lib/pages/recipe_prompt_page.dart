@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:mime/mime.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/openai_service.dart';
 import '../services/packaging_profile_service.dart';
 import '../services/brew_kettle_service.dart';
@@ -20,6 +18,7 @@ import 'recipe_result_page.dart';
 import 'user_profile_page.dart';
 import '../widgets/user_name_banner.dart';
 import '../models/image_attachment.dart';
+import '../widgets/recipe_prompt_widgets.dart';
 
 class RecipePromptPage extends StatefulWidget {
   const RecipePromptPage({super.key});
@@ -201,8 +200,12 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         if (fermenters.isNotEmpty) {
           defaultFermenter = fermenters.firstWhere((f) => f.isDefault, orElse: () => fermenters.first);
           fermenterInfo = 'Marke: ${defaultFermenter.brand}, Gärverlust: ${defaultFermenter.fermentationLossLiters}L';
+          fermenterInfo += ', Heizung: ${defaultFermenter.hasHeating ? "vorhanden" : "NICHT vorhanden"}';
+          fermenterInfo += ', Kühlung: ${defaultFermenter.hasCooling ? "vorhanden" : "NICHT vorhanden"}';
           if (defaultFermenter.canPressurize) {
             fermenterInfo += ', Druckvergärung möglich';
+          } else {
+            fermenterInfo += ', Druckvergärung NICHT möglich';
           }
         }
       } catch (e) {
@@ -283,8 +286,13 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       final bOffPct = defaultKettle?.boilOffPercentage ?? 10.0;
 
       // --- 6. Build Final Prompt ---
+      String augmentedDescription = userInput;
+      if (defaultFermenter != null && !defaultFermenter.canPressurize) {
+        augmentedDescription += '\n\n(HINWEIS: Mein Fermenter ist NICHT druckfest. Erstelle das Rezept zwingend für eine drucklose Vergärung bei 0.0 bar.)';
+      }
+
       final fullPrompt = template
-          .replaceAll('{{description}}', userInput)
+          .replaceAll('{{description}}', augmentedDescription)
           .replaceAll('{{targetVolume}}', targetVolume.toStringAsFixed(1))
           .replaceAll('{{fermentationLoss}}', fermLoss.toStringAsFixed(1))
           .replaceAll('{{postBoilLoss}}', pBoilLoss.toStringAsFixed(1))
@@ -296,6 +304,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           .replaceAll('{{yeast_inventory}}', yeastInventoryInfo)
           .replaceAll('{{json_template}}', jsonTemplate);
 
+      debugPrint('FERMENTER INFO SENT: $fermenterInfo');
       setState(() {
         _lastGeneratedPrompt = fullPrompt;
       });
@@ -445,7 +454,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _ShopResultsSheet(results: results),
+        builder: (_) => ShopResultsSheet(results: results),
       );
     } catch (e) {
       if (!mounted) return;
@@ -642,7 +651,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                     ),
                     if (_imageBytes != null) ...[
                       const SizedBox(height: 12),
-                      _ImagePreview(
+                      ImagePreview(
                         bytes: _imageBytes!,
                         isWide: MediaQuery.of(context).size.width >= 720,
                         fileName: _imageName,
@@ -672,7 +681,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
                       ),
                     
                     if (_lastGeneratedPrompt != null)
-                      _PromptPreview(prompt: _lastGeneratedPrompt!),
+                      PromptPreview(prompt: _lastGeneratedPrompt!),
 
                     if (_response != null) ...[
                       const SizedBox(height: 24),
@@ -709,240 +718,3 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
   }
 }
 
-class _ShopResultsSheet extends StatelessWidget {
-  const _ShopResultsSheet({required this.results});
-
-  final List<ShopSearchResponse> results;
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      expand: false,
-      builder: (context, controller) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: ListView.builder(
-          controller: controller,
-          itemCount: results.length,
-          itemBuilder: (context, index) {
-            final result = results[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _ShopResultSection(result: result),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ShopResultSection extends StatelessWidget {
-  const _ShopResultSection({required this.result});
-
-  final ShopSearchResponse result;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Zutat: ${result.query}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 12),
-        ...result.shops.map(
-          (shop) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _ShopCard(shop: shop),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ShopCard extends StatelessWidget {
-  const _ShopCard({required this.shop});
-
-  final ShopSearchShop shop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFF111827),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  shop.shop,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (shop.url != null)
-                  TextButton(
-                    onPressed: () => _launchShopLink(shop.url!),
-                    child: const Text('Shop öffnen'),
-                  ),
-              ],
-            ),
-            if (shop.error != null)
-              Text(
-                'Keine Ergebnisse automatisch verfügbar. Bitte Shop öffnen.',
-                style: const TextStyle(color: Colors.redAccent),
-              )
-            else if (shop.results.isEmpty)
-              const Text(
-                'Keine Treffer gefunden.',
-                style: TextStyle(color: Colors.white70),
-              )
-            else
-              ...shop.results.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      if ((item.price ?? '').isNotEmpty)
-                        Text(item.price!,
-                            style: const TextStyle(color: Colors.white70)),
-                      if ((item.availability ?? '').isNotEmpty)
-                        Text(
-                          item.availability!,
-                          style: const TextStyle(color: Colors.white54),
-                        ),
-                      if ((item.link ?? '').isNotEmpty)
-                        TextButton(
-                          onPressed: () => _launchShopLink(item.link!),
-                          child: const Text('Produkt öffnen'),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _launchShopLink(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-}
-
-class _ImagePreview extends StatelessWidget {
-  const _ImagePreview({
-    required this.bytes,
-    required this.isWide,
-    this.fileName,
-  });
-
-  final Uint8List bytes;
-  final bool isWide;
-  final String? fileName;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFF0F172A),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final availableWidth = constraints.maxWidth.isFinite
-                    ? constraints.maxWidth
-                    : MediaQuery.of(context).size.width;
-                final ratio = isWide ? 16 / 9 : 4 / 3;
-                final double targetHeight = math.min(availableWidth / ratio, isWide ? 360 : 280);
-                return SizedBox(
-                  height: targetHeight,
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.none,
-                  ),
-                );
-              },
-            ),
-          ),
-          if ((fileName ?? '').isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Text(
-                fileName!,
-                style: const TextStyle(fontSize: 13, color: Colors.white70),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PromptPreview extends StatelessWidget {
-  final String prompt;
-  const _PromptPreview({required this.prompt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFF0F172A),
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Generierter Prompt (für ChatGPT):',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              height: 150,
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.all(8),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  prompt,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.white54),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

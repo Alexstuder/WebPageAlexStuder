@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'discovery_welcome_page.dart';
-import 'rapt_dashboard_page.dart';
-import 'recipe_prompt_page.dart'; // Assuming this exists or will exist
 import 'user_profile_page.dart';
+import 'rapt_dashboard_page.dart';
+import 'recipe_prompt_page.dart';
+import '../widgets/entry_button.dart';
 
 class BrewEntryPage extends StatelessWidget {
   const BrewEntryPage({super.key});
@@ -46,23 +47,23 @@ class BrewEntryPage extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _EntryButton(
+                    EntryButton(
                       label: 'Users profil',
                       onPressed: () =>
                           _openRoute(context, UserProfilePage.routeName),
                     ),
                     const SizedBox(height: 18),
-                    _EntryButton(
+                    EntryButton(
                       label: 'Currently Brewing',
                       onPressed: () => _openRoute(context, RaptDashboardPage.routeName),
                     ),
                     const SizedBox(height: 18),
-                    _EntryButton(
+                    EntryButton(
                       label: 'Studio',
                       onPressed: () => _openStudio(context),
                     ),
                     const SizedBox(height: 18),
-                    _EntryButton(
+                    EntryButton(
                       label: 'Start, entdecken wir ein neues Bier',
                       onPressed: () => _openRoute(
                         context,
@@ -70,7 +71,7 @@ class BrewEntryPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    _EntryButton(
+                    EntryButton(
                       label: 'Freie Text beschreibung',
                       onPressed: () =>
                           _openRoute(context, RecipePromptPage.routeName),
@@ -81,28 +82,6 @@ class BrewEntryPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EntryButton extends StatelessWidget {
-  const _EntryButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          textStyle: const TextStyle(fontSize: 16),
-        ),
-        onPressed: onPressed,
-        child: Text(label),
       ),
     );
   }

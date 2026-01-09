@@ -38,10 +38,13 @@ Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagw�
 - **Equipment:** {{brewing_equipment}} / {{fermenter_info}}
 
 - **Gärplan & Druck:**
-  - Berücksichtige bei der Gärplanung zwingend die Fähigkeiten des Fermenters (siehe Equipment: "Druckvergärung möglich").
-  - Du musst für jede Phase im "Gaerverlauf" zwingend einen optimalen Gärdruck (`Druck_bar`) angeben und diesen fachlich begründen (`Druck_Begruendung`).
-  - Falls der Fermenter NICHT druckfest ist, muss der Druck 0.0 bar sein, begründe dies jedoch trotzdem kurz fachlich (z.B. "Drucklose Vergärung empfohlen für diesen Stil/Hardware").
-  - Falls der Fermenter druckfest ist, entscheide nach Stil: Empfiehl entweder eine Druckvergärung (mit bar-Angabe) oder begründe, warum für diesen Stil dennoch eine drucklose Vergärung vorteilhafter ist.
+  - Berücksichtige bei der Gärplanung zwingend die Hardware-Fähigkeiten des Fermenters (siehe Equipment: "Druckvergärung möglich" oder "Druckvergärung NICHT möglich").
+  - Falls dort steht "Druckvergärung NICHT möglich", MUSS das Feld `Druck_bar` für JEDE Phase 0.0 sein. Begründe dies kurz (z.B. "Drucklose Vergärung, da Hardware nicht druckfest").
+  - Nur falls der Fermenter druckfest ist ("Druckvergärung möglich"), darfst du einen optimalen Gärdruck (`Druck_bar`) > 0 empfehlen, falls dies zum Stil passt (begründe dies dann in `Druck_Begruendung`).
+  - **Professionelles Gär-Management:**
+    - Plane bei untergärigen Bieren (Lager) zwingend eine **Diacetylrast** ein (Temperaturerhöhung gegen Ende der Hauptgärung), sofern eine Heizung oder Steuerung vorhanden ist.
+    - Plane bei allen Stilen (besonders bei hopfengestopften Bieren oder zur Klärung) einen **Coldcrash** am Ende der Gärung ein, sofern eine Kühlung vorhanden ist.
+    - Führe diese Schritte als explizite Phasen im Feld `Gaerverlauf` auf.
 
 - **Abfüllung & Karbonisierung:** 
   """
@@ -59,7 +62,12 @@ Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagw�
   - Die Liste der vorhandenen Mittel dient als optionale Informationsquelle. Du hast die volle Freiheit bei der Wahl der Klärung: Nutze den Bestand, wenn er stimmig ist, oder weiche ganz nach eigenem Ermessen auf vorteilhaftere Alternativen aus.
   - Falls du ein Mittel außerhalb der Liste empfiehlst, markiere dieses zwingend mit "Beschaffung_Notwendig": true.
 
-### 5. AUSGABE
+### 6. SICHERHEITSPROTOKOLLE (HARDWARE-LIMITS)
+- DU DARFST NIEMALS EINEN DRUCK > 0.0 BAR VORSCHLAGEN, WENN BEI EQUIPMENT STEHT: "Druckvergärung NICHT möglich". DIES IST EINE UNERLÄSSLICHE SICHERHEITSREGEL.
+- FALLS DER FERMENTER NICHT DRUCKFEST IST, SETZE `Druck_bar` AUF 0.0 UND ENTFERNE JEGLICHE EMPFEHLUNGEN FÜR DRUCK AUS DEN NOTIZEN UND BEGRÜNDUNGEN.
+- IGNORIERE IN DIESEM FALL AUCH "BEST PRACTICES", DIE DRUCKFESTE HARDWARE VORAUSSETZEN.
+
+### 7. AUSGABE
 Antworte ausschließlich mit dem ausgefüllten JSON-Objekt. Keine Einleitung, kein Markdown-Code-Block.
 Vorlage:
 {{json_template}}

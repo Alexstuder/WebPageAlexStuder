@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import '../models/fermenter.dart';
 import '../services/fermenter_service.dart';
-import '../widgets/card_actions.dart'; // Check relative path
+import '../widgets/card_actions.dart';
 
 class FermenterManagerPage extends StatefulWidget {
-  const FermenterManagerPage({super.key, required this.profileId});
+  const FermenterManagerPage({
+    super.key,
+    required this.profileId,
+    this.repository,
+  });
 
   final String profileId;
+  final FermenterRepository? repository;
 
   @override
   State<FermenterManagerPage> createState() => _FermenterManagerPageState();
 }
 
 class _FermenterManagerPageState extends State<FermenterManagerPage> {
-  final FermenterService _service = FermenterService();
+  late final FermenterRepository _service;
   bool _isLoading = true;
   List<Fermenter> _fermenters = [];
   String? _error;
@@ -21,6 +26,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
   @override
   void initState() {
     super.initState();
+    _service = widget.repository ?? FermenterService();
     _load();
   }
 
@@ -118,6 +124,8 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
                 Text('Kühlung: ${fermenter.hasCooling ? 'Ja' : 'Nein'}'),
                 Text(
                     'Dry-Hopping-Port: ${fermenter.hasDryHoppingPort ? 'Ja' : 'Nein'}'),
+                Text(
+                    'Druckvergärung möglich: ${fermenter.canPressurize ? 'Ja' : 'Nein'}'),
                 if (fermenter.fermentationLossLiters != null)
                   Text(
                       'Gärverlust: ${fermenter.fermentationLossLiters!.toStringAsFixed(1)} L'),
@@ -151,7 +159,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool hasHeating = editing?.hasHeating ?? false;
     bool hasCooling = editing?.hasCooling ?? false;
-     bool hasDryHopPort = editing?.hasDryHoppingPort ?? false;
+    bool hasDryHopPort = editing?.hasDryHoppingPort ?? false;
     bool canPressurize = editing?.canPressurize ?? false;
     bool isDefault = editing?.isDefault ?? false;
     String? brandError;

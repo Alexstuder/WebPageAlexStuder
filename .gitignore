@@ -8,3 +8,6 @@ node_modules/
 # Supabase local stack (Docker configs, volumes)
 supabase/
 flutter_brew_assistent/test/db-test-output-dump*
+
+# Proxy cache
+proxy/cache/

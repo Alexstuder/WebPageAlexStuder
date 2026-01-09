@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:brew_genius/main.dart';
 import 'package:brew_genius/services/user_profile_service.dart';
 import 'package:brew_genius/services/water_profile_service.dart';
 import 'package:brew_genius/models/user_profile.dart';
 import 'package:brew_genius/models/water_profile.dart';
 import 'package:brew_genius/models/bf_recipe.dart';
 import 'package:brew_genius/models/bf_batch.dart';
+import 'package:brew_genius/pages/user_profile_page.dart';
+import 'package:brew_genius/pages/brew_entry_page.dart';
 import 'package:brew_genius/models/misc.dart';
 import 'package:brew_genius/models/hop.dart';
 import 'package:brew_genius/models/fermentable.dart';

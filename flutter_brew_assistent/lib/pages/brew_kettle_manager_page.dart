@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/brew_kettle.dart';
 import '../services/brew_kettle_service.dart';
-import '../widgets/card_actions.dart'; // Ensure this path is correct
+import '../widgets/card_actions.dart';
 
 class BrewKettleManagerPage extends StatefulWidget {
   const BrewKettleManagerPage({
@@ -19,9 +19,6 @@ class BrewKettleManagerPage extends StatefulWidget {
 
 class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
   late final BrewKettleRepository _service;
-  bool _isLoading = true;
-  List<BrewKettle> _kettles = [];
-  String? _error;
 
   @override
   void initState() {
@@ -29,6 +26,10 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     _service = widget.repository ?? BrewKettleService();
     _load();
   }
+
+  bool _isLoading = true;
+  List<BrewKettle> _kettles = [];
+  String? _error;
 
   Future<void> _load() async {
     setState(() {
@@ -120,9 +121,11 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                 if (kettle.volumeLiters != null)
                   Text('Volumen: ${kettle.volumeLiters!.toStringAsFixed(1)} L'),
                 if (kettle.postBoilLossLiters != null)
-                  Text('Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
+                  Text(
+                      'Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
                 if (kettle.boilOffPercentage != null)
-                  Text('Boil-off: ${kettle.boilOffPercentage!.toStringAsFixed(1)} %'),
+                  Text(
+                      'Boil-off: ${kettle.boilOffPercentage!.toStringAsFixed(1)} %'),
                 if ((kettle.notes ?? '').isNotEmpty)
                   Text(
                     kettle.notes!,
@@ -214,11 +217,13 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.white24),
                       ),
-                      textStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                      textStyle:
+                          const TextStyle(fontSize: 12, color: Colors.white),
                       child: const Icon(Icons.info_outline, size: 20),
                     ),
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -253,11 +258,13 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.white24),
                           ),
-                          textStyle: const TextStyle(fontSize: 12, color: Colors.white),
+                          textStyle: const TextStyle(
+                              fontSize: 12, color: Colors.white),
                           child: const Icon(Icons.info_outline, size: 20),
                         ),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                     ),
                   ),
                 CheckboxListTile(
