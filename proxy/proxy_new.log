@@ -1,0 +1,53 @@
+Telemetry cache restored from disk.
+Proxy listening on http://localhost:3000
+[Scheduler] Next telemetry refresh scheduled in 42 minutes.
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/picture
+[Proxy] Incoming Request: POST /api/picture
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-GHfM5ynwnekjAdQWWzVGatmB.png%3Fst%3D2026-01-05T16%253A20%253A59Z%26se%3D2026-01-05T18%253A20%253A59Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3Db1a0ae1f-618f-4548-84fd-8b16cacd5485%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-05T05%253A51%253A41Z%26ske%3D2026-01-06T05%253A51%253A41Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DSAP7dkKnnobVD4kfqHKxUrWioHrG6ZGqd%252BTJNWbUDJ4%253D
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/picture
+[Proxy] Incoming Request: POST /api/picture
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-pk8RSOMovB4UxEqCfwIAACNj.png%3Fst%3D2026-01-05T16%253A49%253A54Z%26se%3D2026-01-05T18%253A49%253A54Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3Db1a0ae1f-618f-4548-84fd-8b16cacd5485%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-05T17%253A49%253A54Z%26ske%3D2026-01-06T17%253A49%253A54Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DwWYULvVrEHGBISpatNJjDeLb%2FqHesonbm4CJUTXIWxI%253D
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=1717
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/picture
+[Proxy] Incoming Request: POST /api/picture
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-tG7RbDn56I5z70JeqynH05Z5.png%3Fst%3D2026-01-05T17%253A05%253A08Z%26se%3D2026-01-05T19%253A05%253A08Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3D77e5a8ec-6bd1-4477-8afc-16703a64f029%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-05T18%253A05%253A08Z%26ske%3D2026-01-06T18%253A05%253A08Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DLvKXSObNrzveV9CSF8bBkiqzMQhSPUPUm5Z9HyQUMcE%253D
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/picture
+[Proxy] Incoming Request: POST /api/picture
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-aBXH1ht1Rcap5VrSKwCAqND2.png%3Fst%3D2026-01-05T17%253A58%253A10Z%26se%3D2026-01-05T19%253A58%253A10Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3D8b33a531-2df9-46a3-bc02-d4b1430a422c%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-04T22%253A10%253A09Z%26ske%3D2026-01-05T22%253A10%253A09Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DMdd7iBof80TjDqQigZ7BD02sEspVFu6f6RIN6Qk9A0M%253D
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-aBXH1ht1Rcap5VrSKwCAqND2.png%3Fst%3D2026-01-05T17%253A58%253A10Z%26se%3D2026-01-05T19%253A58%253A10Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3D8b33a531-2df9-46a3-bc02-d4b1430a422c%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-04T22%253A10%253A09Z%26ske%3D2026-01-05T22%253A10%253A09Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DMdd7iBof80TjDqQigZ7BD02sEspVFu6f6RIN6Qk9A0M%253D
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=1724
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] Active session detected in current cache. Backing up to last-cache files.
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=true, override=2025-12-22T14:00:48.0779343+00:00, cachedRows=1731
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
+[Proxy] Incoming Request: OPTIONS /api/brew
+[Proxy] Incoming Request: POST /api/brew
+[Proxy] Incoming Request: OPTIONS /api/picture
+[Proxy] Incoming Request: POST /api/picture
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-Zub2myq5GwqjXakY8mcoW7kk.png%3Fst%3D2026-01-05T19%253A02%253A05Z%26se%3D2026-01-05T21%253A02%253A05Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3D8b33a531-2df9-46a3-bc02-d4b1430a422c%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-04T22%253A06%253A45Z%26ske%3D2026-01-05T22%253A06%253A45Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DMGg%252B%252BRkBToW5f4NYHr4cafDvBoiq4WFT3Ce6Amp8y54%253D
+[Proxy] Incoming Request: GET /api/proxy-image?url=https%3A%2F%2Foaidalleapiprodscus.blob.core.windows.net%2Fprivate%2Forg-Ango2evdO2FfIayiGYPjN4Rb%2Fuser-tuwehuUYwagBNfe7enTmfacs%2Fimg-Zub2myq5GwqjXakY8mcoW7kk.png%3Fst%3D2026-01-05T19%253A02%253A05Z%26se%3D2026-01-05T21%253A02%253A05Z%26sp%3Dr%26sv%3D2024-08-04%26sr%3Db%26rscd%3Dinline%26rsct%3Dimage%2Fpng%26skoid%3D8b33a531-2df9-46a3-bc02-d4b1430a422c%26sktid%3Da48cca56-e6da-484e-a814-9c849652bcb3%26skt%3D2026-01-04T22%253A06%253A45Z%26ske%3D2026-01-05T22%253A06%253A45Z%26sks%3Db%26skv%3D2024-08-04%26sig%3DMGg%252B%252BRkBToW5f4NYHr4cafDvBoiq4WFT3Ce6Amp8y54%253D

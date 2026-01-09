@@ -16,6 +16,7 @@ class _HowToPageState extends State<HowToPage> {
   bool _isLoading = true;
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  double _sidebarWidth = 250.0;
   final _profileId = 'self_hosted_profile'; // In real app, get from auth/service
 
   @override
@@ -187,58 +188,84 @@ class _HowToPageState extends State<HowToPage> {
           : Row(
               children: [
                 // Index (Sidebar)
-                Container(
-                  width: 250,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128),
-                    border: Border(
-                      right: BorderSide(color: Theme.of(context).dividerColor),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: ReorderableListView.builder(
-                          itemCount: _topics.length,
-                          onReorder: _onReorder,
-                          itemBuilder: (context, index) {
-                            final topic = _topics[index];
-                            final isSelected = _selectedIndex == index;
-                            return ListTile(
-                              key: ValueKey(topic.id),
-                              title: Text(
-                                topic.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? Theme.of(context).colorScheme.primary : null,
-                                ),
-                              ),
-                              selected: isSelected,
-                              onTap: () {
-                                setState(() {
-                                  _selectedIndex = index;
-                                  _updateEditorFields();
-                                });
-                              },
-                            );
-                          },
-                        ),
+                SizedBox(
+                  width: _sidebarWidth,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128),
+                      border: Border(
+                        right: BorderSide(color: Theme.of(context).dividerColor.withAlpha(50)),
                       ),
-                      const Divider(height: 1),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ElevatedButton.icon(
-                          onPressed: _addTopic,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Neues Thema'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 45),
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: ReorderableListView.builder(
+                            itemCount: _topics.length,
+                            onReorder: _onReorder,
+                            itemBuilder: (context, index) {
+                              final topic = _topics[index];
+                              final isSelected = _selectedIndex == index;
+                              return ListTile(
+                                key: ValueKey(topic.id),
+                                title: Text(
+                                  topic.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                  ),
+                                ),
+                                selected: isSelected,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedIndex = index;
+                                    _updateEditorFields();
+                                  });
+                                },
+                              );
+                            },
                           ),
                         ),
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ElevatedButton.icon(
+                            onPressed: _addTopic,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Neues Thema'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 45),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Resizer Handle
+                GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    setState(() {
+                      _sidebarWidth += details.delta.dx;
+                      // Constraints
+                      if (_sidebarWidth < 150) _sidebarWidth = 150;
+                      if (_sidebarWidth > 600) _sidebarWidth = 600;
+                    });
+                  },
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeLeftRight,
+                    child: Container(
+                      width: 4,
+                      color: Colors.transparent,
+                      child: Center(
+                        child: Container(
+                          width: 1,
+                          color: Theme.of(context).dividerColor.withAlpha(80),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 // Editor area

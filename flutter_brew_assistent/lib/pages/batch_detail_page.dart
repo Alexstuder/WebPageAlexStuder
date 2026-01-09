@@ -129,8 +129,12 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // (Existing content...)
           // Responsive layout: Column on small screens, Row on large
           bool isWide = constraints.maxWidth > 800;
           
@@ -295,15 +299,15 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
             ],
           );
 
-          if (isWide) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: leftColumn),
-                const SizedBox(width: 32),
-                Expanded(flex: 2, child: rightColumn),
-              ],
-            );
+              if (isWide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 4, child: leftColumn),
+                    const SizedBox(width: 32),
+                    Expanded(flex: 2, child: rightColumn),
+                  ],
+                );
           } else {
             return Column(
               children: [
@@ -315,6 +319,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           }
         },
       ),
+     ),
+    ),
     );
   }
   
@@ -418,7 +424,10 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.center, // Center aligned like screenshot
         children: [
           // 1. Title & Type
@@ -614,6 +623,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
         ],
       ),
+    ),
+    ),
     );
   }
 
@@ -657,7 +668,10 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: LayoutBuilder(
         builder: (context, constraints) {
           bool isWide = constraints.maxWidth > 900;
           
@@ -691,7 +705,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 3, child: leftColumn),
+                Expanded(flex: 4, child: leftColumn),
                 const SizedBox(width: 16),
                 Expanded(flex: 2, child: rightColumn),
               ],
@@ -707,6 +721,8 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
           }
         }
       ),
+     ),
+    ),
     );
   }
 
@@ -1131,7 +1147,7 @@ class _BatchDetailPageState extends State<BatchDetailPage> with SingleTickerProv
                                 col = Colors.amber;
                              } else if (spot.barIndex == 3) {
                                 double denorm = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
-                                 txt = '${denorm.toStringAsFixed(4)} pts/day';
+                                 txt = '${(denorm / 1000).toStringAsFixed(4)} SG/Tag';
                                 col = Colors.purple;
                              }
                              

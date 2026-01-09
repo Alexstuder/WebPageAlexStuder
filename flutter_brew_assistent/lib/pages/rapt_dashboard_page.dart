@@ -946,7 +946,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                        } else {
                           // Velocity (Index 3)
                           double v = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
-                          return LineTooltipItem('${v.toStringAsFixed(1)} P/Tag', const TextStyle(color: Colors.brown));
+                          return LineTooltipItem('${(v / 1000).toStringAsFixed(4)} SG/Tag', const TextStyle(color: Colors.brown));
                        }
                     }).toList();
                  }

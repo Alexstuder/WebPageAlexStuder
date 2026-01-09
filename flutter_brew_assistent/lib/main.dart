@@ -121,24 +121,7 @@ class BrewMateApp extends StatelessWidget {
         RecipePromptPage.routeName: (_) => const RecipePromptPage(),
         RaptDashboardPage.routeName: (_) => const RaptDashboardPage(),
       },
-      builder: (context, child) {
-        final Widget safeChild = child ?? const SizedBox.shrink();
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            const double maxWidth = 1200;
-            if (constraints.maxWidth <= maxWidth) {
-              return safeChild;
-            }
-            return Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: maxWidth,
-                child: safeChild,
-              ),
-            );
-          },
-        );
-      },
+      builder: (context, child) => child ?? const SizedBox.shrink(),
     );
   }
 }

@@ -28,12 +28,14 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
   String? _processedBase64Image;
   bool _useSourceImage = false;
   bool _isSaving = false;
+  String? _currentDatabaseId;
 
   @override
   void initState() {
     super.initState();
     _promptController = TextEditingController(text: _buildInitialPrompt());
     _useSourceImage = widget.recipe.sourceImage != null;
+    _currentDatabaseId = widget.recipe.id;
   }
 
   @override
@@ -64,6 +66,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     setState(() {
       _isGenerating = true;
       _generatedImageUrl = null;
+      _processedBase64Image = null; // Reset processed image to allow re-processing
     });
 
     try {
@@ -189,11 +192,21 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       }).toList(),
     };
 
-    if (widget.recipe.id != null) {
-      data['id'] = widget.recipe.id;
+    if (_currentDatabaseId != null) {
+      data['id'] = _currentDatabaseId;
     }
 
-    await client.from('ai_generated_recipes_v2').upsert(data);
+    final response = await client
+        .from('ai_generated_recipes_v2')
+        .upsert(data)
+        .select('id')
+        .single();
+    
+    if (response['id'] != null) {
+      setState(() {
+        _currentDatabaseId = response['id'].toString();
+      });
+    }
   }
 
   Future<void> _ensureBase64Image() async {
@@ -445,6 +458,17 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
                 );
               },
             ),
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            _CompletionButton(
+              label: 'Zur Startseite',
+              icon: Icons.home,
+              onPressed: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+            ),
+            const SizedBox(height: 48),
           ],
         ),
       ),

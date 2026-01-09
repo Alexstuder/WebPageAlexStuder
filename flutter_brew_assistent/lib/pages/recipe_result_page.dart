@@ -21,46 +21,55 @@ class RecipeResultPage extends StatelessWidget {
           title: Text(recipe.basisBier),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(48),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: TabBar(
-                    tabs: [
-                      Tab(icon: Icon(Icons.list), text: 'Übersicht'),
-                      Tab(icon: Icon(Icons.timelapse), text: 'Brauprozess'),
-                      Tab(icon: Icon(Icons.local_drink), text: 'Abfüllung'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: TextButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => RecipeCompletionPage(recipe: recipe),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle_outline, size: 20),
-                    label: const Text('Abschliessen'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.greenAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: TabBar(
+                        tabs: [
+                          Tab(icon: Icon(Icons.list), text: 'Übersicht'),
+                          Tab(icon: Icon(Icons.timelapse), text: 'Brauprozess'),
+                          Tab(icon: Icon(Icons.local_drink), text: 'Abfüllung'),
+                        ],
+                      ),
                     ),
-                  ),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => RecipeCompletionPage(recipe: recipe),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.check_circle_outline, size: 20),
+                        label: const Text('Abschliessen'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.greenAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-
-              ],
+              ),
             ),
           ),
         ),
-        body: TabBarView(
-          children: [
-            _OverviewTab(recipe: recipe),
-            _ProcessTab(recipe: recipe),
-            _PackagingTab(recipe: recipe),
-          ],
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: TabBarView(
+              children: [
+                _OverviewTab(recipe: recipe),
+                _ProcessTab(recipe: recipe),
+                _PackagingTab(recipe: recipe),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -153,29 +162,45 @@ class _OverviewTabState extends State<_OverviewTab> {
                   const SizedBox(height: 16),
                   _buildSectionTitle('Malz & Fermentierbares'),
                   ...widget.recipe.zutaten.malts.map((m) => ListTile(
-                    title: Text(m.name),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('Schrotmaß: ${m.crushGap} mm'),
-                    trailing: Text('${m.amountKg.toStringAsFixed(2)} kg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    trailing: Text('${m.amountKg.toStringAsFixed(2)} kg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   )),
                   if (widget.recipe.zutaten.malts.isEmpty) const Text('Keine Malze angegeben.'),
                   
                   const SizedBox(height: 16),
                   _buildSectionTitle('Hopfen'),
                   ...widget.recipe.zutaten.hops.map((h) => ListTile(
-                    title: Text(h.name),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    title: Text(h.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text('${h.use} • ${h.timeMin} min • ${h.alpha}% Alpha'),
-                    trailing: Text('${h.amountG.toStringAsFixed(0)} g', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    trailing: Text('${h.amountG.toStringAsFixed(0)} g', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   )),
                   
                   const SizedBox(height: 16),
                   _buildSectionTitle('Hefe'),
                   ListTile(
-                    title: Text(widget.recipe.zutaten.yeast.name),
-                    subtitle: Text('${widget.recipe.zutaten.yeast.type} • ${widget.recipe.zutaten.yeast.amount}'),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    title: Text(widget.recipe.zutaten.yeast.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.recipe.zutaten.yeast.type),
+                        if (widget.recipe.zutaten.yeast.procurementNeeded)
+                           const Padding(
+                             padding: EdgeInsets.only(top: 4),
+                             child: Chip(label: Text('Beschaffung nötig!'), backgroundColor: Colors.orangeAccent),
+                           )
+                        else
+                           const Padding(
+                             padding: EdgeInsets.only(top: 4),
+                             child: Chip(label: Text('Vorhanden'), backgroundColor: Colors.greenAccent),
+                           ),
+                      ],
+                    ),
                     leading: const Icon(Icons.opacity),
-                    trailing: widget.recipe.zutaten.yeast.procurementNeeded
-                        ? const Chip(label: Text('Beschaffung nötig!'), backgroundColor: Colors.orangeAccent)
-                        : const Chip(label: Text('Vorhanden'), backgroundColor: Colors.greenAccent),
+                    trailing: Text(widget.recipe.zutaten.yeast.amount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   ),
 
                   const SizedBox(height: 16),
@@ -217,9 +242,10 @@ class _OverviewTabState extends State<_OverviewTab> {
                     const SizedBox(height: 16),
                     _buildSectionTitle('Spezialzutaten'),
                     ...widget.recipe.zutaten.specials.map((s) => ListTile(
-                      title: Text(s.name),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(s.detail),
-                      trailing: Text('${s.amount} ${s.unit}'),
+                      trailing: Text('${s.amount} ${s.unit}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     )),
                   ],
                   
@@ -260,10 +286,11 @@ class _OverviewTabState extends State<_OverviewTab> {
             if (widget.recipe.zutaten.water.saltTiming.isNotEmpty)
                Padding(padding: const EdgeInsets.only(top:4, bottom: 4), child: Text('Strategie: ${widget.recipe.zutaten.water.saltTiming}', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12, color: Colors.grey))),
             ...additions.map((a) => ListTile(
+               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                dense: true,
-               title: Text(a.name), 
+               title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.w600)), 
                subtitle: Text('Zugabe: ${a.timing}'), 
-               trailing: Text('${a.amountG.toStringAsFixed(2)} g', style: const TextStyle(fontWeight: FontWeight.bold))
+               trailing: Text('${a.amountG.toStringAsFixed(2)} g', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))
             )),
         ]
      );
@@ -333,10 +360,11 @@ class _ProcessTab extends StatelessWidget {
           Text('Einmaischen bei: ${recipe.prozessdaten.mash.mashInTemp} °C'),
           const SizedBox(height: 8),
           ...recipe.prozessdaten.mash.steps.map((step) => ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
             leading: const Icon(Icons.timer),
-            title: Text(step.stage),
+            title: Text(step.stage, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text('${step.temp} °C'),
-            trailing: Text('${step.duration} min'),
+            trailing: Text('${step.duration} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           )),
           
           const Divider(height: 32),
@@ -350,13 +378,14 @@ class _ProcessTab extends StatelessWidget {
           ListTile(
             title: const Text('Würzekochen (Gesamt)'),
             subtitle: Text('Pfannevoll: ${recipe.prozessdaten.boil.preBoilVolumeL} Liter'),
-            trailing: Text('Gesamt: ${recipe.prozessdaten.boil.duration} min', style: const TextStyle(fontWeight: FontWeight.bold)),
+            trailing: Text('Gesamt: ${recipe.prozessdaten.boil.duration} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           ...boilHops.map((h) => ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: const Icon(Icons.grass),
-              title: Text('${h.amountG.toStringAsFixed(0)}g ${h.name}'),
+              title: Text('${h.amountG.toStringAsFixed(0)}g ${h.name}', style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text('${h.alpha}% Alpha (${h.use})'),
-              trailing: Text('Kochzeit: ${h.timeMin} min'),
+              trailing: Text('Kochzeit: ${h.timeMin} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           )),
 
           const Divider(height: 32),
@@ -364,8 +393,9 @@ class _ProcessTab extends StatelessWidget {
           Text('Anstelltemperatur: ${recipe.prozessdaten.fermentation.pitchTemp} °C'),
           const SizedBox(height: 8),
           ...recipe.prozessdaten.fermentation.steps.map((step) => ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
             leading: const Icon(Icons.thermostat),
-            title: Text(step.phase),
+            title: Text(step.phase, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -380,7 +410,7 @@ class _ProcessTab extends StatelessWidget {
                 Text(step.note.isNotEmpty ? step.note : 'Keine besonderen Hinweise'),
               ],
             ),
-            trailing: Text('${step.temp} °C / ${step.days} Tage'),
+            trailing: Text('${step.temp} °C / ${step.days} Tage', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           )),
         ],
       ),
@@ -409,47 +439,56 @@ class _PackagingTab extends StatelessWidget {
         children: [
           _buildSectionTitle('Abfüllung'),
           ListTile(
-            title: Text('Typ: ${pack.type}'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            title: const Text('Abfüllung Typ', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text('Ziel-CO2: ${pack.co2Target} g/L'),
+            trailing: Text(pack.type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           if (pack.bottleSugar > 0)
             ListTile(
-              title: const Text('Flaschengärung'),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              title: const Text('Flaschengärung', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text('Zuckerzugabe (bei ${pack.bottleTemp.toStringAsFixed(1)} °C)'),
-              trailing: Text('${pack.bottleSugar.toStringAsFixed(1)} g/L'),
+              trailing: Text('${pack.bottleSugar.toStringAsFixed(1)} g/L', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
           if (pack.kegPressure > 0)
              ListTile(
-              title: const Text('Zwangskarbonisierung (Keg)'),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              title: const Text('Zwangskarbonisierung (Keg)', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text('Spundungsdruck (bei ${pack.kegTemp.toStringAsFixed(1)} °C)'),
-              trailing: Text('${pack.kegPressure.toStringAsFixed(1)} bar'),
+              trailing: Text('${pack.kegPressure.toStringAsFixed(1)} bar', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
           
           if (pack.carbonationDurationDays > 0)
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: const Icon(Icons.timer_outlined),
-              title: const Text('Karbonisierungsdauer'),
-              trailing: Text('${pack.carbonationDurationDays} Tage'),
+              title: const Text('Karbonisierungsdauer', style: TextStyle(fontWeight: FontWeight.w600)),
+              trailing: Text('${pack.carbonationDurationDays} Tage', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
           
           if (pack.servingGasRecommendation.isNotEmpty)
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: const Icon(Icons.gas_meter_outlined),
-              title: const Text('Empfohlenes Ausschankgas'),
-              subtitle: Text(pack.servingGasRecommendation),
+              title: const Text('Empfohlenes Ausschankgas', style: TextStyle(fontWeight: FontWeight.w600)),
+              trailing: Text(pack.servingGasRecommendation, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
 
           const Divider(height: 32),
           _buildSectionTitle('Lagerung & Reifung'),
           ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
             leading: const Icon(Icons.ac_unit),
-            title: Text('Lagertemperatur: ${pack.storageTemp.toStringAsFixed(1)} °C'),
+            title: const Text('Lagertemperatur', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text('Dauer: ${pack.storageDurationWeeks} Wochen'),
+            trailing: Text('${pack.storageTemp.toStringAsFixed(1)} °C', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           ),
           if (pack.maturationNote.isNotEmpty)
             ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               leading: const Icon(Icons.info_outline),
-              title: const Text('Hinweis'),
+              title: const Text('Hinweis', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(pack.maturationNote),
             ),
 
