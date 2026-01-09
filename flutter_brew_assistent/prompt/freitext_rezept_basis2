@@ -72,6 +72,9 @@ Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagw�
 - IGNORIERE IN DIESEM FALL AUCH "BEST PRACTICES", DIE DRUCKFESTE HARDWARE VORAUSSETZEN.
 
 ### 7. AUSGABE
-Antworte ausschließlich mit dem ausgefüllten JSON-Objekt. Keine Einleitung, kein Markdown-Code-Block.
+Antworte AUSSCHLIESSLICH mit einem einzigen, validen JSON-Objekt.
+HALTE DICH STRENG AN DIE STRUKTUR DER VORLAGE.
+KEINE Einleitung, kein Markdown (keine Backticks ```), keine Kommentare innerhalb des JSON, kein Text nach dem JSON.
+Jeder Key und jeder String MUSS in doppelten Anführungszeichen (") stehen.
 Vorlage:
 {{json_template}}

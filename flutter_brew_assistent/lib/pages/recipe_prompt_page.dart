@@ -314,7 +314,8 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       );
       
       // Parse JSON
-      final recipeMap = jsonDecode(recipeJsonString);
+      final cleanedJson = _extractJson(recipeJsonString);
+      final recipeMap = jsonDecode(cleanedJson);
       final recipe = AiRecipe.fromJson(recipeMap).copyWith(
         canPressurize: defaultFermenter?.canPressurize ?? false,
       );
@@ -345,6 +346,28 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       setState(() => _error = msg);
       setState(() => _isLoading = false);
     }
+  }
+  String _extractJson(String input) {
+    String cleaned = input.trim();
+    
+    // Remove Markdown code blocks if present
+    if (cleaned.startsWith('```')) {
+      final lines = cleaned.split('\n');
+      if (lines.length > 2) {
+        // Remove first line (```json) and last line (```)
+        cleaned = lines.sublist(1, lines.length - 1).join('\n').trim();
+      }
+    }
+    
+    // Find the first '{' and last '}' to prune any leading/trailing text
+    final firstBrace = cleaned.indexOf('{');
+    final lastBrace = cleaned.lastIndexOf('}');
+    
+    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+      return cleaned.substring(firstBrace, lastBrace + 1);
+    }
+    
+    return cleaned;
   }
 
   Future<void> _pickImage() async {
