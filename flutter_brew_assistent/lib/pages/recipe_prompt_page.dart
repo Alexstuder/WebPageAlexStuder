@@ -287,9 +287,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
 
       // --- 6. Build Final Prompt ---
       String augmentedDescription = userInput;
-      if (defaultFermenter != null && !defaultFermenter.canPressurize) {
-        augmentedDescription += '\n\n(HINWEIS: Mein Fermenter ist NICHT druckfest. Erstelle das Rezept zwingend für eine drucklose Vergärung bei 0.0 bar.)';
-      }
+      // Note: Hardware capabilities are already sent via fermenterInfo and handled in the system prompt.
 
       final fullPrompt = template
           .replaceAll('{{description}}', augmentedDescription)

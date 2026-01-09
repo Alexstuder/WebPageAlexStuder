@@ -38,9 +38,9 @@ Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagw�
 - **Equipment:** {{brewing_equipment}} / {{fermenter_info}}
 
 - **Gärplan & Druck:**
-  - Berücksichtige bei der Gärplanung zwingend die Hardware-Fähigkeiten des Fermenters (siehe Equipment: "Druckvergärung möglich" oder "Druckvergärung NICHT möglich").
-  - Falls dort steht "Druckvergärung NICHT möglich", MUSS das Feld `Druck_bar` für JEDE Phase 0.0 sein. Begründe dies kurz (z.B. "Drucklose Vergärung, da Hardware nicht druckfest").
-  - Nur falls der Fermenter druckfest ist ("Druckvergärung möglich"), darfst du einen optimalen Gärdruck (`Druck_bar`) > 0 empfehlen, falls dies zum Stil passt (begründe dies dann in `Druck_Begruendung`).
+  - Berücksichtige bei der Gärplanung die Hardware-Fähigkeiten des Fermenters (siehe Equipment: "Druckvergärung möglich" oder "Druckvergärung NICHT möglich").
+  - Falls eine Druckvergärung möglich ist, entscheide nach Bierstil, ob du einen Druck (`Druck_bar`) > 0 vorsiehst.
+  - Falls KEINE Druckvergärung möglich ist, muss `Druck_bar` immer 0.0 sein.
   - **Professionelles Gär-Management:**
     - Plane bei untergärigen Bieren (Lager) zwingend eine **Diacetylrast** ein (Temperaturerhöhung gegen Ende der Hauptgärung), sofern eine Heizung oder Steuerung vorhanden ist.
     - Plane bei allen Stilen (besonders bei hopfengestopften Bieren oder zur Klärung) einen **Coldcrash** am Ende der Gärung ein, sofern eine Kühlung vorhanden ist.
