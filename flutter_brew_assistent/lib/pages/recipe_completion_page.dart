@@ -147,6 +147,8 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
       'packaging_maturation_note': r.prozessdaten.packaging.maturationNote,
       'packaging_serving_gas': r.prozessdaten.packaging.servingGasRecommendation,
       'packaging_carb_days': r.prozessdaten.packaging.carbonationDurationDays,
+      'can_pressurize': r.canPressurize,
+      'fermentation_pressure_note': r.prozessdaten.fermentation.pressureNote,
       'bjcp_stil': r.bjcpStyle?.toJson(),
       'ibu': r.ibu,
 

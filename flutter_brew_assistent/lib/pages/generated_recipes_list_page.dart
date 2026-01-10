@@ -185,6 +185,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                        'alkoholgehalt_vol_prozent': r['alkoholgehalt'],
                        'Notizen': r['notizen'] ?? [],
                        'generated_image': r['generated_image'],
+                       'can_pressurize': r['can_pressurize'],
                        'Zutaten': {
                          'Original_Malz': malts ?? [],
                          'Original_Hopfen': hops ?? [],
@@ -223,6 +224,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                          'Gaerungsplan': {
                            'Hefe_Anstelltemperatur_C': r['fermentation_pitch_temp_c'],
                            'Gaerverlauf': fermStepsMapped ?? [],
+                           'Druck_Hinweis': r['fermentation_pressure_note'],
                          },
                          'Abfuell_und_Lagerungsplan': {
                            'Abfuellung_Typ': r['packaging_type'],

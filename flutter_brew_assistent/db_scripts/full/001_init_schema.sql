@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."ai_generated_recipes_v2" (
     "packaging_maturation_note" "text",
     "packaging_serving_gas" "text",
     "packaging_carb_days" integer,
+    "can_pressurize" boolean DEFAULT false,
+    "fermentation_pressure_note" "text",
     "bjcp_stil" "jsonb",
     "ibu" double precision,
     "created_at" timestamp with time zone DEFAULT "now"(),
