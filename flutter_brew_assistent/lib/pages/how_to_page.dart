@@ -13,23 +13,76 @@ class _HowToPageState extends State<HowToPage> {
   final HowToService _howToService = HowToService();
   List<HowToTopic> _topics = [];
   int _selectedIndex = 0;
+  int _selectedPageIndex = 0;
   bool _isLoading = true;
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
+  
+  final _topicTitleController = TextEditingController();
+  final _pageTitleController = TextEditingController();
+  final _pageContentController = TextEditingController();
+  
   double _sidebarWidth = 250.0;
-  final _profileId = 'self_hosted_profile'; // In real app, get from auth/service
+  final _profileId = 'self_hosted_profile';
 
   @override
   void initState() {
     super.initState();
     _loadData();
+
+    _topicTitleController.addListener(_onTopicTitleChanged);
+    _pageTitleController.addListener(_onPageTitleChanged);
+    _pageContentController.addListener(_onPageContentChanged);
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
+    _topicTitleController.dispose();
+    _pageTitleController.dispose();
+    _pageContentController.dispose();
     super.dispose();
+  }
+
+  // To avoid constant state rebuilds and cursor jumps, we update the local model silently
+  void _onTopicTitleChanged() {
+    if (_selectedIndex >= 0 && _selectedIndex < _topics.length) {
+      final val = _topicTitleController.text;
+      if (_topics[_selectedIndex].title != val) {
+        setState(() {
+          _topics[_selectedIndex] = _topics[_selectedIndex].copyWith(title: val);
+        });
+      }
+    }
+  }
+
+  void _onPageTitleChanged() {
+    if (_selectedIndex >= 0 && _selectedIndex < _topics.length) {
+      final topic = _topics[_selectedIndex];
+      if (_selectedPageIndex >= 0 && _selectedPageIndex < topic.pages.length) {
+        final val = _pageTitleController.text;
+        if (topic.pages[_selectedPageIndex].title != val) {
+          setState(() {
+            final newPages = List<HowToPageData>.from(topic.pages);
+            newPages[_selectedPageIndex] = newPages[_selectedPageIndex].copyWith(title: val);
+            _topics[_selectedIndex] = topic.copyWith(pages: newPages);
+          });
+        }
+      }
+    }
+  }
+
+  void _onPageContentChanged() {
+    if (_selectedIndex >= 0 && _selectedIndex < _topics.length) {
+      final topic = _topics[_selectedIndex];
+      if (_selectedPageIndex >= 0 && _selectedPageIndex < topic.pages.length) {
+        final val = _pageContentController.text;
+        if (topic.pages[_selectedPageIndex].content != val) {
+          setState(() {
+            final newPages = List<HowToPageData>.from(topic.pages);
+            newPages[_selectedPageIndex] = newPages[_selectedPageIndex].copyWith(content: val);
+            _topics[_selectedIndex] = topic.copyWith(pages: newPages);
+          });
+        }
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -55,8 +108,19 @@ class _HowToPageState extends State<HowToPage> {
 
   void _updateEditorFields() {
     if (_selectedIndex >= 0 && _selectedIndex < _topics.length) {
-      _titleController.text = _topics[_selectedIndex].title;
-      _contentController.text = _topics[_selectedIndex].content;
+      final topic = _topics[_selectedIndex];
+      _topicTitleController.text = topic.title;
+      
+      if (topic.pages.isNotEmpty) {
+        if (_selectedPageIndex >= topic.pages.length) {
+          _selectedPageIndex = 0;
+        }
+        _pageTitleController.text = topic.pages[_selectedPageIndex].title;
+        _pageContentController.text = topic.pages[_selectedPageIndex].content;
+      } else {
+        _pageTitleController.text = '';
+        _pageContentController.text = '';
+      }
     }
   }
 
@@ -64,13 +128,8 @@ class _HowToPageState extends State<HowToPage> {
     if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
 
     final topic = _topics[_selectedIndex];
-    final updated = topic.copyWith(
-      title: _titleController.text,
-      content: _contentController.text,
-    );
-
     try {
-      final saved = await _howToService.saveTopic(updated);
+      final saved = await _howToService.saveTopic(topic);
       setState(() {
         _topics[_selectedIndex] = saved;
       });
@@ -92,6 +151,7 @@ class _HowToPageState extends State<HowToPage> {
     final newTopic = HowToTopic.create(
       userProfileId: _profileId,
       title: 'Neues Thema',
+      pages: [HowToPageData.create(title: 'Seite 1')],
       position: _topics.length,
     );
 
@@ -100,6 +160,7 @@ class _HowToPageState extends State<HowToPage> {
       setState(() {
         _topics.add(saved);
         _selectedIndex = _topics.length - 1;
+        _selectedPageIndex = 0;
         _updateEditorFields();
       });
     } catch (e) {
@@ -132,9 +193,12 @@ class _HowToPageState extends State<HowToPage> {
       await _howToService.deleteTopic(_topics[_selectedIndex].id);
       setState(() {
         _topics.removeAt(_selectedIndex);
-        if (_selectedIndex >= _topics.length) {
+        if (_topics.isEmpty) {
+          _selectedIndex = 0;
+        } else if (_selectedIndex >= _topics.length) {
           _selectedIndex = _topics.length - 1;
         }
+        _selectedPageIndex = 0;
         if (_topics.isNotEmpty) {
           _updateEditorFields();
         }
@@ -148,7 +212,7 @@ class _HowToPageState extends State<HowToPage> {
     }
   }
 
-  void _onReorder(int oldIndex, int newIndex) {
+  void _onReorderTopics(int oldIndex, int newIndex) {
     setState(() {
       if (newIndex > oldIndex) {
         newIndex -= 1;
@@ -156,7 +220,6 @@ class _HowToPageState extends State<HowToPage> {
       final item = _topics.removeAt(oldIndex);
       _topics.insert(newIndex, item);
       
-      // Update selected index if it moved
       if (_selectedIndex == oldIndex) {
         _selectedIndex = newIndex;
       } else if (oldIndex < _selectedIndex && newIndex >= _selectedIndex) {
@@ -169,8 +232,91 @@ class _HowToPageState extends State<HowToPage> {
     _howToService.updatePositions(_topics);
   }
 
+  void _addPage() {
+    if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
+    final topic = _topics[_selectedIndex];
+    final newPage = HowToPageData.create(title: 'Neue Seite');
+    setState(() {
+      final newPages = List<HowToPageData>.from(topic.pages)..add(newPage);
+      _topics[_selectedIndex] = topic.copyWith(pages: newPages);
+      _selectedPageIndex = newPages.length - 1;
+      _updateEditorFields();
+    });
+  }
+
+  void _deletePage(int pageIndex) {
+    if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
+    final topic = _topics[_selectedIndex];
+    if (topic.pages.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Das Thema muss mindestens eine Seite haben.')),
+      );
+      return;
+    }
+
+    setState(() {
+      final newPages = List<HowToPageData>.from(topic.pages)..removeAt(pageIndex);
+      _topics[_selectedIndex] = topic.copyWith(pages: newPages);
+      if (_selectedPageIndex >= newPages.length) {
+        _selectedPageIndex = newPages.length - 1;
+      }
+      _updateEditorFields();
+    });
+  }
+
+  void _onReorderPages(int oldIndex, int newIndex) {
+    if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
+    final topic = _topics[_selectedIndex];
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final newPages = List<HowToPageData>.from(topic.pages);
+      final item = newPages.removeAt(oldIndex);
+      newPages.insert(newIndex, item);
+      _topics[_selectedIndex] = topic.copyWith(pages: newPages);
+      
+      if (_selectedPageIndex == oldIndex) {
+        _selectedPageIndex = newIndex;
+      } else if (oldIndex < _selectedPageIndex && newIndex >= _selectedPageIndex) {
+        _selectedPageIndex--;
+      } else if (oldIndex > _selectedPageIndex && newIndex <= _selectedPageIndex) {
+        _selectedPageIndex++;
+      }
+    });
+  }
+
+  void _showTabContextMenu(BuildContext context, Offset position, int pageIndex) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    showMenu(
+      context: context,
+      position: RelativeRect.fromRect(
+        position & const Size(40, 40),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        const PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Colors.red, size: 20),
+              SizedBox(width: 8),
+              Text('Seite löschen'),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'delete') {
+        _deletePage(pageIndex);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final topic = _topics.isNotEmpty && _selectedIndex < _topics.length ? _topics[_selectedIndex] : null;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('How To\'s'),
@@ -179,7 +325,7 @@ class _HowToPageState extends State<HowToPage> {
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveCurrentTopic,
-              tooltip: 'Aktuelles Thema speichern',
+              tooltip: 'Speichern',
             ),
         ],
       ),
@@ -202,14 +348,14 @@ class _HowToPageState extends State<HowToPage> {
                         Expanded(
                           child: ReorderableListView.builder(
                             itemCount: _topics.length,
-                            onReorder: _onReorder,
+                            onReorder: _onReorderTopics,
                             itemBuilder: (context, index) {
-                              final topic = _topics[index];
+                              final t = _topics[index];
                               final isSelected = _selectedIndex == index;
                               return ListTile(
-                                key: ValueKey(topic.id),
+                                key: ValueKey(t.id),
                                 title: Text(
-                                  topic.title,
+                                  t.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -221,6 +367,7 @@ class _HowToPageState extends State<HowToPage> {
                                 onTap: () {
                                   setState(() {
                                     _selectedIndex = index;
+                                    _selectedPageIndex = 0;
                                     _updateEditorFields();
                                   });
                                 },
@@ -249,7 +396,6 @@ class _HowToPageState extends State<HowToPage> {
                   onHorizontalDragUpdate: (details) {
                     setState(() {
                       _sidebarWidth += details.delta.dx;
-                      // Constraints
                       if (_sidebarWidth < 150) _sidebarWidth = 150;
                       if (_sidebarWidth > 600) _sidebarWidth = 600;
                     });
@@ -268,53 +414,145 @@ class _HowToPageState extends State<HowToPage> {
                     ),
                   ),
                 ),
-                // Editor area
+                // Main Content
                 Expanded(
-                  child: _topics.isEmpty
+                  child: topic == null
                       ? const Center(child: Text('Erstelle ein neues Thema oder wähle eines aus.'))
-                      : Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                      : Column(
+                          children: [
+                            // Topic Title (Sidebar Title)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: TextField(
+                                controller: _topicTitleController,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      color: Colors.grey,
+                                    ),
+                                decoration: const InputDecoration(
+                                  hintText: 'Themen-Titel (Sidebar)...',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                              ),
+                            ),
+                            // Tab Bar
+                            Container(
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                border: Border(
+                                  bottom: BorderSide(color: Theme.of(context).dividerColor.withAlpha(50)),
+                                ),
+                              ),
+                              child: Row(
                                 children: [
                                   Expanded(
-                                    child: TextField(
-                                      controller: _titleController,
-                                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                    child: ReorderableListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      itemCount: topic.pages.length,
+                                      onReorder: _onReorderPages,
+                                      proxyDecorator: (child, index, animation) {
+                                        return Material(
+                                          elevation: 4,
+                                          color: Colors.transparent,
+                                          child: child,
+                                        );
+                                      },
+                                      itemBuilder: (context, index) {
+                                        final page = topic.pages[index];
+                                        final isSelected = _selectedPageIndex == index;
+                                        return GestureDetector(
+                                          key: ValueKey(page.id),
+                                          onTap: () {
+                                            setState(() {
+                                              _selectedPageIndex = index;
+                                              _updateEditorFields();
+                                            });
+                                          },
+                                          onSecondaryTapDown: (details) => _showTabContextMenu(context, details.globalPosition, index),
+                                          child: Container(
+                                            margin: const EdgeInsets.only(right: 4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withAlpha(50) : null,
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              page.title.isEmpty ? 'Seite ${index + 1}' : page.title,
+                                              style: TextStyle(
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                              ),
+                                            ),
                                           ),
-                                      decoration: const InputDecoration(
-                                        hintText: 'Titel...',
-                                        border: InputBorder.none,
-                                      ),
+                                        );
+                                      },
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                    onPressed: _deleteTopic,
-                                    tooltip: 'Thema löschen',
+                                    icon: const Icon(Icons.add),
+                                    onPressed: _addPage,
+                                    tooltip: 'Neue Seite hinzufügen',
                                   ),
+                                  const SizedBox(width: 8),
                                 ],
                               ),
-                              const Divider(),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                child: TextField(
-                                  controller: _contentController,
-                                  maxLines: null,
-                                  expands: true,
-                                  textAlignVertical: TextAlignVertical.top,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Inhalt schreiben...',
-                                    border: InputBorder.none,
-                                  ),
-                                  style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            // Editor Area
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _pageTitleController,
+                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                            decoration: const InputDecoration(
+                                              hintText: 'Seitentitel...',
+                                              border: InputBorder.none,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                          onPressed: _deleteTopic,
+                                          tooltip: 'Ganzes Thema löschen',
+                                        ),
+                                      ],
+                                    ),
+                                    const Divider(),
+                                    const SizedBox(height: 16),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _pageContentController,
+                                        maxLines: null,
+                                        expands: true,
+                                        textAlignVertical: TextAlignVertical.top,
+                                        decoration: const InputDecoration(
+                                          hintText: 'Inhalt schreiben...',
+                                          border: InputBorder.none,
+                                        ),
+                                        style: Theme.of(context).textTheme.bodyLarge,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                 ),
               ],

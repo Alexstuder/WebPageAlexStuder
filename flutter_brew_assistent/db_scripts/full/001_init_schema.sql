@@ -368,6 +368,20 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."yeast_bank_entries" (
 ALTER TABLE "aibrewgenius"."yeast_bank_entries" OWNER TO "supabase_admin";
 
 
+CREATE TABLE IF NOT EXISTS "aibrewgenius"."how_to_topics" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_profile_id" "text" NOT NULL,
+    "title" "text" NOT NULL,
+    "content" "text" DEFAULT '',
+    "pages" "jsonb" DEFAULT '[]'::"jsonb",
+    "position" integer DEFAULT 0,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+ALTER TABLE "aibrewgenius"."how_to_topics" OWNER TO "supabase_admin";
+
+
 ALTER TABLE ONLY "aibrewgenius"."ai_generated_recipes_v2"
     ADD CONSTRAINT "ai_generated_recipes_v2_pkey" PRIMARY KEY ("id");
 
@@ -440,6 +454,9 @@ ALTER TABLE ONLY "aibrewgenius"."water_profiles"
 
 ALTER TABLE ONLY "aibrewgenius"."yeast_bank_entries"
     ADD CONSTRAINT "yeast_bank_entries_pkey" PRIMARY KEY ("id");
+    
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_pkey" PRIMARY KEY ("id");
 
 
 
@@ -532,6 +549,8 @@ CREATE OR REPLACE TRIGGER "water_profiles_set_updated_at" BEFORE UPDATE ON "aibr
 
 
 CREATE OR REPLACE TRIGGER "yeast_bank_entries_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."yeast_bank_entries" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
+    
+CREATE OR REPLACE TRIGGER "how_to_topics_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."how_to_topics" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
 
 
 
@@ -598,6 +617,9 @@ ALTER TABLE ONLY "aibrewgenius"."water_profiles"
 ALTER TABLE ONLY "aibrewgenius"."yeast_bank_entries"
     ADD CONSTRAINT "yeast_bank_entries_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
 
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
+
 
 
 CREATE POLICY "Allow full access" ON "aibrewgenius"."batches" TO "anon" USING (true) WITH CHECK (true);
@@ -654,6 +676,8 @@ CREATE POLICY "Allow full access" ON "aibrewgenius"."water_profiles" TO "anon" U
 
 CREATE POLICY "Allow full access" ON "aibrewgenius"."yeast_bank_entries" TO "anon" USING (true) WITH CHECK (true);
 
+CREATE POLICY "Allow full access" ON "aibrewgenius"."how_to_topics" TO "anon" USING (true) WITH CHECK (true);
+
 
 
 CREATE POLICY "Allow full access recipes v2" ON "aibrewgenius"."ai_generated_recipes_v2" TO "anon" USING (true) WITH CHECK (true);
@@ -703,6 +727,8 @@ ALTER TABLE "aibrewgenius"."water_profiles" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "aibrewgenius"."yeast_bank_entries" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "aibrewgenius"."how_to_topics" ENABLE ROW LEVEL SECURITY;
 
 
 GRANT ALL ON SCHEMA "aibrewgenius" TO "anon";
@@ -799,6 +825,10 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewge
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "anon";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "authenticated";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "service_role";
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "service_role";
 
 
 
