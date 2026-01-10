@@ -172,14 +172,12 @@ class _HowToPageState extends State<HowToPage> {
     }
   }
 
-  Future<void> _deleteTopic() async {
-    if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
-
+  Future<void> _deleteTopicAt(int index) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Löschen?'),
-        content: const Text('Möchtest du dieses Thema wirklich löschen?'),
+        title: const Text('Thema löschen?'),
+        content: Text('Möchtest du das Thema "${_topics[index].title}" wirklich löschen?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen', style: TextStyle(color: Colors.red))),
@@ -190,9 +188,9 @@ class _HowToPageState extends State<HowToPage> {
     if (confirm != true) return;
 
     try {
-      await _howToService.deleteTopic(_topics[_selectedIndex].id);
+      await _howToService.deleteTopic(_topics[index].id);
       setState(() {
-        _topics.removeAt(_selectedIndex);
+        _topics.removeAt(index);
         if (_topics.isEmpty) {
           _selectedIndex = 0;
         } else if (_selectedIndex >= _topics.length) {
@@ -264,6 +262,33 @@ class _HowToPageState extends State<HowToPage> {
     });
   }
 
+  Future<void> _confirmDeletePage(int pageIndex) async {
+    if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
+    final topic = _topics[_selectedIndex];
+    if (topic.pages.length <= 1) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Das Thema muss mindestens eine Seite haben.')),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seite löschen?'),
+        content: Text('Möchtest du die Seite "${topic.pages[pageIndex].title}" wirklich löschen?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen', style: TextStyle(color: Colors.red))),
+        ],
+      )
+    );
+
+    if (confirm == true) {
+      _deletePage(pageIndex);
+    }
+  }
+
   void _onReorderPages(int oldIndex, int newIndex) {
     if (_selectedIndex < 0 || _selectedIndex >= _topics.length) return;
     final topic = _topics[_selectedIndex];
@@ -308,7 +333,7 @@ class _HowToPageState extends State<HowToPage> {
       ],
     ).then((value) {
       if (value == 'delete') {
-        _deletePage(pageIndex);
+        _confirmDeletePage(pageIndex);
       }
     });
   }
@@ -363,6 +388,11 @@ class _HowToPageState extends State<HowToPage> {
                                     color: isSelected ? Theme.of(context).colorScheme.primary : null,
                                   ),
                                 ),
+                                trailing: isSelected ? IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                  onPressed: () => _deleteTopicAt(index),
+                                  tooltip: 'Thema löschen',
+                                ) : null,
                                 selected: isSelected,
                                 onTap: () {
                                   setState(() {
@@ -422,7 +452,7 @@ class _HowToPageState extends State<HowToPage> {
                           children: [
                             // Topic Title (Sidebar Title)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 16.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
                               child: TextField(
                                 controller: _topicTitleController,
                                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -528,8 +558,8 @@ class _HowToPageState extends State<HowToPage> {
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                          onPressed: _deleteTopic,
-                                          tooltip: 'Ganzes Thema löschen',
+                                          onPressed: () => _confirmDeletePage(_selectedPageIndex),
+                                          tooltip: 'Diese Seite löschen',
                                         ),
                                       ],
                                     ),
