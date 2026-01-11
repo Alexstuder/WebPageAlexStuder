@@ -1,11 +1,12 @@
-import 'dart:math';
-
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/user_profile.dart';
 import '../services/rapt_service.dart';
-import '../services/user_profile_service.dart'; // To get profile
+import '../services/user_profile_service.dart';
+import 'rapt_dashboard/rapt_summary_tile.dart';
+import 'rapt_dashboard/rapt_telemetry_chart.dart';
+import 'rapt_dashboard/rapt_controls_panel.dart';
+import 'rapt_dashboard/rapt_badges.dart';
 
 class RaptDashboardPage extends StatefulWidget {
   const RaptDashboardPage({super.key});
@@ -126,31 +127,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  
-  // (Rest of methods) ... skip to build ...
-
-  
-  // New helper to reset
-  Future<void> _resetDateAndReload() async {
-     setState(() => _isLoading = true);
-     try {
-       final service = RaptService(
-          userId: _profile!.raptUserId!,
-          apiKey: _profile!.raptApiKey!,
-        );
-       await service.resetStartDate();
-       setState(() => _startDate = null);
-       // Reload with force refresh to clear any stale cache state on proxy side regarding date override
-       await _loadTelemetry(_selectedControllerId!, forceRefresh: true);
-     } catch (e) {
-        if (mounted) setState(() => _error = e.toString());
-        setState(() => _isLoading = false);
-     }
-  }
-
-
-
-// ... (existing code omitted)
 
   void _processTelemetry(List<dynamic> rows) {
     if (rows.isEmpty) {
@@ -190,7 +166,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     
     // OG
     final gravities = rows.map((r) => normalize((r['gravity'] as num?)?.toDouble())).where((g) => g > 0).toList();
-    final og = gravities.isNotEmpty ? gravities.reduce(max) : null;
+    final og = gravities.isNotEmpty ? gravities.reduce((a, b) => a > b ? a : b) : null;
     
     // ABV
     double? abv;
@@ -252,34 +228,30 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       _currentProfileName = last['profileName'] ?? last['ProfileName'];
     });
   }
+  
+  // (Rest of methods) ... skip to build ...
 
-  Widget _buildBatteryBadge(double percent) {
-     Color color = Colors.green;
-     if (percent < 30) {
-       color = Colors.red;
-     } else if (percent < 60) {
-       color = Colors.yellow;
+  
+  // New helper to reset
+  Future<void> _resetDateAndReload() async {
+     setState(() => _isLoading = true);
+     try {
+       final service = RaptService(
+          userId: _profile!.raptUserId!,
+          apiKey: _profile!.raptApiKey!,
+        );
+       await service.resetStartDate();
+       setState(() => _startDate = null);
+       // Reload with force refresh to clear any stale cache state on proxy side regarding date override
+       await _loadTelemetry(_selectedControllerId!, forceRefresh: true);
+     } catch (e) {
+        if (mounted) setState(() => _error = e.toString());
+        setState(() => _isLoading = false);
      }
-     
-     return Container(
-       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.5))
-       ),
-       child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-             Text('Pill Batterie', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-             const SizedBox(width: 6),
-             Icon(Icons.battery_std, color: color, size: 16),
-             const SizedBox(width: 4),
-             Text('${percent.floor()}%', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold))
-          ]
-       )
-     );
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +262,15 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
       );
     }
     
+    // Check active session
+    bool isActive = false;
+    if (_selectedControllerId != null) {
+      final c = _controllers.firstWhere((c) => _getControllerId(c) == _selectedControllerId, orElse: () => null);
+      if (c != null && (c['activeProfileSession'] != null || c['ActiveProfileSession'] != null)) {
+        isActive = true;
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF020617),
       appBar: AppBar(
@@ -301,7 +282,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
            if (_latestBattery != null)
              Padding(
                 padding: const EdgeInsets.only(right: 16), 
-                child: Center(child: _buildBatteryBadge(_latestBattery!))
+                child: Center(child: RaptBatteryBadge(percent: _latestBattery!))
              ),
         ],
       ),
@@ -311,7 +292,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Status Badge
-            _buildStatusBadge(),
+            RaptStatusBadge(isActive: isActive),
             const SizedBox(height: 16),
             if (_isFallbackData && _telemetryData.isNotEmpty) ...[
                Builder(
@@ -422,15 +403,14 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      // Cards
                      LayoutBuilder(
                        builder: (ctx, constraints) {
-                         // Responsive switch: if too small, stack
                          if (constraints.maxWidth < 600) {
                             return Column(
                                children: [
-                                  _buildSummaryTile('Temperatur', _latestTemp, '°C', Colors.blue, null),
+                                  RaptSummaryTile(label: 'Temperatur', value: _latestTemp, unit: '°C', color: Colors.blue),
                                   const SizedBox(height: 16),
-                                  _buildSummaryTile('Gravity', _latestGravity, 'SG', Colors.red, _buildGravityExtra()),
+                                  RaptSummaryTile(label: 'Gravity', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra()),
                                   const SizedBox(height: 16),
-                                  _buildSummaryTile('Alkohol', _latestAbv, 'Vol.%', Colors.amber, null),
+                                  RaptSummaryTile(label: 'Alkohol', value: _latestAbv, unit: 'Vol.%', color: Colors.amber),
                                ],
                             );
                          }
@@ -438,11 +418,11 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                            child: Row(
                              crossAxisAlignment: CrossAxisAlignment.stretch,
                              children: [
-                               Expanded(child: _buildSummaryTile('Temperatur', _latestTemp, '°C', Colors.blue, null)),
+                               Expanded(child: RaptSummaryTile(label: 'Temperatur', value: _latestTemp, unit: '°C', color: Colors.blue)),
                                const SizedBox(width: 16),
-                               Expanded(child: _buildSummaryTile('Gravity', _latestGravity, 'SG', Colors.red, _buildGravityExtra())),
+                               Expanded(child: RaptSummaryTile(label: 'Gravity', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra())),
                                const SizedBox(width: 16),
-                               Expanded(child: _buildSummaryTile('Alkohol', _latestAbv, 'Vol.%', Colors.amber, null)),
+                               Expanded(child: RaptSummaryTile(label: 'Alkohol', value: _latestAbv, unit: 'Vol.%', color: Colors.amber)),
                              ],
                            ),
                          );
@@ -453,130 +433,26 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                      // CHART
                      SizedBox(
                        height: 400,
-                       child: _telemetryData.isEmpty 
-                         ? const Center(child: Text('Keine Daten', style: TextStyle(color: Colors.white54)))
-                         : _buildChart(),
+                       child: RaptTelemetryChart(telemetryData: _telemetryData),
                      ),
                      const SizedBox(height: 24),
                      
-                     // Controls Row (Date, Apply, Reset, Reload)
-                     Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         const Text('Startdatum (optional)', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                         const SizedBox(height: 8),
-                         Wrap(
-                           spacing: 12,
-                           runSpacing: 12,
-                           crossAxisAlignment: WrapCrossAlignment.center,
-                           children: [
-                              // Date Picker
-                              InkWell(
-                                 onTap: () async {
-                                    final picked = await showDatePicker(
-                                      context: context, 
-                                      initialDate: _startDate ?? DateTime.now(), 
-                                      firstDate: DateTime(2020), 
-                                      lastDate: DateTime.now()
-                                    );
-                                    if (picked != null) {
-                                       if (!context.mounted) return;
-                                       // ignore: use_build_context_synchronously
-                                       final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_startDate ?? DateTime.now()));
-                                       if (time != null) {
-                                          final dt = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
-                                          setState(() => _startDate = dt);
-                                       }
-                                    }
-                                 },
-                                 child: Container(
-                                   width: 200,
-                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                   decoration: BoxDecoration(
-                                       color: const Color(0xFF0F172A).withValues(alpha: 0.6),
-                                      border: Border.all(color: Colors.white24),
-                                      borderRadius: BorderRadius.circular(10),
-                                   ),
-                                   child: Row(
-                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                     children: [
-                                       Text(
-                                         _startDate != null ? DateFormat('dd.MM.yyyy, HH:mm').format(_startDate!) : 'Datum wählen...',
-                                         style: const TextStyle(color: Colors.white),
-                                       ),
-                                       const Icon(Icons.calendar_today, size: 16, color: Colors.white54),
-                                     ],
-                                   ),
-                                 ),
-                              ),
-                              
-                              // Übernehmen
-                              SizedBox(
-                                height: 48,
-                                child: ElevatedButton(
-                                   onPressed: () {
-                                      if (_selectedControllerId != null) {
-                                         _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
-                                      }
-                                   },
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: const Color(0xFF1E293B),
-                                     foregroundColor: Colors.white,
-                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Colors.white24)),
-                                   ),
-                                   child: const Text('Übernehmen'),
-                                ),
-                              ),
-                              
-                              // Zurücksetzen
-                              SizedBox(
-                                height: 48,
-                                child: OutlinedButton(
-                                   onPressed: () {
-                                      _resetDateAndReload();
-                                   },
-                                   style: OutlinedButton.styleFrom(
-                                     foregroundColor: Colors.white,
-                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                     side: const BorderSide(color: Colors.white24),
-                                   ),
-                                   child: const Text('Zurücksetzen'),
-                                ),
-                              ),
-                              
-                              // Stand info
-                              if (_generatedAt != null)
-                                Text(
-                                  'Stand ${_formatTime(_generatedAt!)}', // e.g. "Stand 07:00 MEZ"
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
-                                ),
-                                
-                              // Reload
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('Reload', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.white24),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.refresh, color: Colors.white),
-                                      onPressed: () {
-                                         if (_selectedControllerId != null) {
-                                            // Reload keeps current date if set, but forces refresh
-                                            _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
-                                         }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              )
-                           ],
-                         ),
-                       ],
+                     // Controls Row
+                     RaptControlsPanel(
+                        startDate: _startDate, 
+                        generatedAt: _generatedAt,
+                        onDateChanged: (dt) => setState(() => _startDate = dt), 
+                        onApply: () {
+                           if (_selectedControllerId != null) {
+                              _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
+                           }
+                        }, 
+                        onReset: _resetDateAndReload, 
+                        onRefresh: () {
+                           if (_selectedControllerId != null) {
+                              _loadTelemetry(_selectedControllerId!, startOverride: _startDate, forceRefresh: true);
+                           }
+                        }
                      ),
                   ],
                ),
@@ -597,75 +473,7 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
     );
   }
   
-  String _formatTime(String iso) {
-     final dt = DateTime.tryParse(iso);
-     if (dt == null) return iso;
-     return '${DateFormat('HH:mm').format(dt)} MEZ'; // Assuming local is close enough to MEZ or converting explicitly if needed
-  }
 
-  
-  Widget _buildStatusBadge() {
-      // Check active session
-      bool isActive = false;
-      if (_selectedControllerId != null) {
-         final c = _controllers.firstWhere((c) => _getControllerId(c) == _selectedControllerId, orElse: () => null);
-         if (c != null && (c['activeProfileSession'] != null || c['ActiveProfileSession'] != null)) {
-            isActive = true;
-         }
-      }
-      
-      return Container(
-         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-         decoration: BoxDecoration(
-            color: isActive ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2),
-            border: Border.all(color: isActive ? Colors.green : Colors.red.withValues(alpha: 0.5)),
-            borderRadius: BorderRadius.circular(20),
-         ),
-         child: Text(
-            isActive ? 'Gärt gerade' : 'Gärt nicht',
-            style: TextStyle(
-               color: isActive ? Colors.greenAccent : Colors.redAccent,
-               fontSize: 12,
-               fontWeight: FontWeight.bold,
-            ),
-         ),
-      );
-  }
-
-  Widget _buildSummaryTile(String label, double? value, String unit, Color color, Widget? extra) {
-     return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-           color: const Color(0xFF0F172A).withValues(alpha: 0.65),
-           border: Border.all(color: color.withValues(alpha: 0.4)),
-           borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-           crossAxisAlignment: CrossAxisAlignment.start,
-           mainAxisSize: MainAxisSize.min,
-           children: [
-              Text(label.toUpperCase(), style: TextStyle(color: Colors.indigo[100], fontSize: 13, letterSpacing: 0.5)),
-              const SizedBox(height: 6),
-              Row(
-                 crossAxisAlignment: CrossAxisAlignment.baseline,
-                 textBaseline: TextBaseline.alphabetic,
-                 children: [
-                    Text(value != null ? (label == 'Gravity' ? value.toStringAsFixed(4) : value.toStringAsFixed(1)) : '–', 
-                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)
-                    ),
-                    const SizedBox(width: 4),
-                    Text(unit, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                 ],
-              ),
-              if (extra != null) ...[
-                 const SizedBox(height: 8),
-                 extra,
-              ]
-           ],
-        ),
-     );
-  }
-  
   Widget _buildGravityExtra() {
      return Column(
         children: [
@@ -682,277 +490,6 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
            Text(val, style: const TextStyle(color: Colors.white, fontSize: 11)),
         ],
-     );
-  }
-  
-
-
-  Widget _buildChart() {
-     // Prepare Spots
-     // Downsample if too many points?
-     // Let's take every Nth point if length > 500
-     List<dynamic> source = _telemetryData;
-     if (source.length > 500) {
-        // Simple decimator
-        final step = (source.length / 500).ceil();
-        List<dynamic> reduced = [];
-        for (int i = 0; i < source.length; i += step) {
-           reduced.add(source[i]);
-        }
-        source = reduced;
-     }
-
-     final pointsTemp = <FlSpot>[];
-     final pointsGravity = <FlSpot>[];
-     final pointsAbv = <FlSpot>[];
-      final pointsVelocity = <FlSpot>[];
-     
-     // 1. Calculate Velocity properly from gravity differences
-     for (int i = 0; i < source.length; i++) {
-        final r = source[i];
-        final tEnd = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
-        if (tEnd == null) continue;
-        
-        // Find a point about 12 hours ago
-        final windowMs = 12 * 60 * 60 * 1000;
-        int? startIdx;
-        for (int j = i - 1; j >= 0; j--) {
-           final tj = DateTime.tryParse(source[j]['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
-           if (tj == null) continue;
-           startIdx = j;
-           if (tj <= tEnd - windowMs) break;
-        }
-        
-        if (startIdx != null && startIdx != i) {
-           final rStart = source[startIdx];
-           final t1 = DateTime.tryParse(rStart['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
-           if (t1 != null) {
-              final dtDays = (tEnd - t1) / (1000 * 60 * 60 * 24);
-              if (dtDays >= 0.05) {
-                 double g1 = (rStart['gravity'] as num?)?.toDouble() ?? 0;
-                 double g2 = (r['gravity'] as num?)?.toDouble() ?? 0;
-                 if (g1 > 500) g1 /= 1000;
-                 if (g2 > 500) g2 /= 1000;
-                 
-                 final dg = (g1 - g2) * 1000;
-                 double vel = dg / dtDays;
-                 
-                 // Noise filter
-                 if (vel < 0.3 && i < source.length * 0.2) vel = 0;
-                 if (vel < 0) vel = 0;
-                 
-                 pointsVelocity.add(FlSpot(tEnd, vel));
-              }
-           }
-        } else {
-           pointsVelocity.add(FlSpot(tEnd, 0));
-        }
-     }
-     
-     // Store raw gravity values for ABV calculation
-     final rawGravities = <double>[];
-     
-     for (final r in source) {
-        final t = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
-        final temp = (r['temperature'] as num?)?.toDouble();
-        double? grav = (r['gravity'] as num?)?.toDouble(); // typically 1.0xx
-        if (grav != null && grav > 500) grav = grav / 1000.0;
-        
-        if (t != null) {
-           if (temp != null) pointsTemp.add(FlSpot(t, temp));
-           if (grav != null) {
-              pointsGravity.add(FlSpot(t, grav));
-              rawGravities.add(grav);
-           }
-        }
-     }
-     
-     if (rawGravities.isNotEmpty) {
-        final double og = rawGravities.reduce(max);
-        double lastAbv = 0.0;
-        
-        // We iterate pointsGravity to align time
-        for (final spot in pointsGravity) {
-           final g = spot.y;
-           double currentAbv = (og - g) * 131.25;
-           if (currentAbv < 0) currentAbv = 0;
-           
-           if (currentAbv < lastAbv) {
-              currentAbv = lastAbv; 
-           } else {
-              lastAbv = currentAbv;
-           }
-           pointsAbv.add(FlSpot(spot.x, currentAbv));
-        }
-     }
-     
-     double minTemp = 0;
-     double maxTemp = 30;
-     if (pointsTemp.isNotEmpty) {
-        minTemp = pointsTemp.map((e) => e.y).reduce(min);
-        maxTemp = pointsTemp.map((e) => e.y).reduce(max);
-     }
-     // Add padding
-     minTemp -= 5;
-     maxTemp += 5;
-     
-     double minGrav = 1.000;
-     double maxGrav = 1.080;
-     if (pointsGravity.isNotEmpty) {
-        minGrav = pointsGravity.map((e) => e.y).reduce(min);
-        maxGrav = pointsGravity.map((e) => e.y).reduce(max);
-     }
-     // Add padding
-     minGrav -= 0.005;
-     maxGrav += 0.005;
-     
-     double minAbv = 0.0;
-     double maxAbv = 7.0; 
-     if (pointsAbv.isNotEmpty) {
-        minAbv = pointsAbv.map((e) => e.y).reduce(min);
-        maxAbv = pointsAbv.map((e) => e.y).reduce(max);
-     }
-     minAbv = -0.5; 
-     maxAbv += 1.0;
- 
-     double minVel = 0;
-     double maxVel = 10.0; 
-     if (pointsVelocity.isNotEmpty) {
-        final actualMax = pointsVelocity.map((e) => e.y).reduce(max);
-        maxVel = (actualMax * 1.2 / 5).ceil() * 5.0; // Dynamic scale with buffer, rounded to 5
-        if (maxVel < 5) maxVel = 5;
-     }
-     
-     // Normalizers
-     double normalizeG(double g) {
-        if (maxGrav == minGrav) return minTemp + (maxTemp - minTemp)/2;
-        return (g - minGrav) / (maxGrav - minGrav) * (maxTemp - minTemp) + minTemp;
-     }
- 
-     double normalizeAbv(double a) {
-        if (maxAbv == minAbv) return minTemp + (maxTemp - minTemp)/2;
-        return (a - minAbv) / (maxAbv - minAbv) * (maxTemp - minTemp) + minTemp;
-     }
- 
-      double normalizeVel(double v) {
-         if (maxVel == minVel) return minTemp + (maxTemp - minTemp)/2;
-         return (v - minVel) / (maxVel - minVel) * (maxTemp - minTemp) + minTemp;
-      }
- 
-      final normalizedGravityPoints = pointsGravity.map((e) => FlSpot(e.x, normalizeG(e.y))).toList();
-      final normalizedAbvPoints = pointsAbv.map((e) => FlSpot(e.x, normalizeAbv(e.y))).toList();
-      final normalizedVelocityPoints = pointsVelocity.map((e) => FlSpot(e.x, normalizeVel(e.y))).toList();
-      
-      return LineChart(
-         LineChartData(
-            minY: minTemp,
-            maxY: maxTemp,
-            minX: pointsTemp.isNotEmpty ? pointsTemp.first.x : (pointsGravity.isNotEmpty ? pointsGravity.first.x : (pointsAbv.isNotEmpty ? pointsAbv.first.x : 0)),
-            maxX: pointsTemp.isNotEmpty ? pointsTemp.last.x : (pointsGravity.isNotEmpty ? pointsGravity.last.x : (pointsAbv.isNotEmpty ? pointsAbv.last.x : 0)),
-            lineBarsData: [
-               // Temp (Index 0)
-               LineChartBarData(
-                  spots: pointsTemp,
-                  color: Colors.blue,
-                  isCurved: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: Colors.blue.withValues(alpha: 0.1)),
-               ),
-               // Gravity (Index 1)
-               LineChartBarData(
-                  spots: normalizedGravityPoints,
-                  color: Colors.red,
-                  isCurved: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: Colors.red.withValues(alpha: 0.1)),
-               ),
-               // Alcohol (Index 2)
-               LineChartBarData(
-                  spots: normalizedAbvPoints,
-                  color: Colors.amber,
-                  isCurved: true,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.1)),
-               ),
-               // Velocity (Index 3)
-               LineChartBarData(
-                  spots: normalizedVelocityPoints,
-                  color: Colors.brown, 
-                  isCurved: false, // Linear to prevent undershooting 0
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(show: false),
-                  barWidth: 1.5,
-               ),
-            ],
-           titlesData: FlTitlesData(
-              bottomTitles: AxisTitles(
-                 sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (val, meta) {
-                       final dt = DateTime.fromMillisecondsSinceEpoch(val.toInt());
-                       return Padding(
-                         padding: const EdgeInsets.only(top: 8.0),
-                         child: Text(DateFormat('dd.MM\nHH:mm').format(dt), style: const TextStyle(color: Colors.white54, fontSize: 10), textAlign: TextAlign.center),
-                       );
-                    },
-                    interval: (pointsTemp.isNotEmpty) ? (pointsTemp.last.x - pointsTemp.first.x) / 5 : 1000000, 
-                    reservedSize: 40,
-                 ),
-              ),
-              leftTitles: AxisTitles(
-                 sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (val, meta) {
-                       return Text(val.toStringAsFixed(1), style: const TextStyle(color: Colors.blue, fontSize: 10));
-                    },
-                    reservedSize: 30,
-                 ),
-              ),
-              rightTitles: AxisTitles(
-                 sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (val, meta) {
-                       double g = (val - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
-                       return Text(g.toStringAsFixed(3), style: const TextStyle(color: Colors.red, fontSize: 10));
-                    },
-                    reservedSize: 40,
-                 ),
-              ),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-           ),
-           gridData: FlGridData(
-             show: true, 
-             drawVerticalLine: true, 
-             getDrawingHorizontalLine: (_) => const FlLine(color: Colors.white10),
-             getDrawingVerticalLine: (_) => const FlLine(color: Colors.white10),
-           ),
-           borderData: FlBorderData(show: false),
-           lineTouchData: LineTouchData(
-              touchTooltipData: LineTouchTooltipData(
-                 getTooltipColor: (_) => Colors.black87,
-                 getTooltipItems: (touchedSpots) {
-                    return touchedSpots.map((spot) {
-                       if (spot.barIndex == 0) {
-                          // Temp
-                          return LineTooltipItem('${spot.y.toStringAsFixed(1)} °C', const TextStyle(color: Colors.blue));
-                       } else if (spot.barIndex == 1) {
-                          // Gravity
-                          double g = (spot.y - minTemp) / (maxTemp - minTemp) * (maxGrav - minGrav) + minGrav;
-                          return LineTooltipItem('${g.toStringAsFixed(4)} SG', const TextStyle(color: Colors.red));
-                       } else if (spot.barIndex == 2) {
-                          // Alcohol
-                          double a = (spot.y - minTemp) / (maxTemp - minTemp) * (maxAbv - minAbv) + minAbv;
-                          return LineTooltipItem('${a.toStringAsFixed(1)} %', const TextStyle(color: Colors.amber));
-                       } else {
-                          // Velocity (Index 3)
-                          double v = (spot.y - minTemp) / (maxTemp - minTemp) * (maxVel - minVel) + minVel;
-                          return LineTooltipItem('${(v / 1000).toStringAsFixed(4)} SG/Tag', const TextStyle(color: Colors.brown));
-                       }
-                    }).toList();
-                 }
-              ),
-           ),
-        ),
      );
   }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/how_to_topic.dart';
 import '../services/how_to_service.dart';
+import 'how_to/how_to_sidebar.dart';
+import 'how_to/how_to_tab_bar.dart';
+import 'how_to/how_to_editor.dart';
+import 'how_to/resizer_handle.dart';
 
 class HowToPage extends StatefulWidget {
   const HowToPage({super.key});
@@ -41,7 +45,6 @@ class _HowToPageState extends State<HowToPage> {
     super.dispose();
   }
 
-  // To avoid constant state rebuilds and cursor jumps, we update the local model silently
   void _onTopicTitleChanged() {
     if (_selectedIndex >= 0 && _selectedIndex < _topics.length) {
       final val = _topicTitleController.text;
@@ -358,75 +361,22 @@ class _HowToPageState extends State<HowToPage> {
           ? const Center(child: CircularProgressIndicator())
           : Row(
               children: [
-                // Index (Sidebar)
-                SizedBox(
+                HowToSidebar(
+                  topics: _topics,
+                  selectedIndex: _selectedIndex,
                   width: _sidebarWidth,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(128),
-                      border: Border(
-                        right: BorderSide(color: Theme.of(context).dividerColor.withAlpha(50)),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: ReorderableListView.builder(
-                            itemCount: _topics.length,
-                            onReorder: _onReorderTopics,
-                            buildDefaultDragHandles: false,
-                            itemBuilder: (context, index) {
-                              final t = _topics[index];
-                              final isSelected = _selectedIndex == index;
-                              return ReorderableDelayedDragStartListener(
-                                key: ValueKey(t.id),
-                                index: index,
-                                child: ListTile(
-                                  title: Text(
-                                    t.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: isSelected ? Theme.of(context).colorScheme.primary : null,
-                                    ),
-                                  ),
-                                  trailing: isSelected ? IconButton(
-                                    icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                                    onPressed: () => _deleteTopicAt(index),
-                                    tooltip: 'Thema löschen',
-                                  ) : null,
-                                  selected: isSelected,
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedIndex = index;
-                                      _selectedPageIndex = 0;
-                                      _updateEditorFields();
-                                    });
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ElevatedButton.icon(
-                            onPressed: _addTopic,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Neues Thema'),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 45),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  onTopicSelected: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                      _selectedPageIndex = 0;
+                      _updateEditorFields();
+                    });
+                  },
+                  onReorderTopics: _onReorderTopics,
+                  onDeleteTopic: _deleteTopicAt,
+                  onAddTopic: _addTopic,
                 ),
-                // Resizer Handle
-                GestureDetector(
+                ResizerHandle(
                   onHorizontalDragUpdate: (details) {
                     setState(() {
                       _sidebarWidth += details.delta.dx;
@@ -434,27 +384,12 @@ class _HowToPageState extends State<HowToPage> {
                       if (_sidebarWidth > 600) _sidebarWidth = 600;
                     });
                   },
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.resizeLeftRight,
-                    child: Container(
-                      width: 4,
-                      color: Colors.transparent,
-                      child: Center(
-                        child: Container(
-                          width: 1,
-                          color: Theme.of(context).dividerColor.withAlpha(80),
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
-                // Main Content
                 Expanded(
                   child: topic == null
                       ? const Center(child: Text('Erstelle ein neues Thema oder wähle eines aus.'))
                       : Column(
                           children: [
-                            // Topic Title (Sidebar Title)
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
                               child: TextField(
@@ -469,126 +404,23 @@ class _HowToPageState extends State<HowToPage> {
                                 ),
                               ),
                             ),
-                            // Tab Bar
-                            Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                border: Border(
-                                  bottom: BorderSide(color: Theme.of(context).dividerColor.withAlpha(50)),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: ReorderableListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      buildDefaultDragHandles: false,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      itemCount: topic.pages.length,
-                                      onReorder: _onReorderPages,
-                                      proxyDecorator: (child, index, animation) {
-                                        return Material(
-                                          elevation: 4,
-                                          color: Colors.transparent,
-                                          child: child,
-                                        );
-                                      },
-                                      itemBuilder: (context, index) {
-                                        final page = topic.pages[index];
-                                        final isSelected = _selectedPageIndex == index;
-                                        return ReorderableDelayedDragStartListener(
-                                          key: ValueKey(page.id),
-                                          index: index,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _selectedPageIndex = index;
-                                                _updateEditorFields();
-                                              });
-                                            },
-                                            onSecondaryTapDown: (details) => _showTabContextMenu(context, details.globalPosition, index),
-                                            child: Container(
-                                              margin: const EdgeInsets.only(right: 4),
-                                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                                              decoration: BoxDecoration(
-                                                border: Border(
-                                                  bottom: BorderSide(
-                                                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withAlpha(50) : null,
-                                              ),
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                page.title.isEmpty ? 'Seite ${index + 1}' : page.title,
-                                                style: TextStyle(
-                                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                                  color: isSelected ? Theme.of(context).colorScheme.primary : null,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add),
-                                    onPressed: _addPage,
-                                    tooltip: 'Neue Seite hinzufügen',
-                                  ),
-                                  const SizedBox(width: 8),
-                                ],
-                              ),
+                            HowToTabBar(
+                              topic: topic,
+                              selectedPageIndex: _selectedPageIndex,
+                              onPageSelected: (index) {
+                                setState(() {
+                                  _selectedPageIndex = index;
+                                  _updateEditorFields();
+                                });
+                              },
+                              onReorderPages: _onReorderPages,
+                              onAddPage: _addPage,
+                              onSecondaryTap: _showTabContextMenu,
                             ),
-                            // Editor Area
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextField(
-                                            controller: _pageTitleController,
-                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                            decoration: const InputDecoration(
-                                              hintText: 'Seitentitel...',
-                                              border: InputBorder.none,
-                                            ),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                          onPressed: () => _confirmDeletePage(_selectedPageIndex),
-                                          tooltip: 'Diese Seite löschen',
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(),
-                                    const SizedBox(height: 16),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _pageContentController,
-                                        maxLines: null,
-                                        expands: true,
-                                        textAlignVertical: TextAlignVertical.top,
-                                        decoration: const InputDecoration(
-                                          hintText: 'Inhalt schreiben...',
-                                          border: InputBorder.none,
-                                        ),
-                                        style: Theme.of(context).textTheme.bodyLarge,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            HowToEditor(
+                              pageTitleController: _pageTitleController,
+                              pageContentController: _pageContentController,
+                              onDeletePage: () => _confirmDeletePage(_selectedPageIndex),
                             ),
                           ],
                         ),
