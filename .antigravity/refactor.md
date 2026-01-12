@@ -1,13 +1,74 @@
-# Deployment Workflow
-- Wenn ich "Deploy" sage, führe zuerst flutter analyze durch und korrigiere den Code solange, bis dieser fehlerfrei ist.
-- Führe danach den DB-Seed-Export aus: ersetze die daten ./db_scripts/full/aibrewgenius_seed.sql .Achte dabei darauf , dass die Reihenfolge der Inserts mit dem init Skript übereinstimmt.
-- Committe danach alle Änderungen mit einer KI-generierten Nachricht.
-- Pushe erst nach erfolgreichem Commit.
+# Refactor Workflow
 
-# Upgrade Workflow
-- Wenn ich "Upgrade" sage, führe folgende Schritte aus:
-  1. Aktualisiere die Supabase CLI via brew: `brew upgrade supabase/tap/supabase`.
-  2. Aktualisiere das Flutter SDK: `flutter upgrade`.
-  3. Aktualisiere die Projekt-Abhängigkeiten: `cd flutter_brew_assistent && flutter pub upgrade`.
-  4. Starte die lokale Supabase-Instanz neu, um Image-Updates zu laden: `supabase stop` gefolgt von `supabase start`.
-  5. Führe danach den kompletten "Deployment Workflow" (siehe oben) aus, um die Änderungen zu validieren und auf den VPS zu bringen.
+Auslöser:
+- Wird das Kommando „Refactor“ ausgesprochen, startet dieser Workflow vollständig und deterministisch.
+
+1. Statische Analyse (Baseline)
+- Führe `flutter analyze` aus.
+- Behebe alle Fehler und Warnings iterativ.
+- Abbruchbedingung: `flutter analyze` liefert ein vollständig fehlerfreies Ergebnis.
+
+2. Test-Baseline (Absicherung vor Refactoring)
+- Nach erfolgreichem `flutter analyze` werden neue Tests erstellt.
+- Ziel der Tests:
+  - Abbildung des aktuellen Ist-Verhaltens
+  - Absicherung kritischer Use-Cases, Logikpfade und Zustände
+- Tests müssen reproduzierbar und deterministisch sein.
+- Führe alle Tests aus und stelle sicher:
+  - Alle Tests bestehen fehlerfrei
+  - Testergebnisse gelten als funktionale Referenz (Baseline)
+
+3. Versionskontrolle
+- Erstelle einen neuen Git-Branch nach folgendem Schema:
+  refactoring-YYYY-MM-DD
+- Der Branch wird ausschließlich für diesen Refactoring-Durchlauf verwendet.
+
+4. Systematische Codeanalyse
+- Analysiere den gesamten Codebestand auf:
+  - Performance
+  - Speicher- und Ressourcenverbrauch
+  - Lesbarkeit
+  - Wartbarkeit
+  - Architektur- und Layer-Trennung
+- Randbedingungen:
+  - Keine funktionalen Änderungen
+  - Zielannahme: ~5000 registrierte Nutzer, ~300 gleichzeitige Sessions
+  - Fokus auf Stabilität, Skalierbarkeit und saubere Zustandsverwaltung
+
+5. Priorisierung
+- Identifiziere alle möglichen Optimierungs- und Refactoring-Maßnahmen.
+- Bewerte jede Maßnahme nach:
+  - Flutter Best Practices
+  - Klarheit und Einfachheit
+  - Langfristiger Wartbarkeit
+- Wähle stets die fachlich sauberste und idiomatischste Flutter-Lösung.
+
+6. Umsetzung
+- Implementiere die Maßnahmen sequenziell.
+- Jede logisch abgeschlossene Änderung erhält:
+  - einen eigenen Commit
+  - minimale, klar abgegrenzte Diff-Größe
+- Keine Commits mit vermischten oder voneinander abhängigen Änderungen.
+
+7. Validierung nach Refactoring
+- Führe erneut `flutter analyze` aus.
+- Führe den vollständigen Test-Suite-Durchlauf aus.
+- Erwartung:
+  - Alle Tests bestehen
+  - Testergebnisse sind identisch zur Baseline
+- Abweichungen gelten als funktionale Änderung und sind nicht zulässig.
+
+8. Commit-Richtlinie
+- Jeder Commit erhält eine präzise, KI-generierte Commit-Message.
+- Format:
+  - Imperativ
+  - Kurzbeschreibung im Titel
+  - Optionaler Body mit technischer Begründung
+- Keine Sammel- oder „Cleanup“-Commits.
+
+9. Abschlusszustand
+- Code ist analysiert, optimiert und refaktoriert.
+- Funktionalität unverändert und testverifiziert.
+- Analyse-Status: fehlerfrei.
+- Git-Historie: nachvollziehbar, linear, wartbar.
+

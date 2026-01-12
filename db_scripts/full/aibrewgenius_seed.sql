@@ -1,4 +1,4 @@
--- Seed data exported on Mon Jan 12 21:44:25 CET 2026
+-- Seed data exported on Mon Jan 12 21:54:08 CET 2026
 SET SESSION AUTHORIZATION DEFAULT;
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -90,6 +90,10 @@ ALTER TABLE aibrewgenius.fermenters ENABLE TRIGGER ALL;
 ALTER TABLE aibrewgenius.fermenter_controllers DISABLE TRIGGER ALL;
 INSERT INTO aibrewgenius.fermenter_controllers (id, user_profile_id, name, is_default, username, api_key, notes, created_at, updated_at) VALUES ('5b64757d-38d6-4c03-b24f-47bd39393d45', 'self_hosted_profile', 'R.A.P.T Temperature Controller', true, NULL, NULL, NULL, '2025-11-17 15:32:40.520411+00', '2025-11-17 15:32:40.520411+00');
 ALTER TABLE aibrewgenius.fermenter_controllers ENABLE TRIGGER ALL;
+
+-- Data for Name: brew_kettle_kettles
+ALTER TABLE aibrewgenius.brew_kettle_kettles DISABLE TRIGGER ALL;
+ALTER TABLE aibrewgenius.brew_kettle_kettles ENABLE TRIGGER ALL;
 
 -- Data for Name: brew_kettles
 ALTER TABLE aibrewgenius.brew_kettles DISABLE TRIGGER ALL;

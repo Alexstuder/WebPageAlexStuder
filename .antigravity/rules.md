@@ -16,8 +16,9 @@ Nach jeder Code-Änderung ist folgender Ablauf **zwingend**:
 ## 3. Datenbank-Workflow (Konditional)
 **WENN** die Änderungen die Datenbank betreffen (z.B. Schema, Models, Drift/Hive/SQLite Änderungen):
 1.  Stelle sicher, dass Schritt 2 (Analyze) erfolgreich abgeschlossen ist.
-2.  Führe das Init-Script aus: `./db_scripts/full/001_init_schema.sql`
-3.  Führe direkt danach das Seed-Script aus: `./db_scripts/full/aibrewgenius_seed.sql`
+2.  **Wichtig:** Hinterlege alle Schema-Anpassungen (Tabellen, Spalten, Constraints) vorläufig **immer direkt** im Haupt-Skript `./db_scripts/full/001_init_schema.sql`. Vermeide separate Inkrement-Skripte, um eine konsolidierte Basis zu behalten.
+3.  Führe das Init-Script aus: `./db_scripts/full/001_init_schema.sql`
+4.  Führe direkt danach das Seed-Script aus: `./db_scripts/full/aibrewgenius_seed.sql`
 
 ## 4. Abschluss (Restart)
 Sobald Code und Datenbank-Status validiert sind:

@@ -6,6 +6,7 @@ class HowToService {
 
   Future<List<HowToTopic>> loadTopics(String profileId) async {
     final response = await _client
+        .schema('aibrewgenius')
         .from('how_to_topics')
         .select()
         .eq('user_profile_id', profileId)
@@ -16,12 +17,17 @@ class HowToService {
 
   Future<HowToTopic> saveTopic(HowToTopic topic) async {
     final data = topic.toJson();
-    final response = await _client.from('how_to_topics').upsert(data).select().single();
+    final response = await _client
+        .schema('aibrewgenius')
+        .from('how_to_topics')
+        .upsert(data)
+        .select()
+        .single();
     return HowToTopic.fromJson(response);
   }
 
   Future<void> deleteTopic(String id) async {
-    await _client.from('how_to_topics').delete().eq('id', id);
+    await _client.schema('aibrewgenius').from('how_to_topics').delete().eq('id', id);
   }
 
   Future<void> updatePositions(List<HowToTopic> topics) async {

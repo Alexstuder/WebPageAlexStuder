@@ -7,6 +7,7 @@ class KeezerService {
   Future<KeezerConfig?> fetchConfig(String profileId) async {
     try {
       final response = await _client
+          .schema('aibrewgenius')
           .from('keezer_configs')
           .select()
           .eq('user_profile_id', profileId)
@@ -15,14 +16,19 @@ class KeezerService {
       if (response == null) return null;
       return KeezerConfig.fromJson(response);
     } catch (e) {
-      // If table doesn't exist yet, we'll return null to trigger configuration
+      // If table doesn't exist yet or other error, we'll return null to trigger configuration
       return null;
     }
   }
 
   Future<KeezerConfig> saveConfig(KeezerConfig config) async {
     final data = config.toJson();
-    final response = await _client.from('keezer_configs').upsert(data).select().single();
+    final response = await _client
+        .schema('aibrewgenius')
+        .from('keezer_configs')
+        .upsert(data)
+        .select()
+        .single();
     return KeezerConfig.fromJson(response);
   }
 }

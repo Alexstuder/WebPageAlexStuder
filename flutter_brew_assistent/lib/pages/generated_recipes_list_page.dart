@@ -14,7 +14,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
   final _supabase = Supabase.instance.client;
 
   Stream<List<Map<String, dynamic>>> _recipesStream() {
-    return _supabase.from('ai_generated_recipes_v2').stream(primaryKey: ['id']).order('created_at', ascending: false).map((recipes) {
+    return _supabase.schema('aibrewgenius').from('ai_generated_recipes_v2').stream(primaryKey: ['id']).order('created_at', ascending: false).map((recipes) {
        // Since stream() doesn't support deep joins easily with realtime, we might need to fetch details on demand or accept that we only have the main table first.
        // However, the user wants the list. The list mainly needs the name and style.
        // The details are fetched on Tap? No, the OnTap logic I wrote assumes 'row' has everything.
@@ -95,7 +95,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
 
                         if (confirm == true) {
                           try {
-                            await _supabase.from('ai_generated_recipes_v2').delete().eq('id', row['id']);
+                            await _supabase.schema('aibrewgenius').from('ai_generated_recipes_v2').delete().eq('id', row['id']);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Rezept gelöscht.')),
@@ -117,6 +117,7 @@ class _GeneratedRecipesListPageState extends State<GeneratedRecipesListPage> {
                 onTap: () async {
                    try {
                      final r = await _supabase
+                         .schema('aibrewgenius')
                          .from('ai_generated_recipes_v2')
                          .select()
                          .eq('id', row['id'])
