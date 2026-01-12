@@ -1,9 +1,3 @@
---
--- PostgreSQL database dump
---
-
-\restrict GOy8HFpGeU667goeoghfnO5qPoVAGs8wrGQeXXPB2XUnuDOcjBo7RaxriHXAN75
-
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.0
 
@@ -18,12 +12,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- PostgreSQL database dump
---
-
-\restrict RTazyzw38fMojxZgdUtcCE410YyUv8XwM6eGARmWTLJEjDKSXNUkEvtGKIEZVVu
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -300,8 +288,16 @@ INSERT INTO aibrewgenius.yeast_bank_entries VALUES ('47eb502c-1019-4d1e-822f-406
 ALTER TABLE aibrewgenius.yeast_bank_entries ENABLE TRIGGER ALL;
 
 --
--- PostgreSQL database dump complete
+-- Data for Name: keezer_configs; Type: TABLE DATA; Schema: aibrewgenius; Owner: -
 --
 
-\unrestrict RTazyzw38fMojxZgdUtcCE410YyUv8XwM6eGARmWTLJEjDKSXNUkEvtGKIEZVVu
+ALTER TABLE aibrewgenius.keezer_configs DISABLE TRIGGER ALL;
+
+INSERT INTO aibrewgenius.keezer_configs VALUES ('self_hosted_profile', 4, '[{"gasType": "co2", "tapType": "standard", "beerName": "London Pride", "tappedAt": "2025-11-30T00:00:00.000", "tapNumber": 1, "bestBefore": "2026-01-31T00:00:00.000"}, {"gasType": "co2", "tapType": "standard", "beerName": null, "tappedAt": null, "tapNumber": 2, "bestBefore": null}, {"gasType": "nitro", "tapType": "ale", "beerName": "Nitro Red Ale", "tappedAt": "2025-11-30T00:00:00.000", "tapNumber": 3, "bestBefore": "2026-02-01T00:00:00.000"}, {"gasType": "nitro", "tapType": "stout", "beerName": "Guinness", "tappedAt": "2026-01-19T00:00:00.000", "tapNumber": 4, "bestBefore": "2026-03-19T00:00:00.000"}]', '2026-01-12 19:58:09.133616+00', '2026-01-12 20:05:54.27722+00');
+
+ALTER TABLE aibrewgenius.keezer_configs ENABLE TRIGGER ALL;
+
+--
+-- PostgreSQL database dump complete
+--
 
