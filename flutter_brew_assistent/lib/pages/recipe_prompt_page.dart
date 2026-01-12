@@ -19,6 +19,7 @@ import 'user_profile_page.dart';
 import '../widgets/user_name_banner.dart';
 import '../models/image_attachment.dart';
 import '../widgets/recipe_prompt_widgets.dart';
+import '../utils/recipe_scaler.dart';
 
 class RecipePromptPage extends StatefulWidget {
   const RecipePromptPage({super.key});
@@ -284,6 +285,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       final fermLoss = defaultFermenter?.fermentationLossLiters ?? 0.0;
       final pBoilLoss = defaultKettle?.postBoilLossLiters ?? 0.0;
       final bOffPct = defaultKettle?.boilOffPercentage ?? 10.0;
+      final bhEfficiency = defaultKettle?.bhEfficiency ?? 70.0;
 
       // --- 6. Build Final Prompt ---
       String augmentedDescription = userInput;
@@ -295,6 +297,7 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
           .replaceAll('{{fermentationLoss}}', fermLoss.toStringAsFixed(1))
           .replaceAll('{{postBoilLoss}}', pBoilLoss.toStringAsFixed(1))
           .replaceAll('{{boilOffPercentage}}', bOffPct.toStringAsFixed(1))
+          .replaceAll('{{bhEfficiency}}', bhEfficiency.toStringAsFixed(1))
           .replaceAll('{{packaging_info}}', packagingInfo)
           .replaceAll('{{brewing_equipment}}', brewingEquipmentInfo)
           .replaceAll('{{fermenter_info}}', fermenterInfo)
@@ -316,25 +319,36 @@ class _RecipePromptPageState extends State<RecipePromptPage> {
       // Parse JSON
       final cleanedJson = _extractJson(recipeJsonString);
       final recipeMap = jsonDecode(cleanedJson);
-      final recipe = AiRecipe.fromJson(recipeMap).copyWith(
+      var initialRecipe = AiRecipe.fromJson(recipeMap).copyWith(
         canPressurize: defaultFermenter?.canPressurize ?? false,
       );
+
+      // --- 7. Apply Scaling Engine ---
+      final scaledRecipe = RecipeScaler.scale(
+        initialRecipe,
+        bhEfficiency: bhEfficiency,
+        targetVolumeL: targetVolume,
+        fermentationLossL: fermLoss,
+        postBoilLossL: pBoilLoss,
+        boilOffPercentage: bOffPct,
+      );
+
       if (attachment != null) {
-        recipe.sourceImage = attachment;
+        scaledRecipe.sourceImage = attachment;
       }
 
       if (!mounted) return;
       
       setState(() {
         _isLoading = false;
-        _lastGeneratedRecipe = recipe;
+        _lastGeneratedRecipe = scaledRecipe;
         _response = recipeJsonString; // Save raw response
       });
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => RecipeResultPage(recipe: recipe),
+          builder: (context) => RecipeResultPage(recipe: scaledRecipe),
         ),
       );
 

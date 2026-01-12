@@ -6,24 +6,25 @@ Erstelle ein präzises Bierrezept basierend auf dieser Beschreibung:
 {{description}}
 """
 
-### 2. BRAU-PARAMETER & ANLAGEN-VERLUSTE
-Berechne alle benötigten Volumina (Hauptguss, Nachguss, Pfannevoll, Ausschlagwürze) eigenständig, um am Ende exakt {{targetVolume}} L fertiges Bier im Gebinde (Netto) zu erhalten. Nutze dafür zwingend diese anlagenspezifischen Werte deiner Hardware:
+### 2. BLUEPRINT-PRINZIP (WICHTIG)
+Um Halluzinationen bei der Volumenberechnung zu vermeiden, erstelle das Rezept als **Blueprint für einen Standard-20L-Sud** (Ausschlagwürze):
+- **Basis:** Alle Mengen (Malz %, Hopfen g, Hefe, Wasser, Specials) beziehen sich auf genau **20 Liter Ausschlagwürze**.
+- **Malz:** Gib zwingend den `Anteil_Prozent` an. Die App berechnet die Kilogramm basierend auf deiner Ziel-Stammwürze und der Anlagen-Effizienz.
+- **Hopfen/Specials:** Gib Mengen für 20L an. Die App skaliert diese Werte automatisch auf das reale Zielvolumen von {{targetVolume}} L hoch.
+- **Volumenrechnung:** Die App berechnet basierend auf deinen 20L-Grundwerten und den Anlagen-Parametern (Verluste, Verdampfung) die exakten realen Volumina für {{targetVolume}} L. Du musst keine Mathematik für das reale Zielvolumen betreiben!
 
-- **Gärverlust:** {{fermentationLoss}} L (Restmenge im Fermenter durch Hefe/Trub)
-- **Kessel-Verlust (Post-Boil):** {{postBoilLoss}} L (Trubverlust im Kessel nach dem Hopfenkochen)
-- **Verdunstung (Boil-off):** {{boilOffPercentage}} % pro Stunde
-- **Kühl-Schrumpfung:** 4% (Volumenreduktion der heißen Würze beim Abkühlen)
-- **Malz-Absorption:** ca. 0.9 L pro kg Malz (im Treber gebundenes Wasser)
-
-### 3. MATHEMATISCHE ANWEISUNG (ARBEITSPLAN)
-1. Ermittle die notwendige Menge im Gäreimer (Basis für Malz- und Hopfenkalkulation).
-2. Berechne rückwärts das Pfannevoll-Volumen (Pre-Boil), das nötig ist, um trotz Verdampfung und Kesselverlust dein Zielvolumen zu erreichen.
-3. Leite die exakten Wassermengen für Hauptguss und Nachguss ab.
-4. Überprüfe, ob die Stammwürze (SG) und Bittereinheiten (IBU) auf das berechnete Volumen im Gäreimer (Batch Size) abgestimmt sind.
+### 3. ANLAGEN-PARAMETER (ZUR INFORMATION)
+Diese Werte nutzt die App zur späteren Skalierung:
+- **Ziel:** {{targetVolume}} L fertiges Bier
+- **Effizienz:** {{bhEfficiency}} %
+- **Verluste/Verdunstung:** Hinterlegt in den App-Berechnungen.
 
 ### 4. REZEPT-STANDARDS
-- **Einheiten:** Malz in kg, Hopfen in g. **WICHTIG:** Verwende für Extrakt, Stammwürze oder Zuckergehalt AUSSCHLIESSLICH Specific Gravity (SG, z.B. 1.050). Die Einheit Plato (°P) ist STRENGSTENS UNTERSAGT, auch in Notizen, Prozessbeschreibungen oder Textfeldern.
-- **Zutaten:** Wähle Mengen, um die Stil-Vorgaben präzise zu treffen.
+- **Einheiten:** Malz in kg, Hopfen in g. **WICHTIG:** Verwende für Extrakt, Stammwürze oder Zuckergehalt AUSSCHLIESSLICH Specific Gravity (SG, z.B. 1.050). Die Einheit Plato (°P) ist STRENGSTENS UNTERSAGT.
+- **Blueprint-Prinzip:** 
+  - **Malz:** Gib zwingend den `Anteil_Prozent` an. Die App berechnet die Kilogramm basierend auf deiner Ziel-Stammwürze und der Anlagen-Effizienz.
+  - **Hopfen/Hefe/Specials:** Gib alle Mengen (`Menge_g`, `Menge_Packungen`, etc.) für einen **Standard 20L Sud** an. Die App skaliert diese Werte automatisch auf das reale Zielvolumen von {{targetVolume}} L hoch.
+- **Zutaten:** Wähle Verhältnisse und Mengen (für 20L-Basis), um die Stil-Vorgaben präzise zu treffen.
 - **Bierstil & Parameter:** 
   - Identifiziere zwingend den am besten passenden BJCP 2021 Bierstil basierend auf dem Rezept und trage die Details in das Feld `bjcp_stil` ein.
   - Berechne die voraussichtliche Bittere des Bieres und trage diese im Feld `ibu` (International Bitterness Units) ein.

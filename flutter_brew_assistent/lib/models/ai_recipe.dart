@@ -182,14 +182,16 @@ class Ingredients {
 class Malt {
   final String name;
   final double amountKg;
+  final int proportionPercent;
   final double crushGap;
 
-  Malt({required this.name, required this.amountKg, required this.crushGap});
+  Malt({required this.name, required this.amountKg, required this.proportionPercent, required this.crushGap});
 
   factory Malt.fromJson(Map<String, dynamic> json) {
     return Malt(
       name: json['Name'] ?? 'Unbekannt',
       amountKg: (json['Menge_kg'] as num?)?.toDouble() ?? 0.0,
+      proportionPercent: (json['Anteil_Prozent'] as num?)?.toInt() ?? 0,
       crushGap: (json['Optimales_Schrot_Spaltmass_mm'] as num?)?.toDouble() ?? 1.2,
     );
   }
@@ -198,6 +200,7 @@ class Malt {
     return {
       'Name': name,
       'Menge_kg': amountKg,
+      'Anteil_Prozent': proportionPercent,
       'Optimales_Schrot_Spaltmass_mm': crushGap,
     };
   }
@@ -374,6 +377,7 @@ class ProcessData {
   final BoilPlan boil;
   final FermentationPlan fermentation;
   final PackagingPlan packaging;
+  final VolumeCalculationCoT? volumeCalculation;
 
   ProcessData({
     required this.mash,
@@ -381,6 +385,7 @@ class ProcessData {
     required this.boil,
     required this.fermentation,
     required this.packaging,
+    this.volumeCalculation,
   });
 
   factory ProcessData.fromJson(Map<String, dynamic> json) {
@@ -390,6 +395,7 @@ class ProcessData {
       boil: BoilPlan.fromJson(json['Kochplan'] ?? json['Kochzeit_und_Kochphasen'] ?? {}),
       fermentation: FermentationPlan.fromJson(json['Gaerplan'] ?? json['Gaerungsplan'] ?? {}),
       packaging: PackagingPlan.fromJson(json['Abfuell_und_Lagerungsplan'] ?? json),
+      volumeCalculation: VolumeCalculationCoT.fromJson(json['Mathematische_Volumenberechnung_CoT'] ?? {}),
     );
   }
 
@@ -400,6 +406,43 @@ class ProcessData {
       'Kochplan': boil.toJson(),
       'Gaerungsplan': fermentation.toJson(),
       'Abfuell_und_Lagerungsplan': packaging.toJson(),
+      'Mathematische_Volumenberechnung_CoT': volumeCalculation?.toJson(),
+    };
+  }
+}
+
+class VolumeCalculationCoT {
+  final double step1EimerKalt;
+  final double step2AusschlagHeiss;
+  final double step3KochEndeHeiss;
+  final double step4Pfannevoll;
+  final String calculationNote;
+
+  VolumeCalculationCoT({
+    this.step1EimerKalt = 0.0,
+    this.step2AusschlagHeiss = 0.0,
+    this.step3KochEndeHeiss = 0.0,
+    this.step4Pfannevoll = 0.0,
+    this.calculationNote = '',
+  });
+
+  factory VolumeCalculationCoT.fromJson(Map<String, dynamic> json) {
+    return VolumeCalculationCoT(
+      step1EimerKalt: (json['Schritt_1_Eimer_kalt_L'] as num?)?.toDouble() ?? 0.0,
+      step2AusschlagHeiss: (json['Schritt_2_Ausschlag_heiss_L'] as num?)?.toDouble() ?? 0.0,
+      step3KochEndeHeiss: (json['Schritt_3_Koch_Ende_heiss_L'] as num?)?.toDouble() ?? 0.0,
+      step4Pfannevoll: (json['Schritt_4_Pfannevoll_L'] as num?)?.toDouble() ?? 0.0,
+      calculationNote: json['Kontrollrechnung_Notiz'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Schritt_1_Eimer_kalt_L': step1EimerKalt,
+      'Schritt_2_Ausschlag_heiss_L': step2AusschlagHeiss,
+      'Schritt_3_Koch_Ende_heiss_L': step3KochEndeHeiss,
+      'Schritt_4_Pfannevoll_L': step4Pfannevoll,
+      'Kontrollrechnung_Notiz': calculationNote,
     };
   }
 }

@@ -20,6 +20,7 @@ import '../services/openai_service.dart';
 import '../services/user_profile_service.dart';
 import 'recipe_summary_page.dart';
 import 'legacy_recipe_pages.dart';
+import 'efficiency_calculator_page.dart';
 
 class EquipmentPage extends StatefulWidget {
   const EquipmentPage({super.key, required this.profile});
@@ -224,6 +225,25 @@ class _EquipmentPageState extends State<EquipmentPage> {
                             kettle.model?.isNotEmpty == true
                                 ? '${kettle.brand} ${kettle.model}'
                                 : kettle.brand,
+                        actions: [
+                          TextButton.icon(
+                            onPressed: () async {
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => EfficiencyCalculatorPage(
+                                    initialKettle: selectedKettle,
+                                  ),
+                                ),
+                              );
+                              if (result == true) {
+                                loadEquipment(); // Refresh if updated
+                              }
+                            },
+                            icon: const Icon(Icons.calculate_outlined, size: 18),
+                            label: const Text('Effizienz bestimmen', style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(foregroundColor: Colors.blueAccent),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 18),
                       _EquipmentSection<WaterProfile>(
@@ -530,6 +550,7 @@ class _EquipmentSection<T> extends StatelessWidget {
     required this.onSelected,
     required this.labelBuilder,
     this.isDefaultBuilder,
+    this.actions,
   });
 
   final String title;
@@ -538,6 +559,7 @@ class _EquipmentSection<T> extends StatelessWidget {
   final ValueChanged<T?> onSelected;
   final String Function(T item) labelBuilder;
   final bool Function(T item)? isDefaultBuilder;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -558,12 +580,18 @@ class _EquipmentSection<T> extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (actions != null) ...actions!,
+              ],
             ),
             const SizedBox(height: 12),
             if (items.length > 1)

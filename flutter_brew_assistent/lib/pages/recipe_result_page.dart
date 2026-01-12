@@ -374,6 +374,34 @@ class _ProcessTab extends StatelessWidget {
             Text('Ziel-pH: ${recipe.prozessdaten.lauter.targetPh}'),
 
           const Divider(height: 32),
+          _buildSectionTitle('Volumen-Bilanz (Berechnet)'),
+          if (recipe.prozessdaten.volumeCalculation != null)
+             Container(
+               padding: const EdgeInsets.all(12),
+               margin: const EdgeInsets.only(bottom: 16),
+               decoration: BoxDecoration(
+                 color: Colors.blueGrey.withValues(alpha: 0.1),
+                 borderRadius: BorderRadius.circular(8),
+                 border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+               ),
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                    _buildCalcRow('1. Im Gärgefäß (kalt):', '${recipe.prozessdaten.volumeCalculation!.step1EimerKalt} L'),
+                    _buildCalcRow('2. Ausschlagwürze (heiß 100°C):', '${recipe.prozessdaten.volumeCalculation!.step2AusschlagHeiss} L'),
+                    _buildCalcRow('3. Im Kessel (Post-Boil heiß):', '${recipe.prozessdaten.volumeCalculation!.step3KochEndeHeiss} L'),
+                    _buildCalcRow('4. Pfannevoll (Pre-Boil):', '${recipe.prozessdaten.volumeCalculation!.step4Pfannevoll} L'),
+                    if (recipe.prozessdaten.volumeCalculation!.calculationNote.isNotEmpty) ...[
+                       const Divider(),
+                       Text('Rechenweg-Notiz:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueAccent.shade100)),
+                       Text(recipe.prozessdaten.volumeCalculation!.calculationNote, style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                    ]
+                 ],
+               ),
+             )
+          else
+             const Text('Keine Berechnungsdaten verfügbar.', style: TextStyle(color: Colors.grey)),
+
           _buildSectionTitle('Kochen'),
           ListTile(
             title: const Text('Würzekochen (Gesamt)'),
@@ -428,7 +456,20 @@ class _ProcessTab extends StatelessWidget {
       ),
     );
   }
-  
+
+  Widget _buildCalcRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),

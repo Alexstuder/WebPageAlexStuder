@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/brew_kettle.dart';
 import '../services/brew_kettle_service.dart';
 import '../widgets/card_actions.dart';
+import 'efficiency_calculator_page.dart';
 
 class BrewKettleManagerPage extends StatefulWidget {
   const BrewKettleManagerPage({
@@ -124,8 +125,29 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   Text(
                       'Prozessverlust: ${kettle.postBoilLossLiters!.toStringAsFixed(1)} L'),
                 if (kettle.boilOffPercentage != null)
-                  Text(
-                      'Boil-off: ${kettle.boilOffPercentage!.toStringAsFixed(1)} %'),
+                  Text('Boil-off: ${kettle.boilOffPercentage!.toStringAsFixed(1)} %'),
+                Row(
+                  children: [
+                    Text('Sudhausausbeute: ${kettle.bhEfficiency.toStringAsFixed(1)} %'),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () async {
+                         final result = await Navigator.of(context).push(
+                           MaterialPageRoute(
+                             builder: (_) => EfficiencyCalculatorPage(
+                               initialKettle: kettle,
+                             ),
+                           ),
+                         );
+                         if (result == true) {
+                           if (!mounted) return;
+                           _load();
+                         }
+                      },
+                      child: const Icon(Icons.calculate_outlined, size: 16, color: Colors.blueAccent),
+                    ),
+                  ],
+                ),
                 if ((kettle.notes ?? '').isNotEmpty)
                   Text(
                     kettle.notes!,
@@ -162,6 +184,9 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     );
     final boilOffCtrl = TextEditingController(
       text: editing?.boilOffPercentage?.toString() ?? '',
+    );
+    final bhEfficiencyCtrl = TextEditingController(
+      text: editing?.bhEfficiency.toString() ?? '70.0',
     );
     final notesCtrl = TextEditingController(text: editing?.notes ?? '');
     bool isDefault = editing?.isDefault ?? false;
@@ -224,6 +249,51 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bhEfficiencyCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Sudhausausbeute (%)',
+                    suffixIcon: Tooltip(
+                      message:
+                          'Brewhouse Efficiency (BH Efficiency):\nWie viel Prozent des Zuckers aus dem Malz\nlanden am Ende tatsächlich in deiner Würze.\nTypisch für Brewtools B40: 65% - 75%.',
+                      triggerMode: TooltipTriggerMode.tap,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      textStyle:
+                          const TextStyle(fontSize: 12, color: Colors.white),
+                      child: const Icon(Icons.info_outline, size: 20),
+                    ),
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EfficiencyCalculatorPage(
+                            initialKettle: editing,
+                          ),
+                        ),
+                      );
+                      if (result == true) {
+                        if (dialogCtx.mounted) {
+                          Navigator.of(dialogCtx).pop(true);
+                        }
+                        _load(); // Refresh list if updated
+                      }
+                    },
+                    icon: const Icon(Icons.calculate_outlined, size: 16),
+                    label: const Text('Rechner öffnen', style: TextStyle(fontSize: 12)),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -309,6 +379,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       volumeLiters: _parseDouble(volumeCtrl.text),
       postBoilLossLiters: _parseDouble(postBoilLossCtrl.text),
       boilOffPercentage: _parseDouble(boilOffCtrl.text),
+      bhEfficiency: _parseDouble(bhEfficiencyCtrl.text) ?? 70.0,
       hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );

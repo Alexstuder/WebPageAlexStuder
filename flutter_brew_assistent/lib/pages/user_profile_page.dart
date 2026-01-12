@@ -32,6 +32,7 @@ import 'hops_manager_page.dart';
 import 'miscs_manager_page.dart';
 import 'recipes_list_page.dart';
 import 'batches_list_page.dart';
+import 'keezer_manager_page.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({
@@ -414,6 +415,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openKeezerManager() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => KeezerManagerPage(profileId: _profileId),
+      ),
+    );
+  }
+
   void _openIntegrationsPage() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -547,6 +556,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
               icon: Icons.science_outlined,
               label: 'Fermentierer',
               onPressed: _openFermenterManager,
+            ),
+            _managerButton(
+              icon: Icons.kitchen,
+              label: 'Keezer',
+              onPressed: _openKeezerManager,
             ),
             _managerButton(
               icon: Icons.developer_board_outlined,

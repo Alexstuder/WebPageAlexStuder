@@ -17,6 +17,7 @@
       {
         "Name": "",
         "Menge_kg": 0.0,
+        "Anteil_Prozent": 0,
         "Optimales_Schrot_Spaltmass_mm": 1.2
       }
     ],
@@ -117,6 +118,13 @@
       "Lagerung_Temperatur_C": 0.0,
       "Lagerung_Dauer_Wochen": 0,
       "Reifungshinweis": ""
+    },
+    "Mathematische_Volumenberechnung_CoT": {
+      "Schritt_1_Eimer_kalt_L": 0.0,
+      "Schritt_2_Ausschlag_heiss_L": 0.0,
+      "Schritt_3_Koch_Ende_heiss_L": 0.0,
+      "Schritt_4_Pfannevoll_L": 0.0,
+      "Kontrollrechnung_Notiz": "Hier alle Rechenschritte als Text dokumentieren"
     }
   },
   "Notizen": [

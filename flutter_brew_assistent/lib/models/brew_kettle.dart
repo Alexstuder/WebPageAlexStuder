@@ -8,6 +8,7 @@ class BrewKettle {
     this.volumeLiters,
     this.postBoilLossLiters,
     this.boilOffPercentage,
+    this.bhEfficiency = 70.0,
     this.hasCondenserHat = false,
     this.notes,
     this.createdAt,
@@ -22,6 +23,7 @@ class BrewKettle {
   final double? volumeLiters;
   final double? postBoilLossLiters;
   final double? boilOffPercentage;
+  final double bhEfficiency;
   final bool hasCondenserHat;
   final String? notes;
   final DateTime? createdAt;
@@ -36,6 +38,7 @@ class BrewKettle {
     double? volumeLiters,
     double? postBoilLossLiters,
     double? boilOffPercentage,
+    double? bhEfficiency,
     bool? hasCondenserHat,
     String? notes,
     DateTime? createdAt,
@@ -50,6 +53,7 @@ class BrewKettle {
       volumeLiters: volumeLiters ?? this.volumeLiters,
       postBoilLossLiters: postBoilLossLiters ?? this.postBoilLossLiters,
       boilOffPercentage: boilOffPercentage ?? this.boilOffPercentage,
+      bhEfficiency: bhEfficiency ?? this.bhEfficiency,
       hasCondenserHat: hasCondenserHat ?? this.hasCondenserHat,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
@@ -69,6 +73,7 @@ class BrewKettle {
       volumeLiters: (json['volume_liters'] as num?)?.toDouble(),
       postBoilLossLiters: (json['post_boil_loss_liters'] as num?)?.toDouble(),
       boilOffPercentage: (json['boil_off_percentage'] as num?)?.toDouble(),
+      bhEfficiency: (json['bh_efficiency'] as num?)?.toDouble() ?? 70.0,
       hasCondenserHat: (json['has_condenser_hat'] as bool?) ?? false,
       notes: json['notes'] as String?,
       createdAt: parseDate(json['created_at'] as String?),
@@ -86,6 +91,7 @@ class BrewKettle {
       'volume_liters': volumeLiters,
       'post_boil_loss_liters': postBoilLossLiters,
       'boil_off_percentage': boilOffPercentage,
+      'bh_efficiency': bhEfficiency,
       'has_condenser_hat': hasCondenserHat,
       'notes': notes,
     };
