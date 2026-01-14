@@ -19,12 +19,6 @@ class RaptControlsPanel extends StatelessWidget {
     this.generatedAt,
   });
 
-  String _formatTime(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return iso;
-    return '${DateFormat('HH:mm').format(dt)} MEZ';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -107,12 +101,6 @@ class RaptControlsPanel extends StatelessWidget {
               ),
             ),
 
-            // Stand info
-            if (generatedAt != null)
-              Text(
-                'Stand ${_formatTime(generatedAt!)}',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
-              ),
 
             // Reload
             Row(

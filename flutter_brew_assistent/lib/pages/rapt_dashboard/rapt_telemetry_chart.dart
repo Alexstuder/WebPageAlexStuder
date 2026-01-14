@@ -113,6 +113,36 @@ class RaptTelemetryChart extends StatelessWidget {
     }
     minTemp -= 5;
     maxTemp += 5;
+
+    // 3. Normalized Mapping for Gravity and ABV
+    double minGrav = 1.000;
+    double maxGrav = 1.100;
+    if (pointsGravity.isNotEmpty) {
+       minGrav = pointsGravity.map((e) => e.y).reduce(min);
+       maxGrav = pointsGravity.map((e) => e.y).reduce(max);
+       // Ensure some range
+       if (maxGrav - minGrav < 0.005) {
+         minGrav -= 0.005;
+         maxGrav += 0.005;
+       }
+       // Add some padding to top/bottom
+       double pad = (maxGrav - minGrav) * 0.1;
+       minGrav -= pad;
+       maxGrav += pad;
+    }
+
+    double minAbv = 0;
+    double maxAbv = 10;
+    if (pointsAbv.isNotEmpty) {
+       minAbv = pointsAbv.map((e) => e.y).reduce(min);
+       maxAbv = pointsAbv.map((e) => e.y).reduce(max);
+       if (maxAbv - minAbv < 1.0) {
+         maxAbv = minAbv + 2.0;
+       }
+       double pad = (maxAbv - minAbv) * 0.1;
+       minAbv -= pad;
+       maxAbv += pad;
+    }
     
     double maxVel = 5;
     if (pointsVelocity.isNotEmpty) {
@@ -120,6 +150,19 @@ class RaptTelemetryChart extends StatelessWidget {
        if (maxVel < 2) maxVel = 2;
     }
     maxVel *= 1.2;
+
+    // Mapping function: Maps a value from its own [min, max] range to the [minTemp, maxTemp] range
+    double mapToTemp(double val, double minVal, double maxVal) {
+      if (maxVal == minVal) return minTemp;
+      return minTemp + (maxTemp - minTemp) * ((val - minVal) / (maxVal - minVal));
+    }
+
+    // Inverse mapping for labels/tooltips
+    double inverseMap(double mappedVal, double minVal, double maxVal) {
+      if (maxTemp == minTemp) return minVal;
+      final ratio = (mappedVal - minTemp) / (maxTemp - minTemp);
+      return minVal + ratio * (maxVal - minVal);
+    }
 
     return LineChart(
       LineChartData(
@@ -133,9 +176,19 @@ class RaptTelemetryChart extends StatelessWidget {
                    final timeStr = DateFormat('dd.MM HH:mm').format(date);
                    
                    if (s.barIndex == 0) return LineTooltipItem('$timeStr\n${s.y.toStringAsFixed(1)}°C', const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold));
-                   if (s.barIndex == 1) return LineTooltipItem('${s.y.toStringAsFixed(4)} SG', const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold));
-                   if (s.barIndex == 2) return LineTooltipItem('${s.y.toStringAsFixed(1)}%', const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold));
-                   if (s.barIndex == 3) return LineTooltipItem('${s.y.toStringAsFixed(1)} P/Tag', const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold));
+                   if (s.barIndex == 1) {
+                      final originalSg = inverseMap(s.y, minGrav, maxGrav);
+                      return LineTooltipItem('${originalSg.toStringAsFixed(4)} SG', const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold));
+                   }
+                   if (s.barIndex == 2) {
+                      final originalAbv = inverseMap(s.y, minAbv, maxAbv);
+                      return LineTooltipItem('${originalAbv.toStringAsFixed(1)}%', const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold));
+                   }
+                   if (s.barIndex == 3) {
+                      final ratio = (s.y - minTemp) / (maxTemp - minTemp);
+                      final originalVel = ratio * maxVel;
+                      return LineTooltipItem('${originalVel.toStringAsFixed(1)} P/Tag', const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold));
+                   }
                    return null;
                 }).toList().whereType<LineTooltipItem>().toList();
              }
@@ -153,13 +206,50 @@ class RaptTelemetryChart extends StatelessWidget {
           rightTitles: AxisTitles(
              sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 50,
+                reservedSize: 130, // Increased to fit 3 columns
                 getTitlesWidget: (val, meta) {
-                   final sg = val;
-                   if (sg < 1.0 || sg > 1.2) return const SizedBox();
-                   return Text(sg.toStringAsFixed(3), style: const TextStyle(color: Colors.red, fontSize: 10));
+                   // Only show labels every 5 units on the temp scale
+                   if (val % 5 != 0 && val != meta.min && val != meta.max) return const SizedBox();
+                   
+                   final sg = inverseMap(val, minGrav, maxGrav);
+                   final vel = ((val - minTemp) / (maxTemp - minTemp)) * maxVel;
+                   final abv = inverseMap(val, minAbv, maxAbv);
+                   
+                   return Row(
+                     mainAxisSize: MainAxisSize.min,
+                     children: [
+                       SizedBox(
+                         width: 45,
+                         child: Text(sg.toStringAsFixed(4), textAlign: TextAlign.right, style: const TextStyle(color: Colors.redAccent, fontSize: 9)),
+                       ),
+                       const SizedBox(width: 8),
+                       SizedBox(
+                         width: 25,
+                         child: Text(vel.toStringAsFixed(0), textAlign: TextAlign.right, style: const TextStyle(color: Colors.greenAccent, fontSize: 9)),
+                       ),
+                       const SizedBox(width: 8),
+                       SizedBox(
+                         width: 30,
+                         child: Text(abv.toStringAsFixed(1), textAlign: TextAlign.right, style: const TextStyle(color: Colors.amberAccent, fontSize: 9)),
+                       ),
+                     ],
+                   );
                 }
-             )
+             ),
+             axisNameWidget: const Padding(
+               padding: EdgeInsets.only(left: 8),
+               child: Row(
+                 mainAxisAlignment: MainAxisAlignment.end,
+                 children: [
+                    RotatedBox(quarterTurns: 1, child: Text('Gravity', style: TextStyle(color: Colors.redAccent, fontSize: 9))),
+                    SizedBox(width: 20),
+                    RotatedBox(quarterTurns: 1, child: Text('Punkte/Tag', style: TextStyle(color: Colors.greenAccent, fontSize: 9))),
+                    SizedBox(width: 15),
+                    RotatedBox(quarterTurns: 1, child: Text('Alkohol %', style: TextStyle(color: Colors.amberAccent, fontSize: 9))),
+                 ],
+               ),
+             ),
+             axisNameSize: 20,
           ),
           topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
@@ -192,25 +282,17 @@ class RaptTelemetryChart extends StatelessWidget {
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(show: true, color: Colors.blue.withValues(alpha: 0.1)),
           ),
-          // Gravity
+          // Gravity (mapped)
           LineChartBarData(
-            spots: pointsGravity,
+            spots: pointsGravity.map((s) => FlSpot(s.x, mapToTemp(s.y, minGrav, maxGrav))).toList(),
             isCurved: true,
             color: Colors.red,
             barWidth: 2,
             dotData: const FlDotData(show: false),
-            // Map Gravity to Temp Y scale for dual axis simulation
-            // Simulation: Temp scale is minTemp to maxTemp. 
-            // We want to map minGrav to minTemp and maxGrav to maxTemp.
-            // Simplified: we just use raw values if we use extraLines or a helper.
-            // But FLChart doesn't easily support dual scales. 
-            // The original code seems to just plot them on the same Y axis? 
-            // No, look at the rightTitles. They expect values between 1.0 and 1.2.
-            // So they ARE plotted on the same Y axis, just with different labels.
           ),
-          // ABV
+          // ABV (mapped)
           LineChartBarData(
-            spots: pointsAbv,
+            spots: pointsAbv.map((s) => FlSpot(s.x, mapToTemp(s.y, minAbv, maxAbv))).toList(),
             isCurved: true,
             color: Colors.amber,
             barWidth: 2,
@@ -220,9 +302,7 @@ class RaptTelemetryChart extends StatelessWidget {
           // Velocity (scaled to fit)
           LineChartBarData(
             spots: pointsVelocity.map((s) {
-               // Map 0 -> minTemp, maxVel -> maxTemp
-               final ratio = (s.y / maxVel);
-               final mappedY = minTemp + (maxTemp - minTemp) * ratio;
+               final mappedY = mapToTemp(s.y, 0, maxVel);
                return FlSpot(s.x, mappedY);
             }).toList(),
             isCurved: true,

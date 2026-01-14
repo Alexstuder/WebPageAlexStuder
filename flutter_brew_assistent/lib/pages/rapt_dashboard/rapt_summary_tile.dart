@@ -37,7 +37,7 @@ class RaptSummaryTile extends StatelessWidget {
             children: [
               Text(
                 value != null 
-                  ? (label == 'Gravity' ? value!.toStringAsFixed(4) : value!.toStringAsFixed(1)) 
+                  ? ((label.toUpperCase() == 'GRAVITY') ? value!.toStringAsFixed(4) : value!.toStringAsFixed(1)) 
                   : '–',
                 style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
               ),

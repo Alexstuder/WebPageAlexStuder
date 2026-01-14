@@ -167,7 +167,22 @@ class _OverviewTabState extends State<_OverviewTab> {
                     subtitle: Text('Schrotmaß: ${m.crushGap} mm'),
                     trailing: Text('${m.amountKg.toStringAsFixed(2)} kg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   )),
-                  if (widget.recipe.zutaten.malts.isEmpty) const Text('Keine Malze angegeben.'),
+                  if (widget.recipe.zutaten.malts.isEmpty) 
+                    const Text('Keine Malze angegeben.')
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Gesamtmenge Malz:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            '${widget.recipe.zutaten.malts.fold<double>(0, (sum, m) => sum + m.amountKg).toStringAsFixed(2)} kg', 
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.blueAccent)
+                          ),
+                        ],
+                      ),
+                    ),
                   
                   const SizedBox(height: 16),
                   _buildSectionTitle('Hopfen'),
@@ -177,6 +192,20 @@ class _OverviewTabState extends State<_OverviewTab> {
                     subtitle: Text('${h.use} • ${h.timeMin} min • ${h.alpha}% Alpha'),
                     trailing: Text('${h.amountG.toStringAsFixed(0)} g', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   )),
+                  if (widget.recipe.zutaten.hops.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Gesamtmenge Hopfen:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            '${widget.recipe.zutaten.hops.fold<double>(0, (sum, h) => sum + h.amountG).toStringAsFixed(0)} g', 
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.greenAccent)
+                          ),
+                        ],
+                      ),
+                    ),
                   
                   const SizedBox(height: 16),
                   _buildSectionTitle('Hefe'),

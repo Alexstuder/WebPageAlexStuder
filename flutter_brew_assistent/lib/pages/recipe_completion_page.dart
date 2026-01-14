@@ -199,6 +199,7 @@ class _RecipeCompletionPageState extends State<RecipeCompletionPage> {
     }
 
     final response = await client
+        .schema('aibrewgenius')
         .from('ai_generated_recipes_v2')
         .upsert(data)
         .select('id')

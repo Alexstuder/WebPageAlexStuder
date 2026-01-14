@@ -13,9 +13,22 @@ class RecipeScaler {
     required double postBoilLossL,
     required double boilOffPercentage,
   }) {
-    // 1. Calculate Malt for real target
+    // 1. Calculate intermediate volumes first (Math-First approach)
+    final boilDuration = recipe.prozessdaten.boil.duration.toDouble();
+    
+    // V_Gärgefäß_Kalt: Volume that enters the fermenter (Net + Loss)
+    final vGaergefassKalt = targetVolumeL + fermentationLossL;
+    // V_Ausschlag_Heiß: Hot volume at end of boil (adjusted for shrinking)
+    final vAusschlagHeiss = vGaergefassKalt / 0.96;
+    // V_Koch_Ende_Heiß: Hot volume in kettle including trub loss
+    final vKochEndeHeiss = vAusschlagHeiss + postBoilLossL;
+    
+    // Total Cold Wort Volume: The volume that actually contains the extract (Stammwürze)
+    final vTotalColdWort = vKochEndeHeiss * 0.96;
+
+    // 2. Calculate Malt for the TOTAL produced extract
     final targetSg = recipe.stammwuerzeSg ?? 1.050;
-    final totalMaltKg = _calculateTotalMalt(targetSg, targetVolumeL, bhEfficiency);
+    final totalMaltKg = _calculateTotalMalt(targetSg, vTotalColdWort, bhEfficiency);
 
     final scaledMalts = recipe.zutaten.malts.map((m) {
       final amount = (totalMaltKg * m.proportionPercent) / 100.0;
@@ -27,35 +40,9 @@ class RecipeScaler {
       );
     }).toList();
 
-    // 2. Calculate Water Volumes (The math-first approach)
-    final boilDuration = recipe.prozessdaten.boil.duration;
-
-    // V_Gärgefäß_Kalt: targetVolume + fermentationLoss
-    final vGaergefassKalt = targetVolumeL + fermentationLossL;
-    // V_Ausschlag_Heiß: vGaergefassKalt / 0.96 (4% shrinking)
-    final vAusschlagHeiss = vGaergefassKalt / 0.96;
-    // V_Koch_Ende_Heiß: vAusschlagHeiss + postBoilLoss
-    final vKochEndeHeiss = vAusschlagHeiss + postBoilLossL;
-    // V_Pfannevoll (Pre-Boil): vKochEndeHeiss / (1 - (evaporation))
-    final evaporationFactor = 1.0 - (boilOffPercentage / 100.0 * (boilDuration / 60.0));
-    final vPfannevoll = vKochEndeHeiss / evaporationFactor;
-
-    // Mash Water (Hauptguss)
-    double mashRatio = 3.5;
-    final baseMaltAmount = recipe.zutaten.malts.fold<double>(0, (sum, m) => sum + m.amountKg);
-    if (baseMaltAmount > 0) {
-      mashRatio = recipe.prozessdaten.mash.mashWaterL / baseMaltAmount;
-    }
-    if (mashRatio < 2.0 || mashRatio > 5.0) mashRatio = 3.5;
-
-    final mashWaterL = totalMaltKg * mashRatio;
-
-    // Sparge Water (Nachguss)
-    const absorption = 0.9;
-    final spargeWaterL = vPfannevoll - (mashWaterL - (totalMaltKg * absorption));
-
-    // 3. Scale Hops and Specials (Linear based on target volume ratio)
-    final scalingFactor = targetVolumeL / 20.0;
+    // 3. Scale Hops and Specials (Based on Gross Cold Volume)
+    // The AI blueprint is designed for 20L Gross (Ausschlagwürze).
+    final scalingFactor = vTotalColdWort / 20.0;
 
     final scaledHops = recipe.zutaten.hops.map((h) {
       return Hop(
@@ -80,7 +67,22 @@ class RecipeScaler {
       return s;
     }).toList();
 
-    // 4. Update the Recipe Object
+    // 4. Calculate Water Volumes for the new scale
+    final evaporationFactor = 1.0 - (boilOffPercentage / 100.0 * (boilDuration / 60.0));
+    final vPfannevoll = vKochEndeHeiss / evaporationFactor;
+
+    double mashRatio = 3.5;
+    final baseMaltAmount = recipe.zutaten.malts.fold<double>(0, (sum, m) => sum + m.amountKg);
+    if (baseMaltAmount > 0) {
+      mashRatio = recipe.prozessdaten.mash.mashWaterL / baseMaltAmount;
+    }
+    if (mashRatio < 2.0 || mashRatio > 5.0) mashRatio = 3.5;
+
+    final mashWaterL = totalMaltKg * mashRatio;
+    const absorption = 0.9;
+    final spargeWaterL = vPfannevoll - (mashWaterL - (totalMaltKg * absorption));
+
+    // 5. Update the Recipe Object
     return recipe.copyWith(
       zutaten: Ingredients(
         malts: scaledMalts,

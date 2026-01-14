@@ -112,16 +112,42 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                   '${f['amount']} ${f['unit'] ?? 'kg'}',
                   subtitle: '${f['type'] ?? ''} • ${f['potential'] ?? ''} SG',
                 )),
+            if (fermentables.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Gesamtmenge Malz:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '${fermentables.fold<double>(0, (sum, f) => sum + ((f['amount'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(2)} kg',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blueAccent),
+                    ),
+                  ],
+                ),
+              ),
             
-            const SizedBox(height: 16),
             _buildSectionTitle('Hopfen'),
             ...hops.map((h) => _buildIngredientRow(
                   h['name'],
                   '${h['amount']} ${h['unit'] ?? 'g'}',
                   subtitle: '${h['use']} • ${h['time']} min • ${h['alpha']}% Alpha',
                 )),
+            if (hops.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, bottom: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Gesamtmenge Hopfen:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '${hops.fold<double>(0, (sum, h) => sum + ((h['amount'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(0)} g',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.greenAccent),
+                    ),
+                  ],
+                ),
+              ),
             
-            const SizedBox(height: 16),
             _buildSectionTitle('Hefe'),
             ...yeast.map((y) => _buildIngredientRow(
                   y['name'],

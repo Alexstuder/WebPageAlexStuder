@@ -291,102 +291,65 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status Badge
+            // 1. Status Badge
             RaptStatusBadge(isActive: isActive),
             const SizedBox(height: 16),
-            if (_isFallbackData && _telemetryData.isNotEmpty) ...[
-               Builder(
-                 builder: (context) {
-                   final first = _telemetryData.first;
-                   final last = _telemetryData.last;
-                   
-                   final profileName = first['profileName'] ?? first['ProfileName'] ?? 'Unknown Profile';
-                   final start = DateTime.tryParse(first['createdOn'] ?? '');
-                   final end = DateTime.tryParse(last['createdOn'] ?? '');
-                   final fmt = DateFormat('dd.MM.yyyy HH:mm');
-                   
-                   return Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                        Text(
-                          'Letzter Sud: $profileName',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            height: 1.3,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (start != null && end != null)
-                          Text(
-                            'Gebraut vom ${fmt.format(start)} bis ${fmt.format(end)}',
-                             style: const TextStyle(color: Colors.white70, fontSize: 16),
-                          ),
-                        const SizedBox(height: 24),
-                        if (_error != null)
-                           Container(
-                             padding: const EdgeInsets.all(12),
-                             margin: const EdgeInsets.only(bottom: 16),
-                             decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                             child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-                           ),
-                     ],
-                   );
-                 }
-               )
-            ] else ...[
-                Text(
-                  _currentProfileName ?? 'RAPT Temperature Controller',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                 const SizedBox(height: 8),
-                 if (_error != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                      child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
-                    ),
-                
-                 const SizedBox(height: 16),
-                 Container(
-                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                   decoration: BoxDecoration(
-                      color: const Color(0xFF020B1D),
-                      border: Border.all(color: Colors.white24),
-                      borderRadius: BorderRadius.circular(10),
-                   ),
-                   child: DropdownButton<String>(
-                     value: _selectedControllerId,
-                     isExpanded: true,
-                     dropdownColor: const Color(0xFF020B1D),
-                     underline: const SizedBox(),
-                     style: const TextStyle(color: Colors.white),
-                     items: _controllers.map((c) {
-                        final id = _getControllerId(c);
-                        final name = c['name'] ?? c['controllerName'] ?? id;
-                        return DropdownMenuItem<String>(
-                           value: id,
-                           child: Text(name),
-                        );
-                     }).toList(),
-                     onChanged: (v) {
-                        if (v != null) {
-                           setState(() {
-                             _selectedControllerId = v;
-                             _startDate = null; 
-                           });
-                           _loadTelemetry(v); 
-                        }
-                     },
-                   ),
+
+            // 2. Metadata Info (Design from Bild 1: Floppy Icon + Amber Text) at the TOP
+            if (_telemetryData.isNotEmpty)
+               Padding(
+                 padding: const EdgeInsets.only(bottom: 16),
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Row(
+                       children: [
+                         const Icon(Icons.save, size: 16, color: Colors.amberAccent),
+                         const SizedBox(width: 8),
+                         Text(
+                           'Cache · ${_telemetryData.length} Messpunkte · Stand ${_generatedAt != null ? DateFormat('dd.MM.yyyy, HH:mm').format(DateTime.tryParse(_generatedAt!) ?? DateTime.now()) : '-'} MEZ',
+                           style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold),
+                         ),
+                       ],
+                     ),
+                     const SizedBox(height: 4),
+                     Builder(
+                       builder: (context) {
+                         final first = _telemetryData.first;
+                         final last = _telemetryData.last;
+                         final start = DateTime.tryParse(first['createdOn'] ?? '');
+                         final end = DateTime.tryParse(last['createdOn'] ?? '');
+                         final fmt = DateFormat('dd.MM.yyyy, HH:mm');
+                         if (start == null || end == null) return const SizedBox();
+                         return Text(
+                           'Zeitraum: ${fmt.format(start)} MEZ → ${fmt.format(end)} MEZ',
+                           style: const TextStyle(color: Colors.white70, fontSize: 13),
+                         );
+                       },
+                     ),
+                   ],
                  ),
-                 const SizedBox(height: 24),
-            ],
+               ),
+            // 3. Profile Title (Bild 1)
+            Text(
+               _isFallbackData ? 'Letzter Sud: ${_telemetryData.isNotEmpty ? (_telemetryData.first['profileName'] ?? _telemetryData.first['ProfileName'] ?? 'Unbekannt') : ''}' 
+                               : (_currentProfileName ?? 'RAPT Sud'),
+               style: const TextStyle(
+                 color: Colors.white,
+                 fontSize: 28,
+                 fontWeight: FontWeight.bold,
+                 height: 1.2,
+               ),
+            ),
+            const SizedBox(height: 24),
+
+            if (_error != null)
+               Container(
+                 padding: const EdgeInsets.all(12),
+                 margin: const EdgeInsets.only(bottom: 16),
+                 decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                 child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+               ),
              
              // Main Panel
              Container(
@@ -400,17 +363,17 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                ),
                child: Column(
                   children: [
-                     // Cards
+                     // 4. Main Metric Cards (Bild 1: Temp, Gravity, Alcohol)
                      LayoutBuilder(
                        builder: (ctx, constraints) {
                          if (constraints.maxWidth < 600) {
                             return Column(
                                children: [
-                                  RaptSummaryTile(label: 'Temperatur', value: _latestTemp, unit: '°C', color: Colors.blue),
+                                  RaptSummaryTile(label: 'TEMPERATUR', value: _latestTemp, unit: '°C', color: Colors.blue),
                                   const SizedBox(height: 16),
-                                  RaptSummaryTile(label: 'Gravity', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra()),
+                                  RaptSummaryTile(label: 'GRAVITY', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra()),
                                   const SizedBox(height: 16),
-                                  RaptSummaryTile(label: 'Alkohol', value: _latestAbv, unit: 'Vol.%', color: Colors.amber),
+                                  RaptSummaryTile(label: 'ALKOHOL', value: _latestAbv, unit: 'Vol.%', color: Colors.amber),
                                ],
                             );
                          }
@@ -418,26 +381,65 @@ class _RaptDashboardPageState extends State<RaptDashboardPage> {
                            child: Row(
                              crossAxisAlignment: CrossAxisAlignment.stretch,
                              children: [
-                               Expanded(child: RaptSummaryTile(label: 'Temperatur', value: _latestTemp, unit: '°C', color: Colors.blue)),
+                               Expanded(child: RaptSummaryTile(label: 'TEMPERATUR', value: _latestTemp, unit: '°C', color: Colors.blue)),
                                const SizedBox(width: 16),
-                               Expanded(child: RaptSummaryTile(label: 'Gravity', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra())),
+                               Expanded(child: RaptSummaryTile(label: 'GRAVITY', value: _latestGravity, unit: 'SG', color: Colors.red, extra: _buildGravityExtra())),
                                const SizedBox(width: 16),
-                               Expanded(child: RaptSummaryTile(label: 'Alkohol', value: _latestAbv, unit: 'Vol.%', color: Colors.amber)),
+                               Expanded(child: RaptSummaryTile(label: 'ALKOHOL', value: _latestAbv, unit: 'Vol.%', color: Colors.amber)),
                              ],
                            ),
                          );
                        },
                      ),
                      const SizedBox(height: 24),
+
+                     // 5. Controller Selection (Label + Dropdown) - Below Tiles
+                     if (!_isFallbackData) ...[
+                        const Text('Temperature Controller', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                             color: const Color(0xFF020B1D),
+                             border: Border.all(color: Colors.white24),
+                             borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _selectedControllerId,
+                            isExpanded: true,
+                            dropdownColor: const Color(0xFF020B1D),
+                            underline: const SizedBox(),
+                            style: const TextStyle(color: Colors.white),
+                            items: _controllers.map((c) {
+                               final id = _getControllerId(c);
+                               final name = c['name'] ?? c['controllerName'] ?? id;
+                               return DropdownMenuItem<String>(
+                                  value: id,
+                                  child: Text(name),
+                               );
+                            }).toList(),
+                            onChanged: (v) {
+                               if (v != null) {
+                                  setState(() {
+                                    _selectedControllerId = v;
+                                    _startDate = null; 
+                                  });
+                                  _loadTelemetry(v); 
+                               }
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                     ],
                      
-                     // CHART
+                     // 6. CHART
                      SizedBox(
-                       height: 400,
+                       height: 450,
                        child: RaptTelemetryChart(telemetryData: _telemetryData),
                      ),
                      const SizedBox(height: 24),
                      
-                     // Controls Row
+                     // 7. Controls Row
                      RaptControlsPanel(
                         startDate: _startDate, 
                         generatedAt: _generatedAt,
