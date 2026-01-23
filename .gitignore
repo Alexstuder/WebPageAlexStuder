@@ -11,3 +11,7 @@ flutter_brew_assistent/test/db-test-output-dump*
 
 # Proxy cache
 proxy/cache/
+proxy/cache/controllers-cache.json
+proxy/cache/last-controllers-cache.json
+proxy/cache/last-telemetry-cache.json
+proxy/cache/telemetry-cache.json
