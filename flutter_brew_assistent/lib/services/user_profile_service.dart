@@ -229,7 +229,9 @@ class UserProfileService implements UserProfileRepository {
     final Map<String, Map<String, dynamic>> dataToUpsert = {};
     for (var batch in batches) {
        var json = batch.toJson();
-       if (json['id'] == null) json.remove('id');
+       // ALWAYS remove id to let onConflict handle matching via user_profile_id/brewfather_id
+       // This avoids PostgREST mixing null and non-null IDs in the same batch request.
+       json.remove('id');
 
        final bfId = batch.brewfatherId;
        if (bfId != null) {
@@ -248,9 +250,6 @@ class UserProfileService implements UserProfileRepository {
              if (incomingAnalysis.isEmpty && existingAnalysis.isNotEmpty) {
                 json['analysis_data'] = existingAnalysis;
              }
-             
-             // Ensure we update the existing row ID if it exists
-             json['id'] = existing['id'];
           }
           // Deduplicate in the local list to avoid conflict errors
           dataToUpsert[bfId] = json;
