@@ -44,6 +44,11 @@ let telemetryCachePromise = null;
 let persistedRaptStartDate = null;
 let lastEffectiveStartDate = null;
 let controllersCache = null;
+let lastControllersFetchTime = 0;
+let lastHydrometersFetchTime = 0;
+let cachedHydrometers = [];
+let raptTokenCache = null;
+let raptTokenExpiry = 0;
 
 loadTelemetryCacheFromDisk();
 loadControllersCacheFromDisk();
@@ -820,6 +825,12 @@ async function handleRaptStartOverrideRequest(req, res) {
 }
 
 async function requestRaptToken() {
+  const now = Date.now();
+  if (raptTokenCache && raptTokenExpiry > now + 60000) {
+    return raptTokenCache;
+  }
+
+  console.log('[Proxy] Requesting new RAPT token...');
   const body = new URLSearchParams({
     client_id: 'rapt-user',
     grant_type: 'password',
@@ -835,10 +846,16 @@ async function requestRaptToken() {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.error_description || data.error || 'Failed to fetch RAPT token.');
+    console.error(`[Proxy] Token request failed with status ${response.status}:`, data);
+    const error = new Error(data.error_description || data.error || `Failed to fetch RAPT token (${response.status}).`);
     error.statusCode = response.status;
     throw error;
   }
+
+  raptTokenCache = data;
+  const expiresIn = data.expires_in || 3600;
+  raptTokenExpiry = now + (expiresIn * 1000);
+  console.log(`[Proxy] New RAPT token received (expires in ${expiresIn}s).`);
   return data;
 }
 
@@ -977,9 +994,22 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
   }
 
   const base = RAPT_API_BASE.replace(/\/$/, '');
-  const controllers = await fetchTemperatureControllers(base, token.access_token);
+
+  // 1. Fetch Controllers & Hydrometers (concurrently)
+  const [controllers, hydrometers] = await Promise.all([
+    fetchTemperatureControllers(base, token.access_token).catch(err => {
+      console.warn('[Proxy] Failed to fetch controllers during refresh:', err.message);
+      return [];
+    }),
+    fetchHydrometers(base, token.access_token).catch(err => {
+      console.warn('[Proxy] Failed to fetch hydrometers during refresh:', err.message);
+      return [];
+    })
+  ]);
+
   const filteredControllers = filterControllersForUse(controllers, RAPT_CONTROLLER_USE);
   updateControllersCache(filteredControllers);
+
   const cachedRowsByController = mapRowsByControllerId(telemetryCache?.rows || []);
   const nowIso = new Date().toISOString();
   const rows = [];
@@ -992,7 +1022,19 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
       controller?.activeProfileSession?.Name ||
       controller?.name ||
       null;
-    const hydrometerId = getHydrometerIdFromController(controller);
+
+    let hydrometerId = getHydrometerIdFromController(controller);
+
+    // Auto-Link: If no hydrometerId found on controller, search in hydrometers list by pairedDeviceId
+    if (!hydrometerId && controllerId) {
+      const matchedPill = hydrometers.find(h =>
+        h.pairedDeviceId === controllerId ||
+        h.PairedDeviceId === controllerId
+      );
+      if (matchedPill) {
+        hydrometerId = matchedPill.id || matchedPill.Id;
+      }
+    }
     const hasActiveSession = controllerHasActiveSession(controller);
     const fallbackStart = getControllerStartDate(controller);
     const startDate = startDateOverride || fallbackStart;
@@ -1128,6 +1170,14 @@ async function refreshTelemetryCache(startDateOverride = null, hasFallback = fal
 }
 
 async function fetchTemperatureControllers(base, accessToken) {
+  const now = Date.now();
+  // Limit fetches to once per minute unless there is no cache
+  if (controllersCache && Array.isArray(controllersCache.controllers) && (now - lastControllersFetchTime < 60000)) {
+    console.log('[Proxy] Using cached controllers list due to cooldown.');
+    return controllersCache.controllers;
+  }
+
+  lastControllersFetchTime = now;
   const response = await fetch(`${base}${RAPT_CONTROLLERS_ENDPOINT}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -1136,12 +1186,44 @@ async function fetchTemperatureControllers(base, accessToken) {
   });
   const payload = await response.json().catch(() => []);
   if (!response.ok) {
-    const err = new Error('Temperature controller response invalid.');
+    if (response.status === 429) {
+      console.warn('[Proxy] RAPT API Rate Limit (429) hit on controllers endpoint.');
+    } else {
+      console.error(`[Proxy] Controller fetch failed (${response.status}):`, payload);
+    }
+    const err = new Error(response.status === 429 ? 'RAPT API Rate Limit hit. Please wait.' : 'Temperature controller response invalid.');
     err.statusCode = response.status;
     err.details = payload;
     throw err;
   }
   return normalizeControllerArray(payload);
+}
+
+async function fetchHydrometers(base, accessToken) {
+  const now = Date.now();
+  if (cachedHydrometers.length > 0 && (now - lastHydrometersFetchTime < 60000)) {
+    return cachedHydrometers;
+  }
+
+  lastHydrometersFetchTime = now;
+  const response = await fetch(`${base}/api/Hydrometers/GetHydrometers`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+  const payload = await response.json().catch(() => []);
+  if (!response.ok) {
+    if (response.status === 429) {
+      console.warn('[Proxy] RAPT API Rate Limit (429) hit on hydrometers endpoint.');
+    }
+    const err = new Error('Hydrometer response invalid.');
+    err.statusCode = response.status;
+    err.details = payload;
+    throw err;
+  }
+  cachedHydrometers = normalizeControllerArray(payload);
+  return cachedHydrometers;
 }
 
 function normalizeControllerArray(payload) {
@@ -1215,6 +1297,8 @@ function getHydrometerIdFromController(controller) {
     controller?.HydrometerId ||
     session?.hydrometerId ||
     session?.HydrometerId ||
+    controller?.activeProfileSession?.hydrometerId ||
+    controller?.activeProfileSession?.HydrometerId ||
     null
   );
 }
@@ -1283,7 +1367,12 @@ async function requestHydrometerTelemetry(base, accessToken, hydrometerId, start
   });
   const payload = await response.json().catch(() => []);
   if (!response.ok) {
-    const err = new Error('Telemetry response invalid.');
+    if (response.status === 429) {
+      console.warn(`[Proxy] RAPT API Rate Limit (429) hit on telemetry endpoint for hydrometer ${hydrometerId}.`);
+    } else {
+      console.error(`[Proxy] Telemetry fetch failed (${response.status}) for ${hydrometerId}:`, payload);
+    }
+    const err = new Error(response.status === 429 ? 'RAPT API Rate Limit hit. Please wait.' : 'Telemetry response invalid.');
     err.statusCode = response.status;
     err.details = payload;
     throw err;
