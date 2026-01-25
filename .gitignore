@@ -9,3 +9,5 @@ node_modules/
 supabase/
 flutter_brew_assistent/test/db-test-output-dump*
 
+# Proxy Cache
+proxy/cache/
