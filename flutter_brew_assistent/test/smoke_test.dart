@@ -84,7 +84,7 @@ class MockUserProfileRepository implements UserProfileRepository {
   @override Future<void> saveRecipes(List<BfRecipe> r) async {}
   
   @override Future<List<BfBatch>> getBatches(String id) async => [];
-  @override Future<void> saveBatches(List<BfBatch> b) async {}
+  @override Future<void> saveBatches(List<BfBatch> b, {bool syncDeletions = false}) async {}
 }
 
 class MockWaterProfileRepository implements WaterProfileRepository {

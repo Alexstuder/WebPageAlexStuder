@@ -201,7 +201,7 @@ class FakeUserProfileRepository implements UserProfileRepository {
   }
 
   @override
-  Future<void> saveBatches(List<BfBatch> batches) async {
+  Future<void> saveBatches(List<BfBatch> batches, {bool syncDeletions = false}) async {
     // no-op
   }
 }

@@ -68,8 +68,8 @@ class _BatchesListPageState extends State<BatchesListPage> {
         newItems.add(BfBatch.fromBrewfather(item, widget.profileId));
       }
 
-      // 4. Save
-      await _userService.saveBatches(newItems);
+      // 4. Save (with syncDeletions: true to remove local entries no longer in Brewfather)
+      await _userService.saveBatches(newItems, syncDeletions: true);
 
       // 5. Reload
       localItems = await _userService.getBatches(widget.profileId);

@@ -33,7 +33,7 @@ abstract class UserProfileRepository {
 
   // Batches
   Future<List<BfBatch>> getBatches(String userProfileId);
-  Future<void> saveBatches(List<BfBatch> batches);
+  Future<void> saveBatches(List<BfBatch> batches, {bool syncDeletions = false});
 }
 
 class UserProfileService implements UserProfileRepository {
@@ -210,23 +210,34 @@ class UserProfileService implements UserProfileRepository {
   }
 
   @override
-  Future<void> saveBatches(List<BfBatch> batches) async {
-    if (batches.isEmpty) return;
+  Future<void> saveBatches(List<BfBatch> batches, {bool syncDeletions = false}) async {
+    if (batches.isEmpty && !syncDeletions) return;
 
     // 1. Fetch existing batches for this user/profile to check for existing RAPT data or updates
-    // We assume all batches belong to the same profile based on the first item
+    // We assume all batches belong to the same profile based on the first item (or context)
+    // If list is empty but syncDeletions is true, we still need the userProfileId.
+    // In BatchesListPage, it's always for one profile.
+    if (batches.isEmpty && syncDeletions) {
+       // This is a special case where the user might have deleted EVERYTHING in Brewfather.
+       // However, we usually get a profileId from somewhere. 
+       // In the current architecture of this method, we can't delete without a profileId.
+       return; 
+    }
+
     final userProfileId = batches.first.userProfileId;
     final existingData = await _tableBatches()
         .select('brewfather_id, rapt_data, analysis_data, data, id')
         .eq('user_profile_id', userProfileId);
     
     // Map existing batches by brewfather_id for quick lookup
-    final existingMap = {
+    final Map<String, Map<String, dynamic>> existingMap = {
       for (var item in existingData) 
          if (item['brewfather_id'] != null) item['brewfather_id'] as String : item
     };
 
     final Map<String, Map<String, dynamic>> dataToUpsert = {};
+    final Set<String> incomingBfIds = {};
+
     for (var batch in batches) {
        var json = batch.toJson();
        // ALWAYS remove id to let onConflict handle matching via user_profile_id/brewfather_id
@@ -235,6 +246,7 @@ class UserProfileService implements UserProfileRepository {
 
        final bfId = batch.brewfatherId;
        if (bfId != null) {
+          incomingBfIds.add(bfId);
           if (existingMap.containsKey(bfId)) {
              final existing = existingMap[bfId]!;
              
@@ -256,6 +268,24 @@ class UserProfileService implements UserProfileRepository {
        }
     }
 
+    // 2. Handle Deletions if requested
+    if (syncDeletions) {
+       final List<String> idsToDelete = [];
+       for (var bfId in existingMap.keys) {
+          if (!incomingBfIds.contains(bfId)) {
+             idsToDelete.add(bfId);
+          }
+       }
+       
+       if (idsToDelete.isNotEmpty) {
+          await _tableBatches()
+              .delete()
+              .eq('user_profile_id', userProfileId)
+              .filter('brewfather_id', 'in', idsToDelete);
+       }
+    }
+
+    // 3. Perform Upsert
     if (dataToUpsert.isNotEmpty) {
        await _tableBatches().upsert(dataToUpsert.values.toList(), onConflict: 'user_profile_id, brewfather_id');
     }
