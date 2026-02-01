@@ -153,6 +153,11 @@ class OpenAIService {
     return imageUrl;
   }
 
+  Future<String> analyzeRecipe(Map<String, dynamic> recipeData) async {
+    final prompt = 'Bitte analysiere folgendes Bierbrau-Rezept und gib konstruktive Vorschläge zur Verbesserung (z.B. Hopfen-Timing, Malz-Zusammensetzung, Gärführung). \n\nRezept-Daten:\n${const JsonEncoder.withIndent('  ').convert(recipeData)}';
+    return generalChat(prompt);
+  }
+
 }
 
 class ShopSearchResponse {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
 import '../models/keezer_config.dart';
 import '../services/keezer_service.dart';
 import 'keezer_config_page.dart';
+import '../l10n/app_localizations.dart';
 
 class KeezerManagerPage extends StatefulWidget {
   const KeezerManagerPage({super.key, required this.profileId});
@@ -13,15 +15,26 @@ class KeezerManagerPage extends StatefulWidget {
   State<KeezerManagerPage> createState() => _KeezerManagerPageState();
 }
 
-class _KeezerManagerPageState extends State<KeezerManagerPage> {
+class _KeezerManagerPageState extends State<KeezerManagerPage> with SingleTickerProviderStateMixin {
   final _service = KeezerService();
   KeezerConfig? _config;
   bool _isLoading = true;
+  late AnimationController _bubbleController;
 
   @override
   void initState() {
     super.initState();
+    _bubbleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
     _loadConfig();
+  }
+
+  @override
+  void dispose() {
+    _bubbleController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadConfig() async {
@@ -73,30 +86,30 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
     DateTime? tappedAt = tap.tappedAt;
     DateTime? bestBefore = tap.bestBefore;
 
-    final result = await showDialog<bool>(
+    final result = await showDialog<String>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Zapfhahn #${tap.tapNumber} Details'),
+              title: Text(AppLocalizations.of(context)!.tapDetails(tap.tapNumber)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Bier Name',
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.beerName,
                         hintText: 'z.B. Pilsner, IPA...',
                       ),
                     ),
                     const SizedBox(height: 16),
                     ListTile(
-                      title: const Text('Angezapft am'),
+                      title: Text(AppLocalizations.of(context)!.tappedAt),
                       subtitle: Text(tappedAt != null
                           ? DateFormat('dd.MM.yyyy').format(tappedAt!)
-                          : 'Nicht festgelegt'),
+                          : AppLocalizations.of(context)!.notSet),
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -106,15 +119,20 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
                           lastDate: DateTime(2100),
                         );
                         if (picked != null) {
-                          setState(() => tappedAt = picked);
+                          setState(() {
+                            tappedAt = picked;
+                            if (bestBefore == null) {
+                              bestBefore = picked.add(const Duration(days: 90));
+                            }
+                          });
                         }
                       },
                     ),
                     ListTile(
-                      title: const Text('Genießbar bis'),
+                      title: Text(AppLocalizations.of(context)!.bestBefore),
                       subtitle: Text(bestBefore != null
                           ? DateFormat('dd.MM.yyyy').format(bestBefore!)
-                          : 'Nicht festgelegt'),
+                          : AppLocalizations.of(context)!.notSet),
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -134,11 +152,15 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Abbrechen'),
+                  child: Text(AppLocalizations.of(context)!.cancel),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, 'empty'),
+                  child: Text(AppLocalizations.of(context)!.empty, style: const TextStyle(color: Colors.redAccent)),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Speichern'),
+                  onPressed: () => Navigator.pop(context, 'save'),
+                  child: Text(AppLocalizations.of(context)!.save),
                 ),
               ],
             );
@@ -147,9 +169,16 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
       },
     );
 
-    if (result == true) {
+    if (result == 'save' || result == 'empty') {
       final updatedTaps = _config!.taps.map((t) {
         if (t.tapNumber == tap.tapNumber) {
+          if (result == 'empty') {
+             return t.copyWith(
+                beerName: '',
+                tappedAt: null,
+                bestBefore: null,
+             );
+          }
           return t.copyWith(
             beerName: nameController.text,
             tappedAt: tappedAt,
@@ -188,11 +217,11 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Noch keine Konfiguration vorhanden.'),
+                      Text(AppLocalizations.of(context)!.noConfig),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _openConfig,
-                        child: const Text('Jetzt konfigurieren'),
+                        child: Text(AppLocalizations.of(context)!.configureNow),
                       ),
                     ],
                   ),
@@ -379,8 +408,16 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
                     // Bubbles effect for beer
                     if (fillPercentage > 0)
                       Positioned.fill(
-                        child: CustomPaint(
-                          painter: BubblesPainter(fillPercentage: fillPercentage),
+                        child: AnimatedBuilder(
+                          animation: _bubbleController,
+                          builder: (context, child) {
+                            return CustomPaint(
+                              painter: BubblesPainter(
+                                fillPercentage: fillPercentage,
+                                animationValue: _bubbleController.value,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     // Label (Beer Name)
@@ -425,32 +462,48 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> {
 }
 
 class BubblesPainter extends CustomPainter {
+  BubblesPainter({
+    required this.fillPercentage,
+    required this.animationValue,
+  });
+
   final double fillPercentage;
-  BubblesPainter({required this.fillPercentage});
+  final double animationValue;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (fillPercentage <= 0) return;
-    
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.3);
-    final beerHeight = size.height * fillPercentage;
-    final r = 1.5;
-    
-    // Simple static bubbles
-    final bubblePositions = [
-      Offset(size.width * 0.2, size.height - beerHeight * 0.2),
-      Offset(size.width * 0.5, size.height - beerHeight * 0.5),
-      Offset(size.width * 0.8, size.height - beerHeight * 0.1),
-      Offset(size.width * 0.3, size.height - beerHeight * 0.7),
-      Offset(size.width * 0.7, size.height - beerHeight * 0.4),
-      Offset(size.width * 0.4, size.height - beerHeight * 0.8),
-    ];
 
-    for (var pos in bubblePositions) {
-      canvas.drawCircle(pos, r, paint);
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+
+    final random = math.Random(42);
+    final count = (20 * fillPercentage).toInt().clamp(10, 30);
+
+    for (int i = 0; i < count; i++) {
+      final radius = random.nextDouble() * 2 + 1;
+      // Animate vertical position
+      final baseTop = size.height * (1 - fillPercentage);
+      final offsetMultiplier = random.nextDouble();
+      final bubbleHeight = size.height * fillPercentage;
+      
+      // Infinite upward movement
+      double yProgress = (animationValue + offsetMultiplier) % 1.0;
+      final y = size.height - (yProgress * bubbleHeight);
+      
+      // Subtle horizontal sway
+      final xSway = math.sin(animationValue * 2 * math.pi + i) * 3;
+      final x = (random.nextDouble() * size.width) + xSway;
+
+      if (y > baseTop) {
+        canvas.drawCircle(Offset(x, y), radius, paint);
+      }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant BubblesPainter oldDelegate) =>
+      oldDelegate.animationValue != animationValue ||
+      oldDelegate.fillPercentage != fillPercentage;
 }

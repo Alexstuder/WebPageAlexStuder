@@ -64,6 +64,12 @@ class TapConfig {
       bestBefore: bestBefore ?? this.bestBefore,
     );
   }
+
+  DateTime? suggestBestBefore() {
+    if (tappedAt == null) return null;
+    // Simple logic: 90 days for most beers
+    return tappedAt!.add(const Duration(days: 90));
+  }
 }
 
 class KeezerConfig {

@@ -22,6 +22,11 @@ void main() {
   });
 
   testWidgets('User can fill profile and water data via GUI flow', (tester) async {
+    // Set larger window size
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
     final fakeUserRepo = FakeUserProfileRepository();
     final fakeWaterRepo = FakeWaterProfileRepository();
 
@@ -40,27 +45,39 @@ void main() {
     await tester.tap(find.text('Users profil'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.bySemanticsLabel('Name').first, 'Brew Master');
-    await tester.enterText(
-      find.bySemanticsLabel('Avatar URL'),
-      'https://example.com/avatar.png',
-    );
+    // Check if we are on UserProfilePage
+    expect(find.text('Users Profil'), findsOneWidget);
 
-    await tester.tap(find.text('Wasserprofile'));
+    await tester.enterText(find.byType(TextField).first, 'Brew Master');
+    await tester.pumpAndSettle();
+    
+    // Tap Water Profiles button
+    final waterBtn = find.text('Wasserprofile');
+    await tester.ensureVisible(waterBtn);
+    await tester.tap(waterBtn);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Profil anlegen'));
+    final addBtn = find.text('Profil anlegen');
+    await tester.ensureVisible(addBtn);
+    await tester.tap(addBtn);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.bySemanticsLabel('Profilname'), 'Hauswasser');
-    await tester.enterText(find.bySemanticsLabel('pH'), '5.4');
+    // In Editor
+    await tester.enterText(find.byType(TextField).at(0), 'Hauswasser');
+    await tester.enterText(find.byType(TextField).at(1), '5.4');
 
-    final wertFields = find.bySemanticsLabel('Wert');
-    await tester.enterText(wertFields.at(0), '55'); // Ca
-    await tester.enterText(wertFields.at(1), '12'); // Mg
-    await tester.enterText(wertFields.at(2), '18'); // Na
+    // Values for Ca, Mg, Na...
+    // In WaterProfileEditorPage, the ion fields start after Name (0) and pH (1)
+    // The following index 2..7 are Ca, Mg, Na, Cl, SO4, HCO3
+    final allFields = find.byType(TextField);
+    await tester.enterText(allFields.at(2), '55'); // Ca
+    await tester.enterText(allFields.at(3), '12'); // Mg
+    await tester.enterText(allFields.at(4), '18'); // Na
+    await tester.enterText(allFields.at(5), '10'); // Cl
+    await tester.enterText(allFields.at(6), '45'); // SO4
+    await tester.enterText(allFields.at(7), '180'); // HCO3
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+    await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
 
     await tester.pageBack();
@@ -73,42 +90,46 @@ void main() {
     expect(fakeWaterRepo.lastSaved?.magnesiumPpm, 12);
     expect(fakeWaterRepo.lastSaved?.sodiumPpm, 18);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Zurück'));
-    await tester.pumpAndSettle();
-
     expect(find.text('Brew Master'), findsWidgets);
+
+    // Now go back to home
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    
+    expect(find.text('Users profil'), findsOneWidget);
   });
 }
 
 void _registerTestAsset() {
-  const assetKey = 'assets/icon.png';
+  final assets = [
+    'assets/icon.png',
+    'assets/icon_small.png',
+    'assets/Brewfather_logo.png',
+    '.env',
+  ];
   final transparentPixel = base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==',
   );
-  final iconBytes = ByteData.view(transparentPixel.buffer);
-  final manifestJson = jsonEncode({assetKey: [assetKey]});
-  final manifestBin = const StandardMessageCodec().encodeMessage({
-    assetKey: <String>[assetKey],
-  });
-
+  
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMessageHandler('flutter/assets', (message) async {
-    final String key = utf8.decode(message!.buffer.asUint8List());
-    if (key == assetKey) {
-      return iconBytes;
+    final Uint8List list = message!.buffer.asUint8List();
+    final String key = utf8.decode(list);
+    
+    if (assets.contains(key)) {
+      return ByteData.view(transparentPixel.buffer);
     }
-    if (key == 'AssetManifest.json') {
-      final data = Uint8List.fromList(utf8.encode(manifestJson));
-      return ByteData.view(data.buffer);
+    
+    if (key == 'AssetManifest.json' || key == 'AssetManifest.bin.json') {
+      final manifestJson = jsonEncode({for (var a in assets) a: [a]});
+      return ByteData.view(Uint8List.fromList(utf8.encode(manifestJson)).buffer);
     }
+    
     if (key == 'AssetManifest.bin') {
-      if (manifestBin == null) return null;
-      return ByteData.view(
-        manifestBin.buffer,
-        manifestBin.offsetInBytes,
-        manifestBin.lengthInBytes,
-      );
+      final bin = const StandardMessageCodec().encodeMessage({});
+      return bin;
     }
+    
     return null;
   });
 }

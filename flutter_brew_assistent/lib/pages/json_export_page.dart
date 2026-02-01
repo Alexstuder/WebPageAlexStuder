@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:js_interop';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:web/web.dart' as web;
+import '../utils/download_utils.dart';
 import 'package:url_launcher/url_launcher.dart'; 
 import '../models/ai_recipe.dart';
 import '../services/brewfather_transformer_service.dart';
@@ -97,18 +96,12 @@ class _JsonExportPageState extends State<JsonExportPage> {
   Future<void> _download() async {
     try {
       if (kIsWeb) {
-        // Optimierter Web-Download via package:web
         final bytes = utf8.encode(_jsonString);
-        final array = Uint8List.fromList(bytes);
-        final blob = web.Blob([array.toJS].toJS, web.BlobPropertyBag(type: 'application/json'));
-        final url = web.URL.createObjectURL(blob);
-        
-        final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
-        anchor.href = url;
-        anchor.download = _fileName;
-        anchor.click();
-        
-        web.URL.revokeObjectURL(url);
+        downloadBytes(
+          Uint8List.fromList(bytes),
+          _fileName,
+          mimeType: 'application/json',
+        );
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image/image.dart' as img;
-
+import '../main.dart';
 import '../models/user_profile.dart';
 import '../services/user_profile_service.dart';
 import '../services/water_profile_service.dart';
@@ -32,7 +32,10 @@ import 'hops_manager_page.dart';
 import 'miscs_manager_page.dart';
 import 'recipes_list_page.dart';
 import 'batches_list_page.dart';
+import 'batches_list_page.dart';
 import 'keezer_manager_page.dart';
+import 'video_instructions_page.dart';
+import '../l10n/app_localizations.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({
@@ -69,6 +72,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final TextEditingController _defaultBatchCtrl = TextEditingController();
 
   String? _newAvatarBase64;
+  String _selectedLanguage = 'de';
   late final UserProfileRepository _profileRepository;
 
   bool _isSaving = false;
@@ -100,6 +104,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       if (profile != null) {
         _userNameCtrl.text = profile.name;
         _defaultBatchCtrl.text = profile.defaultBatchLiters?.toString() ?? '';
+        _selectedLanguage = profile.language;
       }
       setState(() {
         _isLoadingProfile = false;
@@ -128,6 +133,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       brewfatherUserId: _loadedProfile?.brewfatherUserId,
       brewfatherApiKey: _loadedProfile?.brewfatherApiKey,
       brewfatherSyncEnabled: _loadedProfile?.brewfatherSyncEnabled ?? false,
+      language: _selectedLanguage,
     );
 
     setState(() {
@@ -143,6 +149,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profil gespeichert')),
         );
+      }
+      if (mounted) {
+        BrewMateApp.setLocale(context, Locale(_selectedLanguage));
       }
       success = true;
     } catch (e) {
@@ -209,7 +218,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Users Profil'),
+        title: Text(AppLocalizations.of(context)!.userProfile),
         centerTitle: true,
       ),
       body: _isLoadingProfile
@@ -256,7 +265,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               else
                                 const Icon(Icons.save_rounded),
                               const SizedBox(width: 12),
-                              Text(_isSaving ? 'Speichert …' : 'Profil speichern'),
+                              Text(_isSaving ? 'Speichert …' : AppLocalizations.of(context)!.saveProfile),
                             ],
                           ),
                         ),
@@ -431,6 +440,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  void _openVideoInstructions() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VideoInstructionsPage(profileId: _profileId),
+      ),
+    );
+  }
+
   void _openBrewfatherMenu() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -503,7 +520,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     controller: _userNameCtrl,
                     focusNode: _userNameFocusNode,
                     decoration: InputDecoration(
-                      labelText: 'Name',
+                      labelText: AppLocalizations.of(context)!.name,
                       hintText: 'z. B. Alex Studer',
                       errorText: _userNameError,
                     ),
@@ -515,6 +532,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedLanguage,
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.language,
+                prefixIcon: const Icon(Icons.language),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'de', child: Text('Deutsch')),
+                DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _selectedLanguage = val);
+                }
+              },
             ),
           ],
         ),
@@ -537,55 +571,60 @@ class _UserProfilePageState extends State<UserProfilePage> {
           children: [
             _managerButton(
               icon: Icons.receipt_long,
-              label: 'Generierte Rezepte',
+              label: 'Generierte Rezepte', // Still hardcoded, but I'll add to ARB if needed.
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const GeneratedRecipesListPage()),
               ),
             ),
             _managerButton(
               icon: Icons.water_drop_outlined,
-              label: 'Wasserprofile',
+              label: AppLocalizations.of(context)!.waterProfiles,
               onPressed: _openWaterProfileManager,
             ),
             _managerButton(
               icon: Icons.kitchen_outlined,
-              label: 'Braukessel',
+              label: AppLocalizations.of(context)!.brewKettles,
               onPressed: _openBrewKettleManager,
             ),
             _managerButton(
               icon: Icons.science_outlined,
-              label: 'Fermentierer',
+              label: AppLocalizations.of(context)!.fermenters,
               onPressed: _openFermenterManager,
             ),
             _managerButton(
               icon: Icons.kitchen,
-              label: 'Keezer',
+              label: AppLocalizations.of(context)!.keezer,
               onPressed: _openKeezerManager,
             ),
             _managerButton(
               icon: Icons.developer_board_outlined,
-              label: 'Fermentierer-Kontroller',
+              label: AppLocalizations.of(context)!.fermenterControllers,
               onPressed: _openFermenterControllerManager,
             ),
             _managerButton(
               icon: Icons.inventory_2_outlined,
-              label: 'Zielmenge,Abfüllen und Lagern',
+              label: AppLocalizations.of(context)!.packaging,
               onPressed: _openPackagingProfileManager,
             ),
             _managerButton(
               icon: Icons.filter_alt_outlined,
-              label: 'Klärmittel / Schönungsmittel',
+              label: AppLocalizations.of(context)!.finingAgents,
               onPressed: _openFiningAgentsManager,
             ),
             _managerButton(
               icon: Icons.help_outline,
-              label: "How To's",
+              label: AppLocalizations.of(context)!.howTo,
               onPressed: _openHowTo,
             ),
             _managerButton(
               icon: Icons.warehouse_outlined,
-              label: 'Brauerei Shops',
+              label: AppLocalizations.of(context)!.breweryShops,
               onPressed: _openMaltDepotManager,
+            ),
+            _managerButton(
+              icon: Icons.video_library_outlined,
+              label: AppLocalizations.of(context)!.videoInstructions,
+              onPressed: _openVideoInstructions,
             ),
           ],
         ),
@@ -604,12 +643,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
           children: [
             _managerButton(
               icon: Icons.extension_outlined,
-              label: 'Integration',
+              label: AppLocalizations.of(context)!.integrations,
               onPressed: _openIntegrationsPage,
             ),
             _managerButton(
               icon: Icons.cloud_download_outlined,
-              label: 'Brewfather',
+              label: AppLocalizations.of(context)!.brewfather,
               onPressed: _openBrewfatherMenu,
               customIcon: Image.asset(
                 'assets/Brewfather_logo.png',
@@ -619,32 +658,32 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             _managerButton(
               icon: Icons.biotech_outlined,
-              label: 'Hefe',
+              label: AppLocalizations.of(context)!.yeast,
               onPressed: _openYeastBankManager,
             ),
             _managerButton(
               icon: Icons.grain_outlined,
-              label: 'Vergärbare Zutaten',
+              label: AppLocalizations.of(context)!.fermentables,
               onPressed: _openAvailableIngredientsManager,
             ),
             _managerButton(
               icon: Icons.grass_outlined,
-              label: 'Hopfen',
+              label: AppLocalizations.of(context)!.hops,
               onPressed: _openHopsManager,
             ),
             _managerButton(
               icon: Icons.category_outlined,
-              label: 'Sonstiges',
+              label: AppLocalizations.of(context)!.miscs,
               onPressed: _openMiscsManager,
             ),
             _managerButton(
               icon: Icons.menu_book,
-              label: 'Rezepte',
+              label: AppLocalizations.of(context)!.recipes,
               onPressed: _openRecipesList,
             ),
             _managerButton(
               icon: Icons.history_edu,
-              label: 'Sud',
+              label: AppLocalizations.of(context)!.batches,
               onPressed: _openBatchesList,
             ),
           ],

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../models/bf_recipe.dart';
 import '../services/user_profile_service.dart';
+import '../services/openai_service.dart';
+import '../l10n/app_localizations.dart';
 
 class RecipeDetailPage extends StatefulWidget {
   const RecipeDetailPage({super.key, required this.recipe});
@@ -68,7 +70,58 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
         debugPrint('Proxy fetch failed too: $e');
       }
 
-      if (mounted) setState(() => _isLoadingImage = false);
+    }
+  }
+
+  Future<void> _analyzeRecipe() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final analysis = await OpenAIService().analyzeRecipe(_recipe.data);
+      if (!mounted) return;
+      Navigator.pop(context); // Pop loading
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocalizations.of(context)!.analysisResult,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(analysis),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Pop loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler bei der Analyse: $e')),
+      );
     }
   }
 
@@ -98,6 +151,13 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_recipe.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            onPressed: _analyzeRecipe,
+            tooltip: AppLocalizations.of(context)!.analyzeRecipe,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

@@ -33,24 +33,32 @@
     const ring=document.getElementById('ring');
     const wrapper=document.getElementById('wrapper');
 
-    const galleryItems=[
-      ...Array.from({length:9},(_,i)=>({src:`./images/${i+1}.jpg`})),
-      {
-        src:'./images/aibrewgenius-icon.png',
-        link:'https://alexstuder.ch/brew_app/'
-      }
-    ];
-
-    const N=galleryItems.length;
+    let currentFolder = './images/';
+    let galleryItems = [];
+    let N = 0;
     let RADIUS=260;
 
+    function initGallery() {
+      galleryItems = [
+        ...Array.from({length:9},(_,i)=>({src:`${currentFolder}${i+1}.jpg`})),
+        {
+          src: './images/aibrewgenius-icon.png',
+          link: 'https://alexstuder.ch/brew_app/'
+        }
+      ];
+      N = galleryItems.length;
+      placePhotos();
+    }
+
     function computeRadius(){
+      if (N === 0) return 260;
       const vmin=Math.min(innerWidth,innerHeight)/100;
       const photoVmin=22;const photoPx=photoVmin*vmin;const gapPx=photoPx*0.28;
       return Math.max(160,(N*(photoPx+gapPx))/(2*Math.PI));
     }
 
     function placePhotos(){
+      if (N === 0) return;
       RADIUS=computeRadius();ring.innerHTML='';
       galleryItems.forEach((item,i)=>{
         const el=document.createElement('div');
@@ -63,7 +71,7 @@
       });
     }
 
-    placePhotos();
+    initGallery();
     addEventListener('resize',placePhotos);
 
     // Rotation + Wobble
@@ -87,6 +95,13 @@
         window.open(item.link,'_blank','noopener');
         return;
       }
+      
+      // Toggle folder if 9.jpg is clicked
+      if(item.src.endsWith('9.jpg')){
+        currentFolder = currentFolder === './images/' ? './images/me/' : './images/';
+        initGallery();
+      }
+
       const bg=`url('${item.src}')`;
       if(nextSide==='L'){
         prevLImg.style.backgroundImage=bg;

@@ -9,6 +9,7 @@ class UserProfile {
     this.brewfatherUserId,
     this.brewfatherApiKey,
     this.brewfatherSyncEnabled = false,
+    this.language = 'de',
   });
 
   final String id;
@@ -20,6 +21,7 @@ class UserProfile {
   final String? brewfatherUserId;
   final String? brewfatherApiKey;
   final bool brewfatherSyncEnabled;
+  final String language;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -31,6 +33,7 @@ class UserProfile {
         'brewfather_user_id': brewfatherUserId,
         'brewfather_api_key': brewfatherApiKey,
         'brewfather_sync_enabled': brewfatherSyncEnabled,
+        'language': language,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -44,6 +47,7 @@ class UserProfile {
         brewfatherUserId: json['brewfather_user_id'] as String?,
         brewfatherApiKey: json['brewfather_api_key'] as String?,
         brewfatherSyncEnabled: json['brewfather_sync_enabled'] as bool? ?? false,
+        language: json['language'] as String? ?? 'de',
       );
 }
 

@@ -6,6 +6,7 @@ import '../models/water_profile.dart';
 import '../services/water_profile_service.dart';
 import '../services/user_profile_service.dart';
 import '../utils/water_calc.dart';
+import '../l10n/app_localizations.dart';
 
 class RecipeResultPage extends StatelessWidget {
   final AiRecipe recipe;
@@ -158,6 +159,30 @@ class _OverviewTabState extends State<_OverviewTab> {
                         ),
                       ),
                     ),
+
+                  Card(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.orangeAccent.withValues(alpha: 0.3)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              AppLocalizations.of(context)!.aiDisclaimer,
+                              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   _buildKeyStatsCard(),
                   const SizedBox(height: 16),
                   _buildSectionTitle('Malz & Fermentierbares'),

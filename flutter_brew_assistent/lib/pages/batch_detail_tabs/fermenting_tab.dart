@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/bf_batch.dart';
 import '../../services/rapt_service.dart';
 import '../../services/user_profile_service.dart';
+import '../../services/calendar_service.dart';
 import '../../widgets/batch_detail_widgets.dart';
 
 class FermentingTab extends StatefulWidget {
@@ -701,10 +702,25 @@ class _FermentingTabState extends State<FermentingTab> {
       stepWidgets.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            '${dateFormat.format(stepDate)} - $name - $temp °C - $days Tage',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
-            textAlign: TextAlign.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '${dateFormat.format(stepDate)} - $name - $temp °C - $days Tage',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              IconButton(
+                icon: const Icon(Icons.calendar_add_on, size: 16, color: Colors.greenAccent),
+                onPressed: () {
+                  CalendarService.addToGoogleCalendar(
+                    title: 'Gärung: ${widget.batch.name} ($name)',
+                    startTime: stepDate,
+                    description: 'Sud: ${widget.batch.name}\nTemperatur: $temp °C\nDauer: $days Tage',
+                  );
+                },
+                tooltip: 'In Kalender eintragen',
+              ),
+            ],
           ),
         ),
       );
@@ -746,7 +762,20 @@ class _FermentingTabState extends State<FermentingTab> {
                   const Icon(Icons.calendar_today, size: 14, color: Colors.white),
                   const SizedBox(width: 6),
                   Text(bottlingDate,
-                      style: const TextStyle(fontWeight: FontWeight.bold))
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  if (widget.batch.data['bottlingDate'] != null)
+                    IconButton(
+                      icon: const Icon(Icons.calendar_add_on, size: 16, color: Colors.greenAccent),
+                      onPressed: () {
+                        final bDate = DateTime.fromMillisecondsSinceEpoch(widget.batch.data['bottlingDate']);
+                        CalendarService.addToGoogleCalendar(
+                          title: 'Abfüllung: ${widget.batch.name}',
+                          startTime: bDate,
+                          description: 'Sud: ${widget.batch.name} abfüllen.',
+                        );
+                      },
+                      tooltip: 'In Kalender eintragen',
+                    ),
                 ]),
                 const SizedBox(height: 4),
                 Container(height: 1, width: 120, color: Colors.white24)

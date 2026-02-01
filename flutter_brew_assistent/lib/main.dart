@@ -8,6 +8,7 @@ import 'pages/user_profile_page.dart';
 import 'pages/recipe_prompt_page.dart';
 import 'pages/brew_entry_page.dart';
 import 'pages/discovery_welcome_page.dart';
+import 'l10n/app_localizations.dart';
 
 import 'services/user_profile_service.dart';
 import 'services/water_profile_service.dart';
@@ -32,12 +33,18 @@ Future<void> main() async {
     anonKey: supabaseAnonKey,
     postgrestOptions: const PostgrestClientOptions(schema: 'aibrewgenius'),
   );
-  runApp(const BrewMateApp());
+
+  final profileService = UserProfileService();
+  final profile = await profileService.fetchDefaultProfile();
+  final initialLocale = Locale(profile?.language ?? 'de');
+
+  runApp(BrewMateApp(initialLocale: initialLocale));
 }
 
-class BrewMateApp extends StatelessWidget {
+class BrewMateApp extends StatefulWidget {
   const BrewMateApp({
     super.key,
+    required this.initialLocale,
     this.profileRepository,
     this.waterRepository,
     this.brewKettleRepository,
@@ -49,6 +56,7 @@ class BrewMateApp extends StatelessWidget {
     this.yeastRepository,
   });
 
+  final Locale initialLocale;
   final UserProfileRepository? profileRepository;
   final WaterProfileRepository? waterRepository;
   final BrewKettleRepository? brewKettleRepository;
@@ -59,11 +67,45 @@ class BrewMateApp extends StatelessWidget {
   final FiningAgentsRepository? finingAgentsRepository;
   final YeastBankRepository? yeastRepository;
 
+  static void setLocale(BuildContext context, Locale newLocale) {
+    _BrewMateAppState? state = context.findAncestorStateOfType<_BrewMateAppState>();
+    state?.setLocale(newLocale);
+  }
+
+  @override
+  State<BrewMateApp> createState() => _BrewMateAppState();
+}
+
+class _BrewMateAppState extends State<BrewMateApp> {
+  late Locale _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    _locale = widget.initialLocale;
+    _updateDateFormatting();
+  }
+
+  void setLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+    _updateDateFormatting();
+  }
+
+  void _updateDateFormatting() {
+    final localeStr = _locale.languageCode == 'de' ? 'de_DE' : 'en_US';
+    initializeDateFormatting(localeStr, null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AiBrewGenius',
       debugShowCheckedModeBanner: false,
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.dark().copyWith(
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF2563EB),
@@ -82,15 +124,15 @@ class BrewMateApp extends StatelessWidget {
       routes: {
         BrewEntryPage.routeName: (_) => const BrewEntryPage(),
         UserProfilePage.routeName: (_) => UserProfilePage(
-              profileRepository: profileRepository,
-              waterRepository: waterRepository,
-              brewKettleRepository: brewKettleRepository,
-              fermenterRepository: fermenterRepository,
-              fermenterControllerRepository: fermenterControllerRepository,
-              maltDepotRepository: maltDepotRepository,
-              packagingRepository: packagingRepository,
-              finingAgentsRepository: finingAgentsRepository,
-              yeastRepository: yeastRepository,
+              profileRepository: widget.profileRepository,
+              waterRepository: widget.waterRepository,
+              brewKettleRepository: widget.brewKettleRepository,
+              fermenterRepository: widget.fermenterRepository,
+              fermenterControllerRepository: widget.fermenterControllerRepository,
+              maltDepotRepository: widget.maltDepotRepository,
+              packagingRepository: widget.packagingRepository,
+              finingAgentsRepository: widget.finingAgentsRepository,
+              yeastRepository: widget.yeastRepository,
             ),
         DiscoveryWelcomePage.routeName: (_) => const DiscoveryWelcomePage(),
         RecipePromptPage.routeName: (_) => const RecipePromptPage(),
