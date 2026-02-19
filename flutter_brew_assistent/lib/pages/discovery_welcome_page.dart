@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/user_name_banner.dart';
-import 'fine_tuning_pages.dart';
+import 'fine_tuning_general_page.dart';
 
 class DiscoveryWelcomePage extends StatefulWidget {
   const DiscoveryWelcomePage({super.key});
