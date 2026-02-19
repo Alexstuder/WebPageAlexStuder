@@ -16,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:brew_genius/l10n/app_localizations.dart';
 
 class TestAssetBundle extends CachingAssetBundle {
   @override
@@ -115,6 +117,14 @@ void main() {
       DefaultAssetBundle(
         bundle: TestAssetBundle(),
         child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('de'), Locale('en')],
+          locale: Locale('de'),
           home: BrewEntryPage(),
         ),
       ),
@@ -127,6 +137,14 @@ void main() {
       DefaultAssetBundle(
         bundle: TestAssetBundle(),
         child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('de'), Locale('en')],
+          locale: const Locale('de'),
           home: UserProfilePage(
             profileRepository: MockUserProfileRepository(),
             waterRepository: MockWaterProfileRepository(),
@@ -144,9 +162,11 @@ void main() {
       'Braukessel',
       'Fermentierer',
       'Fermentierer-Kontroller',
-      'Zielmenge,Abfüllen und Lagern',
-      'Klärmittel / Schönungsmittel',
+      'Zielmenge, Abfüllen & Lagern',
+      'Klärmittel',
+      'How To\'s',
       'Brauerei Shops',
+      'Video Anleitungen',
       'Integration',
       'Brewfather',
       'Hefe',
@@ -154,7 +174,7 @@ void main() {
       'Hopfen',
       'Sonstiges',
       'Rezepte',
-      'Sud'
+      'Sud / Batches'
     ];
 
     // Find the Scrollable inside SingleChildScrollView
@@ -183,16 +203,13 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget); 
       
       // Go back
-      if (find.byTooltip('Back').evaluate().isNotEmpty) {
-         await tester.tap(find.byTooltip('Back'));
-      } else if (find.byIcon(Icons.arrow_back).evaluate().isNotEmpty) {
-         await tester.tap(find.byIcon(Icons.arrow_back));
-      } else {
-         // Fallback usually pop
-         Navigator.of(tester.element(find.byType(AppBar))).pop();
-      }
-      
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
+
+      if (find.text('Test User').evaluate().isEmpty && find.byType(BackButton).evaluate().isNotEmpty) {
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+      }
       
       // Verify we are back (find user name again)
       expect(find.text('Test User'), findsOneWidget);
