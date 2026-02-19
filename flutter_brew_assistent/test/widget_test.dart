@@ -5,6 +5,7 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:brew_genius/main.dart';
@@ -12,7 +13,7 @@ import 'package:brew_genius/main.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const BrewMateApp());
+    await tester.pumpWidget(const BrewMateApp(initialLocale: Locale('de')));
 
     // Verify that the entry page renders the navigation buttons.
     expect(find.text('Users profil'), findsOneWidget);

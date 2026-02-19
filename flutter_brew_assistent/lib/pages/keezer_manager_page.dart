@@ -121,9 +121,7 @@ class _KeezerManagerPageState extends State<KeezerManagerPage> with SingleTicker
                         if (picked != null) {
                           setState(() {
                             tappedAt = picked;
-                            if (bestBefore == null) {
-                              bestBefore = picked.add(const Duration(days: 90));
-                            }
+                            bestBefore ??= picked.add(const Duration(days: 90));
                           });
                         }
                       },

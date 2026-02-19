@@ -710,7 +710,7 @@ class _FermentingTabState extends State<FermentingTab> {
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               IconButton(
-                icon: const Icon(Icons.calendar_add_on, size: 16, color: Colors.greenAccent),
+                icon: const Icon(Icons.event_available, size: 16, color: Colors.greenAccent),
                 onPressed: () {
                   CalendarService.addToGoogleCalendar(
                     title: 'Gärung: ${widget.batch.name} ($name)',
@@ -765,7 +765,7 @@ class _FermentingTabState extends State<FermentingTab> {
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   if (widget.batch.data['bottlingDate'] != null)
                     IconButton(
-                      icon: const Icon(Icons.calendar_add_on, size: 16, color: Colors.greenAccent),
+                      icon: const Icon(Icons.event_available, size: 16, color: Colors.greenAccent),
                       onPressed: () {
                         final bDate = DateTime.fromMillisecondsSinceEpoch(widget.batch.data['bottlingDate']);
                         CalendarService.addToGoogleCalendar(

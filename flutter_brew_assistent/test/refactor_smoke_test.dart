@@ -8,7 +8,7 @@ void main() {
     // Note: main() calls Supabase.initialize which might fail in tests
     // So we pump the BrewMateApp directly with fake repositories if possible
     
-    await tester.pumpWidget(const BrewMateApp());
+    await tester.pumpWidget(const BrewMateApp(initialLocale: Locale('de')));
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.text('Currently Brewing'), findsOneWidget);
   });

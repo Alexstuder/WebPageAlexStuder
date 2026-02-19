@@ -13,6 +13,9 @@ import 'package:brew_genius/models/bf_batch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:brew_genius/l10n/app_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +35,17 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('de'),
+          Locale('en'),
+        ],
+        locale: const Locale('de'),
         home: const BrewEntryPage(),
         routes: {
           UserProfilePage.routeName: (_) => UserProfilePage(
@@ -42,11 +56,11 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Users profil'));
+    await tester.tap(find.text('Users profil').first);
     await tester.pumpAndSettle();
 
     // Check if we are on UserProfilePage
-    expect(find.text('Users Profil'), findsOneWidget);
+    expect(find.text('Benutzerprofil'), findsWidgets);
 
     await tester.enterText(find.byType(TextField).first, 'Brew Master');
     await tester.pumpAndSettle();
@@ -80,7 +94,7 @@ void main() {
     await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
     expect(fakeUserRepo.saveCallCount, greaterThanOrEqualTo(1));
@@ -93,7 +107,7 @@ void main() {
     expect(find.text('Brew Master'), findsWidgets);
 
     // Now go back to home
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     
     expect(find.text('Users profil'), findsOneWidget);

@@ -32,7 +32,6 @@ import 'hops_manager_page.dart';
 import 'miscs_manager_page.dart';
 import 'recipes_list_page.dart';
 import 'batches_list_page.dart';
-import 'batches_list_page.dart';
 import 'keezer_manager_page.dart';
 import 'video_instructions_page.dart';
 import '../l10n/app_localizations.dart';
@@ -535,7 +534,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedLanguage,
+              initialValue: _selectedLanguage,
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.language,
                 prefixIcon: const Icon(Icons.language),

@@ -97,7 +97,7 @@ class _VideoInstructionsPageState extends State<VideoInstructionsPage> {
                 createdAt: existingVideo?.createdAt ?? DateTime.now(),
               );
               await _service.saveVideo(video);
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
               _loadVideos();
             },
             child: const Text('Speichern'),
