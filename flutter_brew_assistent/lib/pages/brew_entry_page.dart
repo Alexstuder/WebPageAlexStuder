@@ -34,11 +34,20 @@ class BrewEntryPage extends StatelessWidget {
             Positioned(
               top: 20,
               right: 20,
-              child: Image.asset(
-                'assets/icon_small.png',
-                height: 49,
-                filterQuality: FilterQuality.none,
-                semanticLabel: 'AiBrewGenius',
+              child: Row(
+                children: [
+                  const Text(
+                    String.fromEnvironment('BUILD_TIME', defaultValue: 'dev'),
+                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 8),
+                  Image.asset(
+                    'assets/icon_small.png',
+                    height: 49,
+                    filterQuality: FilterQuality.none,
+                    semanticLabel: 'AiBrewGenius',
+                  ),
+                ],
               ),
             ),
             Center(
