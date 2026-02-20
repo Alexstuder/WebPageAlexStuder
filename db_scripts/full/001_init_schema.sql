@@ -123,7 +123,6 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."brew_kettles" (
     "volume_liters" double precision,
     "post_boil_loss_liters" double precision DEFAULT 0,
     "boil_off_percentage" double precision DEFAULT 0,
-    "bh_efficiency" double precision DEFAULT 70,
     "has_condenser_hat" boolean DEFAULT false NOT NULL,
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
@@ -316,7 +315,8 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."user_profiles" (
     "rapt_api_key" "text",
     "brewfather_user_id" "text",
     "brewfather_api_key" "text",
-    "brewfather_sync_enabled" boolean DEFAULT false NOT NULL
+    "brewfather_sync_enabled" boolean DEFAULT false NOT NULL,
+    "language" "text"
 );
 
 
@@ -369,6 +369,18 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."yeast_bank_entries" (
 ALTER TABLE "aibrewgenius"."yeast_bank_entries" OWNER TO "supabase_admin";
 
 
+CREATE TABLE IF NOT EXISTS "aibrewgenius"."keezer_configs" (
+    "user_profile_id" "text" NOT NULL,
+    "num_taps" integer DEFAULT 0,
+    "taps" "jsonb" DEFAULT '[]'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
+);
+
+
+ALTER TABLE "aibrewgenius"."keezer_configs" OWNER TO "supabase_admin";
+
+
 CREATE TABLE IF NOT EXISTS "aibrewgenius"."how_to_topics" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_profile_id" "text" NOT NULL,
@@ -381,17 +393,6 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."how_to_topics" (
 );
 
 ALTER TABLE "aibrewgenius"."how_to_topics" OWNER TO "supabase_admin";
-
-
-CREATE TABLE IF NOT EXISTS "aibrewgenius"."keezer_configs" (
-    "user_profile_id" "text" NOT NULL,
-    "num_taps" integer DEFAULT 1 NOT NULL,
-    "taps" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
-);
-
-ALTER TABLE "aibrewgenius"."keezer_configs" OWNER TO "supabase_admin";
 
 
 ALTER TABLE ONLY "aibrewgenius"."ai_generated_recipes_v2"
@@ -467,11 +468,11 @@ ALTER TABLE ONLY "aibrewgenius"."water_profiles"
 ALTER TABLE ONLY "aibrewgenius"."yeast_bank_entries"
     ADD CONSTRAINT "yeast_bank_entries_pkey" PRIMARY KEY ("id");
     
-ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
-    ADD CONSTRAINT "how_to_topics_pkey" PRIMARY KEY ("id");
-
 ALTER TABLE ONLY "aibrewgenius"."keezer_configs"
     ADD CONSTRAINT "keezer_configs_pkey" PRIMARY KEY ("user_profile_id");
+
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_pkey" PRIMARY KEY ("id");
 
 
 
@@ -567,8 +568,6 @@ CREATE OR REPLACE TRIGGER "yeast_bank_entries_set_updated_at" BEFORE UPDATE ON "
     
 CREATE OR REPLACE TRIGGER "how_to_topics_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."how_to_topics" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
 
-CREATE OR REPLACE TRIGGER "keezer_configs_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."keezer_configs" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
-
 
 
 ALTER TABLE ONLY "aibrewgenius"."batches"
@@ -634,11 +633,11 @@ ALTER TABLE ONLY "aibrewgenius"."water_profiles"
 ALTER TABLE ONLY "aibrewgenius"."yeast_bank_entries"
     ADD CONSTRAINT "yeast_bank_entries_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
 
-ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
-    ADD CONSTRAINT "how_to_topics_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
-
 ALTER TABLE ONLY "aibrewgenius"."keezer_configs"
     ADD CONSTRAINT "keezer_configs_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
+    ADD CONSTRAINT "how_to_topics_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -696,9 +695,9 @@ CREATE POLICY "Allow full access" ON "aibrewgenius"."water_profiles" TO "anon" U
 
 CREATE POLICY "Allow full access" ON "aibrewgenius"."yeast_bank_entries" TO "anon" USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow full access" ON "aibrewgenius"."how_to_topics" TO "anon" USING (true) WITH CHECK (true);
-
 CREATE POLICY "Allow full access" ON "aibrewgenius"."keezer_configs" TO "anon" USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow full access" ON "aibrewgenius"."how_to_topics" TO "anon" USING (true) WITH CHECK (true);
 
 
 
@@ -750,9 +749,9 @@ ALTER TABLE "aibrewgenius"."water_profiles" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "aibrewgenius"."yeast_bank_entries" ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE "aibrewgenius"."how_to_topics" ENABLE ROW LEVEL SECURITY;
-
 ALTER TABLE "aibrewgenius"."keezer_configs" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "aibrewgenius"."how_to_topics" ENABLE ROW LEVEL SECURITY;
 
 
 GRANT ALL ON SCHEMA "aibrewgenius" TO "anon";
@@ -850,13 +849,13 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewge
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "authenticated";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."yeast_bank_entries" TO "service_role";
 
-GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "anon";
-GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "authenticated";
-GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "service_role";
-
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."keezer_configs" TO "anon";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."keezer_configs" TO "authenticated";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."keezer_configs" TO "service_role";
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "service_role";
 
 
 
