@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."brew_kettles" (
     "volume_liters" double precision,
     "post_boil_loss_liters" double precision DEFAULT 0,
     "boil_off_percentage" double precision DEFAULT 0,
+    "bh_efficiency" double precision DEFAULT 70,
     "has_condenser_hat" boolean DEFAULT false NOT NULL,
     "notes" "text",
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
