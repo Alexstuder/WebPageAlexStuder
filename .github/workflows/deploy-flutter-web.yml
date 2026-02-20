@@ -86,7 +86,7 @@ jobs:
           PORT=${SSH_PORT:-22}
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/id_deploy_key -p $PORT" \
-            db_scripts/ \
+            flutter_brew_assistent/db_scripts/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/db_scripts/
 
       - name: Deploy Nginx configuration to VPS
