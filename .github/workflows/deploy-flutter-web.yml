@@ -129,6 +129,9 @@ jobs:
             # Running Seed
             docker exec -e PGPASSWORD=$DB_PASS -i $CONTAINER_NAME psql -U supabase_admin -d postgres < ${{ secrets.DEPLOY_PATH }}/db_scripts/full/aibrewgenius_seed.sql
 
+            # Reload PostgREST Schema Cache
+            docker exec -e PGPASSWORD=$DB_PASS -i $CONTAINER_NAME psql -U supabase_admin -d postgres -c "NOTIFY pgrst, 'reload schema';"
+
 
       - name: Deploy proxy to VPS
         run: |
