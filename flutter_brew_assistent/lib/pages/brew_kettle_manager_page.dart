@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/brew_kettle.dart';
 import '../services/brew_kettle_service.dart';
+import '../utils/parse_utils.dart';
 import '../widgets/card_actions.dart';
 import 'efficiency_calculator_page.dart';
 
@@ -376,10 +377,10 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
       brand: brandCtrl.text.trim(),
       model: modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
       isDefault: isDefault,
-      volumeLiters: _parseDouble(volumeCtrl.text),
-      postBoilLossLiters: _parseDouble(postBoilLossCtrl.text),
-      boilOffPercentage: _parseDouble(boilOffCtrl.text),
-      bhEfficiency: _parseDouble(bhEfficiencyCtrl.text) ?? 70.0,
+      volumeLiters: tryParseDouble(volumeCtrl.text),
+      postBoilLossLiters: tryParseDouble(postBoilLossCtrl.text),
+      boilOffPercentage: tryParseDouble(boilOffCtrl.text),
+      bhEfficiency: tryParseDouble(bhEfficiencyCtrl.text) ?? 70.0,
       hasCondenserHat: hasCondenserHat,
       notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
     );
@@ -435,11 +436,7 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     });
   }
 
-  double? _parseDouble(String value) {
-    final cleaned = value.trim();
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned.replaceAll(',', '.'));
-  }
+
 
   Future<void> _deleteKettle(BrewKettle kettle) async {
     if (kettle.id == null) return;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/fermenter.dart';
 import '../services/fermenter_service.dart';
+import '../utils/parse_utils.dart';
 import '../widgets/card_actions.dart';
 
 class FermenterManagerPage extends StatefulWidget {
@@ -299,8 +300,8 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
       userProfileId: widget.profileId,
       brand: brandCtrl.text.trim(),
       type: typeCtrl.text.trim().isEmpty ? null : typeCtrl.text.trim(),
-      volumeLiters: _parseDouble(volumeCtrl.text),
-      fermentationLossLiters: _parseDouble(fermentationLossCtrl.text),
+      volumeLiters: tryParseDouble(volumeCtrl.text),
+      fermentationLossLiters: tryParseDouble(fermentationLossCtrl.text),
       hasHeating: hasHeating,
       hasCooling: hasCooling,
       hasDryHoppingPort: hasDryHopPort,
@@ -348,11 +349,7 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     }
   }
 
-  double? _parseDouble(String value) {
-    final cleaned = value.trim();
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned.replaceAll(',', '.'));
-  }
+
 
   void _sortFermenters() {
     _fermenters.sort((a, b) {
