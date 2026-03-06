@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/dialog_utils.dart';
 import '../models/fermenter_controller.dart';
 import '../services/fermenter_controller_service.dart';
 import '../widgets/card_actions.dart';
@@ -126,6 +127,7 @@ class _FermenterControllerManagerPageState
             trailing: CardActions(
               onEdit: () => openForm(editing: controller),
               onDelete: () => confirmDelete(
+                context,
                 'Kontroller “${controller.name}” löschen?',
                 () => deleteController(controller),
               ),
@@ -288,31 +290,4 @@ class _FermenterControllerManagerPageState
     }
   }
 
-  Future<void> confirmDelete(
-    String title,
-    Future<void> Function() onDelete,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content:
-            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await onDelete();
-    }
-  }
 }

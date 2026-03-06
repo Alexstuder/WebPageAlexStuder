@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../utils/dialog_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/yeast_bank_entry.dart';
 import '../services/yeast_bank_service.dart';
@@ -352,7 +353,8 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
                 }
               },
               onEdit: () => _openForm(editing: entry),
-              onDelete: () => _confirmDelete(
+              onDelete: () => confirmDelete(
+                context,
                 'Hefeeintrag “${entry.brand} · ${entry.strain}” löschen?',
                 () => _deleteEntry(entry),
               ),
@@ -430,31 +432,4 @@ class _YeastBankManagerPageState extends State<YeastBankManagerPage> {
     }
   }
 
-  Future<void> _confirmDelete(
-    String title,
-    Future<void> Function() onDelete,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content:
-            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await onDelete();
-    }
-  }
 }

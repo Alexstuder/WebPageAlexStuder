@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/dialog_utils.dart';
 import '../models/water_profile.dart';
 import '../services/water_profile_service.dart';
 import '../widgets/card_actions.dart';
@@ -134,10 +135,10 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
             subtitle: Text(stats),
             trailing: CardActions(
               onEdit: () => _openEditor(editing: profile),
-              onDelete: () => _confirmDelete(
-                title:
+              onDelete: () => confirmDelete(
+                context,
                     'Profil “${profile.name.isEmpty ? 'Unbenannt' : profile.name}” löschen?',
-                onDelete: () => _deleteProfile(profile),
+                () => _deleteProfile(profile),
               ),
             ),
           ),
@@ -201,31 +202,5 @@ class _WaterProfileManagerPageState extends State<WaterProfileManagerPage> {
     }
   }
 
-  Future<void> _confirmDelete({
-    required String title,
-    required Future<void> Function() onDelete,
-  }) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content:
-            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await onDelete();
-    }
-  }
 }
+

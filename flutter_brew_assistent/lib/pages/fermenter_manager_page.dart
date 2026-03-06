@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/dialog_utils.dart';
 import '../models/fermenter.dart';
 import '../services/fermenter_service.dart';
 import '../utils/parse_utils.dart';
@@ -139,7 +140,8 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
             ),
             trailing: CardActions(
               onEdit: () => _openForm(editing: fermenter),
-              onDelete: () => _confirmDelete(
+              onDelete: () => confirmDelete(
+                context,
                 'Fermentierer “${titleText.trim()}” löschen?',
                 () => _deleteFermenter(fermenter),
               ),
@@ -378,31 +380,4 @@ class _FermenterManagerPageState extends State<FermenterManagerPage> {
     }
   }
 
-  Future<void> _confirmDelete(
-    String title,
-    Future<void> Function() onDelete,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content:
-            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await onDelete();
-    }
-  }
 }

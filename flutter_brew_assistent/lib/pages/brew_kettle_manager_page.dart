@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/brew_kettle.dart';
 import '../services/brew_kettle_service.dart';
+import '../utils/dialog_utils.dart';
 import '../utils/parse_utils.dart';
 import '../widgets/card_actions.dart';
 import 'efficiency_calculator_page.dart';
@@ -163,7 +164,8 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
             ),
             trailing: CardActions(
               onEdit: () => _openForm(editing: kettle),
-              onDelete: () => _confirmDelete(
+              onDelete: () => confirmDelete(
+                context,
                 'Braukessel “${titleText.trim()}” löschen?',
                 () => _deleteKettle(kettle),
               ),
@@ -456,31 +458,4 @@ class _BrewKettleManagerPageState extends State<BrewKettleManagerPage> {
     }
   }
 
-  Future<void> _confirmDelete(
-    String title,
-    Future<void> Function() onDelete,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content:
-            const Text('Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await onDelete();
-    }
-  }
 }
