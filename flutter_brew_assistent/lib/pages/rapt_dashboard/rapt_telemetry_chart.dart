@@ -34,6 +34,7 @@ class RaptTelemetryChart extends StatelessWidget {
     final pointsVelocity = <FlSpot>[];
     
     // 1. Calculate Velocity properly from gravity differences
+    final rawVelocities = <FlSpot>[];
     for (int i = 0; i < source.length; i++) {
         final r = source[i];
         final tEnd = DateTime.tryParse(r['createdOn'] ?? '')?.millisecondsSinceEpoch.toDouble();
@@ -65,11 +66,30 @@ class RaptTelemetryChart extends StatelessWidget {
                  if (vel < 0.3 && i < source.length * 0.2) vel = 0;
                  if (vel < 0) vel = 0;
                  
-                 pointsVelocity.add(FlSpot(tEnd, vel));
+                 rawVelocities.add(FlSpot(tEnd, vel));
               }
            }
         } else {
-           pointsVelocity.add(FlSpot(tEnd, 0));
+           rawVelocities.add(FlSpot(tEnd, 0));
+        }
+    }
+
+    // Apply a 2-hour smoothing window (1 hour on each side) to raw velocities
+    final smoothingWindowMs = 2 * 60 * 60 * 1000; // 2 hours
+    for (int i = 0; i < rawVelocities.length; i++) {
+        final currentX = rawVelocities[i].x;
+        double sum = 0.0;
+        int count = 0;
+        for (int j = 0; j < rawVelocities.length; j++) {
+            if ((rawVelocities[j].x - currentX).abs() <= (smoothingWindowMs / 2)) {
+                sum += rawVelocities[j].y;
+                count++;
+            }
+        }
+        if (count > 0) {
+            pointsVelocity.add(FlSpot(currentX, sum / count));
+        } else {
+            pointsVelocity.add(rawVelocities[i]);
         }
     }
     
