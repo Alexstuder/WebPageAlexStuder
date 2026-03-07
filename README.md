@@ -21,8 +21,9 @@ Projektstruktur (empfohlen)
 │  │  └─ index.html
 │  └─ todo/
 │     └─ index.html
-├─ assets/
-│  ├─ images/        (Bilder)
+├─ img/
+│  ├─ me/            (Eigene Bilder)
+│  └─ brew/          (Brau-Bilder)
 │  └─ fonts/         (falls lokal benötigt)
 ├─ flutter_brew_assistent/   (Flutter-Web-App "AiBrewGenius")
 └─ proxy/                    (Node Proxy für OpenAI)
@@ -30,7 +31,7 @@ Projektstruktur (empfohlen)
 Kurzanleitung (Landing Page):
 - Öffne index.html im Browser (lokal per Dateipfad oder lokalem Server).
 - Styles liegen in css/styles.css, Skripte in js/app.js.
-- Lege Bilder in assets/images/ ab und referenziere sie z.B. mit "assets/images/meinbild.jpg".
+- Lege Bilder in img/brew/ oder img/me/ ab und referenziere sie entsprechend.
 
 ## Flutter + Proxy Setup
 

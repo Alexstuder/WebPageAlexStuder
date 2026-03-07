@@ -1,15 +1,28 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Start</title>
   <link rel="stylesheet" href="css/styles.css?v=4" />
+  <style>
+    .photo:hover {
+      filter: brightness(1.2);
+      outline: 3px solid #3b82f6;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+  </style>
 </head>
+
 <body data-page="index">
   <div class="stage">
-    <div class="preview left" id="prevL"><div class="img" id="prevLImg"></div></div>
-    <div class="preview right" id="prevR"><div class="img" id="prevRImg"></div></div>
+    <div class="preview left" id="prevL">
+      <div class="img" id="prevLImg"></div>
+    </div>
+    <div class="preview right" id="prevR">
+      <div class="img" id="prevRImg"></div>
+    </div>
 
     <div class="scene" id="scene">
       <div class="ring-wrapper" id="wrapper" style="width:var(--ring-size);height:var(--ring-size);">
@@ -19,7 +32,8 @@
 
     <div class="menu">
       <a href="https://alexstuder.ch/brew_app/" target="_blank" rel="noopener">
-        <img src="images/aibrewgenius-icon.png" alt="AiBrewGenius" style="width:90px;height:90px;margin-bottom:12px;border-radius:18px;" />
+        <img src="img/brew/aibrewgenius-icon.png" alt="AiBrewGenius"
+          style="width:90px;height:90px;margin-bottom:12px;border-radius:18px;" />
       </a>
       <a class="btn" href="WebPages/quiz/">Quiz</a>
       <a class="btn" href="WebPages/todo/">1-3-5</a>
@@ -30,19 +44,20 @@
   </div>
 
   <script>
-    const ring=document.getElementById('ring');
-    const wrapper=document.getElementById('wrapper');
+    const ring = document.getElementById('ring');
+    const wrapper = document.getElementById('wrapper');
 
-    let currentFolder = './images/';
+    let currentFolder = './img/brew/';
     let galleryItems = [];
     let N = 0;
-    let RADIUS=260;
+    let RADIUS = 260;
+    let isPaused = false;
 
     function initGallery() {
       galleryItems = [
-        ...Array.from({length:9},(_,i)=>({src:`${currentFolder}${i+1}.jpg`})),
+        ...Array.from({ length: 9 }, (_, i) => ({ src: `${currentFolder}${i + 1}.jpg` })),
         {
-          src: './images/aibrewgenius-icon.png',
+          src: './img/brew/aibrewgenius-icon.png',
           link: 'https://alexstuder.ch/brew_app/'
         }
       ];
@@ -50,69 +65,77 @@
       placePhotos();
     }
 
-    function computeRadius(){
+    function computeRadius() {
       if (N === 0) return 260;
-      const vmin=Math.min(innerWidth,innerHeight)/100;
-      const photoVmin=22;const photoPx=photoVmin*vmin;const gapPx=photoPx*0.28;
-      return Math.max(160,(N*(photoPx+gapPx))/(2*Math.PI));
+      const vmin = Math.min(innerWidth, innerHeight) / 100;
+      const photoVmin = 22; const photoPx = photoVmin * vmin; const gapPx = photoPx * 0.28;
+      return Math.max(160, (N * (photoPx + gapPx)) / (2 * Math.PI));
     }
 
-    function placePhotos(){
+    function placePhotos() {
       if (N === 0) return;
-      RADIUS=computeRadius();ring.innerHTML='';
-      galleryItems.forEach((item,i)=>{
-        const el=document.createElement('div');
-        el.className='photo';el.dataset.idx=i;
-        el.style.backgroundImage=`url('${item.src}')`;
-        const angle=(i/N)*360;const tilt=(i%2?-4:4);
-        el.style.transform=`rotateY(${angle}deg) translateZ(${RADIUS}px) rotateY(${tilt}deg)`;
-        el.addEventListener('click',()=>onPhotoClick(item));
+      RADIUS = computeRadius(); ring.innerHTML = '';
+      galleryItems.forEach((item, i) => {
+        const el = document.createElement('div');
+        el.className = 'photo'; el.dataset.idx = i;
+        el.style.backgroundImage = `url('${item.src}')`;
+        el.title = item.src.split('/').pop();
+        const angle = (i / N) * 360; const tilt = (i % 2 ? -4 : 4);
+        el.style.transform = `rotateY(${angle}deg) translateZ(${RADIUS}px) rotateY(${tilt}deg)`;
+        el.addEventListener('click', () => onPhotoClick(item));
         ring.appendChild(el);
       });
     }
 
+    ring.addEventListener('mouseenter', () => isPaused = true);
+    ring.addEventListener('mouseleave', () => isPaused = false);
+
     initGallery();
-    addEventListener('resize',placePhotos);
+    addEventListener('resize', placePhotos);
 
     // Rotation + Wobble
-    let yaw=0;const yawSpeed=0.35;const tiltAmp=7*Math.PI/180;
-    let pre=0;const preSpeed=0.6;let last=performance.now();
-    (function loop(){
-      const now=performance.now(),dt=(now-last)/1000;last=now;
-      yaw+=yawSpeed*dt;pre+=preSpeed*dt;
-      const x=tiltAmp*Math.sin(pre),z=.6*tiltAmp*Math.cos(pre);
-      wrapper.style.transform=`translateZ(0) rotateX(${x}rad) rotateZ(${z}rad)`;
-      ring.style.transform=`rotateY(${yaw}rad)`;
+    let yaw = 0; const yawSpeed = 0.35; const tiltAmp = 7 * Math.PI / 180;
+    let pre = 0; const preSpeed = 0.6; let last = performance.now();
+    (function loop() {
+      const now = performance.now(), dt = (now - last) / 1000; last = now;
+      if (!isPaused) {
+        yaw += yawSpeed * dt; pre += preSpeed * dt;
+        const x = tiltAmp * Math.sin(pre), z = .6 * tiltAmp * Math.cos(pre);
+        wrapper.style.transform = `translateZ(0) rotateX(${x}rad) rotateZ(${z}rad)`;
+        ring.style.transform = `rotateY(${yaw}rad)`;
+      }
       requestAnimationFrame(loop);
     })();
 
-    const prevL=document.getElementById('prevL'),prevR=document.getElementById('prevR');
-    const prevLImg=document.getElementById('prevLImg'),prevRImg=document.getElementById('prevRImg');
-    let nextSide='L';
+    const prevL = document.getElementById('prevL'), prevR = document.getElementById('prevR');
+    const prevLImg = document.getElementById('prevLImg'), prevRImg = document.getElementById('prevRImg');
+    let nextSide = 'L';
 
-    function onPhotoClick(item){
-      if(item.link){
-        window.open(item.link,'_blank','noopener');
+    function onPhotoClick(item) {
+      if (item.link) {
+        window.open(item.link, '_blank', 'noopener');
         return;
       }
-      
+
       // Toggle folder if 9.jpg is clicked
-      if(item.src.endsWith('9.jpg')){
-        currentFolder = currentFolder === './images/' ? './images/me/' : './images/';
+      if (item.src.endsWith('9.jpg')) {
+        currentFolder = currentFolder === './img/brew/' ? './img/me/' : './img/brew/';
         initGallery();
+        return;
       }
 
-      const bg=`url('${item.src}')`;
-      if(nextSide==='L'){
-        prevLImg.style.backgroundImage=bg;
+      const bg = `url('${item.src}')`;
+      if (nextSide === 'L') {
+        prevLImg.style.backgroundImage = bg;
         prevL.classList.add('show');
-        nextSide='R';
+        nextSide = 'R';
       } else {
-        prevRImg.style.backgroundImage=bg;
+        prevRImg.style.backgroundImage = bg;
         prevR.classList.add('show');
-        nextSide='L';
+        nextSide = 'L';
       }
     }
   </script>
 </body>
+
 </html>
