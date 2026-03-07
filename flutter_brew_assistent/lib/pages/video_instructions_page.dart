@@ -130,59 +130,73 @@ class _VideoInstructionsPageState extends State<VideoInstructionsPage> {
                     ],
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _videos.length,
-                  itemBuilder: (context, index) {
-                    final video = _videos[index];
-                    final videoId = _getVideoId(video.youtubeUrl);
-                    
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => _launchUrl(video.youtubeUrl),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (videoId != null)
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Image.network(
-                                    'https://img.youtube.com/vi/$videoId/0.jpg',
-                                    height: 200,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      height: 200,
-                                      color: Colors.grey[800],
-                                      child: const Icon(Icons.video_library, size: 50),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = (constraints.maxWidth / 200).clamp(2, 6).toInt();
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1.4,
+                      ),
+                      itemCount: _videos.length,
+                      itemBuilder: (context, index) {
+                        final video = _videos[index];
+                        final videoId = _getVideoId(video.youtubeUrl);
+                        
+                        return Card(
+                          margin: EdgeInsets.zero,
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => _launchUrl(video.youtubeUrl),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (videoId != null)
+                                  AspectRatio(
+                                    aspectRatio: 16 / 9,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Image.network(
+                                          'https://img.youtube.com/vi/$videoId/0.jpg',
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            color: Colors.grey[800],
+                                            child: const Icon(Icons.video_library, size: 24),
+                                          ),
+                                        ),
+                                        const Icon(Icons.play_circle_fill, size: 32, color: Colors.white70),
+                                      ],
                                     ),
                                   ),
-                                  const Icon(Icons.play_circle_fill, size: 60, color: Colors.white70),
-                                ],
-                              ),
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
+                                  child: Row(
                                     children: [
                                       Expanded(
                                         child: Text(
                                           video.title,
-                                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.edit, size: 20),
+                                        icon: const Icon(Icons.edit, size: 14),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
                                         onPressed: () => _showAddVideoDialog(existingVideo: video),
                                       ),
+                                      const SizedBox(width: 4),
                                       IconButton(
-                                        icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
+                                        icon: const Icon(Icons.delete, size: 14, color: Colors.redAccent),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
                                         onPressed: () async {
                                           final confirm = await showDialog<bool>(
                                             context: context,
@@ -202,20 +216,12 @@ class _VideoInstructionsPageState extends State<VideoInstructionsPage> {
                                       ),
                                     ],
                                   ),
-                                  if (video.description != null && video.description!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Text(
-                                        video.description!,
-                                        style: TextStyle(color: Colors.white70),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

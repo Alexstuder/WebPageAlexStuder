@@ -396,6 +396,21 @@ CREATE TABLE IF NOT EXISTS "aibrewgenius"."how_to_topics" (
 ALTER TABLE "aibrewgenius"."how_to_topics" OWNER TO "supabase_admin";
 
 
+CREATE TABLE IF NOT EXISTS "aibrewgenius"."video_instructions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_profile_id" "text" NOT NULL,
+    "title" "text" NOT NULL,
+    "youtube_url" "text" NOT NULL,
+    "description" "text",
+    "position" integer DEFAULT 0,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+ALTER TABLE "aibrewgenius"."video_instructions" OWNER TO "supabase_admin";
+
+
+
 ALTER TABLE ONLY "aibrewgenius"."ai_generated_recipes_v2"
     ADD CONSTRAINT "ai_generated_recipes_v2_pkey" PRIMARY KEY ("id");
 
@@ -474,6 +489,10 @@ ALTER TABLE ONLY "aibrewgenius"."keezer_configs"
 
 ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
     ADD CONSTRAINT "how_to_topics_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "aibrewgenius"."video_instructions"
+    ADD CONSTRAINT "video_instructions_pkey" PRIMARY KEY ("id");
+
 
 
 
@@ -568,6 +587,9 @@ CREATE OR REPLACE TRIGGER "water_profiles_set_updated_at" BEFORE UPDATE ON "aibr
 CREATE OR REPLACE TRIGGER "yeast_bank_entries_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."yeast_bank_entries" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
     
 CREATE OR REPLACE TRIGGER "how_to_topics_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."how_to_topics" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
+    
+CREATE OR REPLACE TRIGGER "video_instructions_set_updated_at" BEFORE UPDATE ON "aibrewgenius"."video_instructions" FOR EACH ROW EXECUTE FUNCTION "aibrewgenius"."set_updated_at"();
+
 
 
 
@@ -640,6 +662,10 @@ ALTER TABLE ONLY "aibrewgenius"."keezer_configs"
 ALTER TABLE ONLY "aibrewgenius"."how_to_topics"
     ADD CONSTRAINT "how_to_topics_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
 
+ALTER TABLE ONLY "aibrewgenius"."video_instructions"
+    ADD CONSTRAINT "video_instructions_user_profile_id_fkey" FOREIGN KEY ("user_profile_id") REFERENCES "aibrewgenius"."user_profiles"("id") ON DELETE CASCADE;
+
+
 
 
 CREATE POLICY "Allow full access" ON "aibrewgenius"."batches" TO "anon" USING (true) WITH CHECK (true);
@@ -700,6 +726,9 @@ CREATE POLICY "Allow full access" ON "aibrewgenius"."keezer_configs" TO "anon" U
 
 CREATE POLICY "Allow full access" ON "aibrewgenius"."how_to_topics" TO "anon" USING (true) WITH CHECK (true);
 
+CREATE POLICY "Allow full access" ON "aibrewgenius"."video_instructions" TO "anon" USING (true) WITH CHECK (true);
+
+
 
 
 CREATE POLICY "Allow full access recipes v2" ON "aibrewgenius"."ai_generated_recipes_v2" TO "anon" USING (true) WITH CHECK (true);
@@ -753,6 +782,9 @@ ALTER TABLE "aibrewgenius"."yeast_bank_entries" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "aibrewgenius"."keezer_configs" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "aibrewgenius"."how_to_topics" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "aibrewgenius"."video_instructions" ENABLE ROW LEVEL SECURITY;
+
 
 
 GRANT ALL ON SCHEMA "aibrewgenius" TO "anon";
@@ -857,6 +889,11 @@ GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewge
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "anon";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "authenticated";
 GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."how_to_topics" TO "service_role";
+
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."video_instructions" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."video_instructions" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE "aibrewgenius"."video_instructions" TO "service_role";
+
 
 
 

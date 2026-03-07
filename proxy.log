@@ -1,13 +1,7 @@
 
-> brew-proxy@0.1.0 dev
+> brew-proxy@0.1.0 start
 > node server.js
 
 Telemetry cache restored from disk.
 Proxy listening on http://localhost:3000
-[Scheduler] Next telemetry refresh scheduled in 28 minutes.
-[Proxy] Incoming Request: OPTIONS /api/cache/controllers
-[Proxy] Incoming Request: GET /api/cache/controllers
-[Proxy] Incoming Request: GET /api/cache/telemetry
-[Proxy] Incoming Request: OPTIONS /api/cache/controllers
-[Proxy] Incoming Request: GET /api/cache/controllers
-[Proxy] Incoming Request: GET /api/cache/telemetry
+[Scheduler] Next telemetry refresh scheduled in 19 minutes.
