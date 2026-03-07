@@ -77,159 +77,70 @@ class UserProfileService implements UserProfileRepository {
   }
 
   @override
-  Future<List<Fermentable>> getFermentables(String userProfileId) async {
-    final data = await _tableFermentables().select().eq('user_profile_id', userProfileId);
-    return (data as List).map((e) => Fermentable.fromJson(e)).toList();
-  }
+  Future<List<Fermentable>> getFermentables(String userProfileId) =>
+      _getItems(_tableFermentables(), userProfileId, Fermentable.fromJson);
 
   @override
-  Future<void> saveFermentables(List<Fermentable> fermentables) async {
-    if (fermentables.isEmpty) return;
-    
-    // Convert to JSON and remove null ID so DB generates it for new inserts
-    final data = fermentables.map((e) {
-      final json = e.toJson();
-      if (json['id'] == null) json.remove('id');
-      return json;
-    }).toList();
-
-    await _tableFermentables().upsert(data, onConflict: 'user_profile_id, brewfather_id');
-  }
+  Future<void> saveFermentables(List<Fermentable> items) =>
+      _upsertItems(_tableFermentables(), items, (i) => i.toJson());
 
   @override
-  Future<void> saveFermentable(Fermentable item) async {
-    final json = item.toJson();
-    if (json['id'] == null) json.remove('id');
-    
-    // If we have an ID, we upsert on ID (default).
-    // If not, and no brewfather_id, we just insert.
-    if (item.id != null) {
-      await _tableFermentables().upsert(json);
-    } else {
-      await _tableFermentables().insert(json);
-    }
-  }
+  Future<void> saveFermentable(Fermentable item) =>
+      _saveItem(_tableFermentables(), item, (i) => i.toJson());
 
   @override
-  Future<void> deleteFermentable(String id) async {
-    await _tableFermentables().delete().eq('id', id);
-  }
+  Future<void> deleteFermentable(String id) => _deleteItem(_tableFermentables(), id);
 
   @override
-  Future<List<Hop>> getHops(String userProfileId) async {
-    final data = await _tableHops().select().eq('user_profile_id', userProfileId);
-    return (data as List).map((e) => Hop.fromJson(e)).toList();
-  }
+  Future<List<Hop>> getHops(String userProfileId) =>
+      _getItems(_tableHops(), userProfileId, Hop.fromJson);
 
   @override
-  Future<void> saveHops(List<Hop> hops) async {
-    if (hops.isEmpty) return;
-    final data = hops.map((e) {
-      final json = e.toJson();
-      if (json['id'] == null) json.remove('id');
-      return json;
-    }).toList();
-    await _tableHops().upsert(data, onConflict: 'user_profile_id, brewfather_id');
-  }
+  Future<void> saveHops(List<Hop> items) => _upsertItems(_tableHops(), items, (i) => i.toJson());
 
   @override
-  Future<void> saveHop(Hop item) async {
-    final json = item.toJson();
-    if (json['id'] == null) json.remove('id');
-    if (item.id != null) {
-      await _tableHops().upsert(json);
-    } else {
-      await _tableHops().insert(json);
-    }
-  }
+  Future<void> saveHop(Hop item) => _saveItem(_tableHops(), item, (i) => i.toJson());
 
-  Future<void> deleteHop(String id) async {
-    await _tableHops().delete().eq('id', id);
-  }
+  Future<void> deleteHop(String id) => _deleteItem(_tableHops(), id);
 
   @override
-  Future<List<Misc>> getMiscs(String userProfileId) async {
-    final data = await _tableMiscs().select().eq('user_profile_id', userProfileId);
-    return (data as List).map((e) => Misc.fromJson(e)).toList();
-  }
+  Future<List<Misc>> getMiscs(String userProfileId) =>
+      _getItems(_tableMiscs(), userProfileId, Misc.fromJson);
 
   @override
-  Future<void> saveMiscs(List<Misc> miscs) async {
-    if (miscs.isEmpty) return;
-    final data = miscs.map((e) {
-      final json = e.toJson();
-      if (json['id'] == null) json.remove('id');
-      return json;
-    }).toList();
-    await _tableMiscs().upsert(data, onConflict: 'user_profile_id, brewfather_id');
-  }
+  Future<void> saveMiscs(List<Misc> items) => _upsertItems(_tableMiscs(), items, (i) => i.toJson());
 
   @override
-  Future<void> saveMisc(Misc item) async {
-    final json = item.toJson();
-    if (json['id'] == null) json.remove('id');
-    if (item.id != null) {
-      await _tableMiscs().upsert(json);
-    } else {
-      await _tableMiscs().insert(json);
-    }
-  }
+  Future<void> saveMisc(Misc item) => _saveItem(_tableMiscs(), item, (i) => i.toJson());
 
-  Future<void> deleteMisc(String id) async {
-    await _tableMiscs().delete().eq('id', id);
-  }
+  Future<void> deleteMisc(String id) => _deleteItem(_tableMiscs(), id);
 
   @override
-  Future<List<BfRecipe>> getRecipes(String userProfileId) async {
-    final data = await _tableRecipes().select().eq('user_profile_id', userProfileId);
-    return (data as List).map((e) => BfRecipe.fromJson(e)).toList();
-  }
+  Future<List<BfRecipe>> getRecipes(String userProfileId) =>
+      _getItems(_tableRecipes(), userProfileId, BfRecipe.fromJson);
 
   @override
-  Future<void> saveRecipes(List<BfRecipe> recipes) async {
-    if (recipes.isEmpty) return;
-    final data = recipes.map((e) {
-      final json = e.toDbJson();
-      if (json['id'] == null) json.remove('id');
-      return json;
-    }).toList();
-    await _tableRecipes().upsert(data, onConflict: 'user_profile_id, brewfather_id');
-  }
+  Future<void> saveRecipes(List<BfRecipe> items) =>
+      _upsertItems(_tableRecipes(), items, (i) => i.toDbJson());
 
-  // Helper to save a single recipe (with image for example)
-  Future<void> saveRecipe(BfRecipe recipe) async {
-     final json = recipe.toDbJson();
-      if (json['id'] == null) json.remove('id');
-      await _tableRecipes().upsert(json, onConflict: 'user_profile_id, brewfather_id');
-  }
+  Future<void> saveRecipe(BfRecipe item) =>
+      _saveItem(_tableRecipes(), item, (i) => i.toDbJson(), onConflict: 'user_profile_id, brewfather_id');
 
   @override
-  Future<List<BfBatch>> getBatches(String userProfileId) async {
-    final data = await _tableBatches().select().eq('user_profile_id', userProfileId);
-    return (data as List).map((e) => BfBatch.fromJson(e)).toList();
-  }
+  Future<List<BfBatch>> getBatches(String userProfileId) =>
+      _getItems(_tableBatches(), userProfileId, BfBatch.fromJson);
 
   @override
   Future<void> saveBatches(List<BfBatch> batches, {bool syncDeletions = false}) async {
     if (batches.isEmpty && !syncDeletions) return;
 
-    // 1. Fetch existing batches for this user/profile to check for existing RAPT data or updates
-    // We assume all batches belong to the same profile based on the first item (or context)
-    // If list is empty but syncDeletions is true, we still need the userProfileId.
-    // In BatchesListPage, it's always for one profile.
-    if (batches.isEmpty && syncDeletions) {
-       // This is a special case where the user might have deleted EVERYTHING in Brewfather.
-       // However, we usually get a profileId from somewhere. 
-       // In the current architecture of this method, we can't delete without a profileId.
-       return; 
-    }
+    if (batches.isEmpty && syncDeletions) return;
 
     final userProfileId = batches.first.userProfileId;
     final existingData = await _tableBatches()
         .select('brewfather_id, rapt_data, analysis_data, data, id')
         .eq('user_profile_id', userProfileId);
     
-    // Map existing batches by brewfather_id for quick lookup
     final Map<String, Map<String, dynamic>> existingMap = {
       for (var item in existingData) 
          if (item['brewfather_id'] != null) item['brewfather_id'] as String : item
@@ -240,8 +151,6 @@ class UserProfileService implements UserProfileRepository {
 
     for (var batch in batches) {
        var json = batch.toJson();
-       // ALWAYS remove id to let onConflict handle matching via user_profile_id/brewfather_id
-       // This avoids PostgREST mixing null and non-null IDs in the same batch request.
        json.remove('id');
 
        final bfId = batch.brewfatherId;
@@ -250,7 +159,6 @@ class UserProfileService implements UserProfileRepository {
           if (existingMap.containsKey(bfId)) {
              final existing = existingMap[bfId]!;
              
-             // Preserve existing data if incoming is empty
              final incomingRapt = json['rapt_data'] as Map<String, dynamic>? ?? {};
              final existingRapt = existing['rapt_data'] as Map<String, dynamic>? ?? {};
              if (incomingRapt.isEmpty && existingRapt.isNotEmpty) {
@@ -263,19 +171,14 @@ class UserProfileService implements UserProfileRepository {
                 json['analysis_data'] = existingAnalysis;
              }
           }
-          // Deduplicate in the local list to avoid conflict errors
           dataToUpsert[bfId] = json;
        }
     }
 
-    // 2. Handle Deletions if requested
     if (syncDeletions) {
-       final List<String> idsToDelete = [];
-       for (var bfId in existingMap.keys) {
-          if (!incomingBfIds.contains(bfId)) {
-             idsToDelete.add(bfId);
-          }
-       }
+       final List<String> idsToDelete = [
+         for (var bfId in existingMap.keys) if (!incomingBfIds.contains(bfId)) bfId
+       ];
        
        if (idsToDelete.isNotEmpty) {
           await _tableBatches()
@@ -285,27 +188,59 @@ class UserProfileService implements UserProfileRepository {
        }
     }
 
-    // 3. Perform Upsert
     if (dataToUpsert.isNotEmpty) {
        await _tableBatches().upsert(dataToUpsert.values.toList(), onConflict: 'user_profile_id, brewfather_id');
     }
   }
 
-  SupabaseQueryBuilder _table() =>
-      _client.schema(_schemaName).from(_tableName);
+  // Generic Helpers
+  Future<List<T>> _getItems<T>(
+    SupabaseQueryBuilder table,
+    String userProfileId,
+    T Function(Map<String, dynamic>) fromJson,
+  ) async {
+    final data = await table.select().eq('user_profile_id', userProfileId);
+    return (data as List).map((e) => fromJson(e as Map<String, dynamic>)).toList();
+  }
 
-  SupabaseQueryBuilder _tableFermentables() =>
-      _client.schema(_schemaName).from('fermentables');
+  Future<void> _upsertItems<T>(
+    SupabaseQueryBuilder table,
+    List<T> items,
+    Map<String, dynamic> Function(T) toJson,
+  ) async {
+    if (items.isEmpty) return;
+    final data = items.map((e) {
+      final json = toJson(e);
+      if (json['id'] == null) json.remove('id');
+      return json;
+    }).toList();
+    await table.upsert(data, onConflict: 'user_profile_id, brewfather_id');
+  }
 
-  SupabaseQueryBuilder _tableHops() =>
-    _client.schema(_schemaName).from('hops');
+  Future<void> _saveItem<T>(
+    SupabaseQueryBuilder table,
+    T item,
+    Map<String, dynamic> Function(T) toJson, {
+    String? onConflict,
+  }) async {
+    final json = toJson(item);
+    if (json['id'] == null) json.remove('id');
 
-  SupabaseQueryBuilder _tableMiscs() =>
-    _client.schema(_schemaName).from('miscs');
+    if (json['id'] != null) {
+      await table.upsert(json, onConflict: onConflict);
+    } else {
+      await table.insert(json);
+    }
+  }
 
-  SupabaseQueryBuilder _tableRecipes() =>
-    _client.schema(_schemaName).from('recipes');
+  Future<void> _deleteItem(SupabaseQueryBuilder table, String id) async {
+    await table.delete().eq('id', id);
+  }
 
-  SupabaseQueryBuilder _tableBatches() =>
-    _client.schema(_schemaName).from('batches');
+  SupabaseQueryBuilder _table() => _client.schema(_schemaName).from(_tableName);
+  SupabaseQueryBuilder _tableFermentables() => _client.schema(_schemaName).from('fermentables');
+  SupabaseQueryBuilder _tableHops() => _client.schema(_schemaName).from('hops');
+  SupabaseQueryBuilder _tableMiscs() => _client.schema(_schemaName).from('miscs');
+  SupabaseQueryBuilder _tableRecipes() => _client.schema(_schemaName).from('recipes');
+  SupabaseQueryBuilder _tableBatches() => _client.schema(_schemaName).from('batches');
 }
