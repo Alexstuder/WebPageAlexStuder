@@ -5,6 +5,7 @@ import '../models/bf_recipe.dart';
 import '../services/user_profile_service.dart';
 import '../services/openai_service.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/section_title.dart';
 
 class RecipeDetailPage extends StatefulWidget {
   const RecipeDetailPage({super.key, required this.recipe});
@@ -166,7 +167,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           children: [
             _buildTopSection(context),
             const SizedBox(height: 24),
-            _buildSectionTitle('Malz & Gärfähiges'),
+            const SectionTitle('Malz & Gärfähiges', color: Colors.blueAccent),
             ...fermentables.map((f) => _buildIngredientRow(
                   f['name'],
                   '${f['amount']} ${f['unit'] ?? 'kg'}',
@@ -187,7 +188,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             
-            _buildSectionTitle('Hopfen'),
+            const SectionTitle('Hopfen', color: Colors.blueAccent),
             ...hops.map((h) => _buildIngredientRow(
                   h['name'],
                   '${h['amount']} ${h['unit'] ?? 'g'}',
@@ -208,7 +209,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 ),
               ),
             
-            _buildSectionTitle('Hefe'),
+            const SectionTitle('Hefe', color: Colors.blueAccent),
             ...yeast.map((y) => _buildIngredientRow(
                   y['name'],
                   '${y['amount']} ${y['unit'] ?? ''}',
@@ -216,7 +217,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                 )),
 
             const SizedBox(height: 16),
-            _buildSectionTitle('Maische'),
+            const SectionTitle('Maische', color: Colors.blueAccent),
              ...mashSteps.map((step) => _buildIngredientRow(
                   step['name'] ?? 'Step',
                   '${step['stepTemp']} °C',
@@ -317,16 +318,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-      ),
-    );
-  }
+
 
   Widget _buildIngredientRow(String name, String amount, {String? subtitle}) {
     return Padding(

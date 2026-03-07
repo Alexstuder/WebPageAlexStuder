@@ -7,6 +7,7 @@ import '../services/water_profile_service.dart';
 import '../services/user_profile_service.dart';
 import '../utils/water_calc.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/section_title.dart';
 
 class RecipeResultPage extends StatelessWidget {
   final AiRecipe recipe;
@@ -185,7 +186,7 @@ class _OverviewTabState extends State<_OverviewTab> {
                   ),
                   _buildKeyStatsCard(),
                   const SizedBox(height: 16),
-                  _buildSectionTitle('Malz & Fermentierbares'),
+                  const SectionTitle('Malz & Fermentierbares'),
                   ...widget.recipe.zutaten.malts.map((m) => ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -210,7 +211,7 @@ class _OverviewTabState extends State<_OverviewTab> {
                     ),
                   
                   const SizedBox(height: 16),
-                  _buildSectionTitle('Hopfen'),
+                  const SectionTitle('Hopfen'),
                   ...widget.recipe.zutaten.hops.map((h) => ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     title: Text(h.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -233,7 +234,7 @@ class _OverviewTabState extends State<_OverviewTab> {
                     ),
                   
                   const SizedBox(height: 16),
-                  _buildSectionTitle('Hefe'),
+                  const SectionTitle('Hefe'),
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                     title: Text(widget.recipe.zutaten.yeast.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -258,7 +259,7 @@ class _OverviewTabState extends State<_OverviewTab> {
                   ),
 
                   const SizedBox(height: 16),
-                  _buildSectionTitle('Wasserprofil (Zielwerte)'),
+                  const SectionTitle('Wasserprofil (Zielwerte)'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -294,7 +295,7 @@ class _OverviewTabState extends State<_OverviewTab> {
 
                   if (widget.recipe.zutaten.specials.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _buildSectionTitle('Spezialzutaten'),
+                    const SectionTitle('Spezialzutaten'),
                     ...widget.recipe.zutaten.specials.map((s) => ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -305,7 +306,7 @@ class _OverviewTabState extends State<_OverviewTab> {
                   
                   if (widget.recipe.zutaten.finings.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _buildSectionTitle('Schönungsmittel'),
+                    const SectionTitle('Schönungsmittel'),
                     ...widget.recipe.zutaten.finings.map((f) => ListTile(
                       title: Text('${f.name} (${f.purpose})'),
                       subtitle: Text('Phase: ${f.phase}\nMenge: ${f.amount}\n${f.applicationDetail}'),
@@ -381,12 +382,7 @@ class _OverviewTabState extends State<_OverviewTab> {
     return Chip(label: Text('$ion: $val mg/L'));
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
-  }
+
 }
 
 class _ProcessTab extends StatelessWidget {
@@ -409,7 +405,7 @@ class _ProcessTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Maischen'),
+          const SectionTitle('Maischen'),
           Text('Hauptguss: ${recipe.prozessdaten.mash.mashWaterL} Liter'),
           Text('Einmaischen bei: ${recipe.prozessdaten.mash.mashInTemp} °C'),
           const SizedBox(height: 8),
@@ -422,13 +418,13 @@ class _ProcessTab extends StatelessWidget {
           )),
           
           const Divider(height: 32),
-          _buildSectionTitle('Läutern'),
+          const SectionTitle('Läutern'),
           Text('Nachguss: ${recipe.prozessdaten.lauter.spargeWaterL} Liter'),
           if (recipe.prozessdaten.lauter.targetPh.isNotEmpty)
             Text('Ziel-pH: ${recipe.prozessdaten.lauter.targetPh}'),
 
           const Divider(height: 32),
-          _buildSectionTitle('Volumen-Bilanz (Berechnet)'),
+          const SectionTitle('Volumen-Bilanz (Berechnet)'),
           if (recipe.prozessdaten.volumeCalculation != null)
              Container(
                padding: const EdgeInsets.all(12),
@@ -456,7 +452,7 @@ class _ProcessTab extends StatelessWidget {
           else
              const Text('Keine Berechnungsdaten verfügbar.', style: TextStyle(color: Colors.grey)),
 
-          _buildSectionTitle('Kochen'),
+          const SectionTitle('Kochen'),
           ListTile(
             title: const Text('Würzekochen (Gesamt)'),
             subtitle: Text('Pfannevoll: ${recipe.prozessdaten.boil.preBoilVolumeL} Liter'),
@@ -471,7 +467,7 @@ class _ProcessTab extends StatelessWidget {
           )),
 
           const Divider(height: 32),
-          _buildSectionTitle('Gärung'),
+          const SectionTitle('Gärung'),
           if (recipe.prozessdaten.fermentation.pressureNote.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
@@ -524,12 +520,7 @@ class _ProcessTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
-  }
+
 }
 
 class _PackagingTab extends StatelessWidget {
@@ -544,7 +535,7 @@ class _PackagingTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Abfüllung'),
+          const SectionTitle('Abfüllung'),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
             title: const Text('Abfüllung Typ', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -583,7 +574,7 @@ class _PackagingTab extends StatelessWidget {
             ),
 
           const Divider(height: 32),
-          _buildSectionTitle('Lagerung & Reifung'),
+          const SectionTitle('Lagerung & Reifung'),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 8),
             leading: const Icon(Icons.ac_unit),
@@ -600,7 +591,7 @@ class _PackagingTab extends StatelessWidget {
             ),
 
           const Divider(height: 32),
-          _buildSectionTitle('Notizen des KI-Braumeisters'),
+          const SectionTitle('Notizen des KI-Braumeisters'),
           if (recipe.notizen.isEmpty) 
             const Text('Keine weiteren Notizen.'),
           ...recipe.notizen.map((n) => Card(
@@ -614,10 +605,5 @@ class _PackagingTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
-  }
+
 }

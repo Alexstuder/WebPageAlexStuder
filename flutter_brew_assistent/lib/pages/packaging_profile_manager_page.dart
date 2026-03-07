@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/dialog_utils.dart';
 import '../models/packaging_profile.dart';
 import '../services/packaging_profile_service.dart';
+import '../utils/parse_utils.dart';
 import '../widgets/card_actions.dart';
 
 class PackagingProfileManagerPage extends StatefulWidget {
@@ -358,16 +359,16 @@ class _PackagingProfileManagerPageState
       id: editing?.id,
       userProfileId: widget.profileId,
       name: nameCtrl.text.trim(),
-      targetVolume: parseDouble(targetVolumeCtrl.text),
+      targetVolume: tryParseDouble(targetVolumeCtrl.text),
       bottleEnabled: bottleEnabled,
       bottleCarbonationTempC:
-          bottleEnabled ? parseDouble(bottleCarbCtrl.text) : null,
+          bottleEnabled ? tryParseDouble(bottleCarbCtrl.text) : null,
       bottleStorageTempC:
-          bottleEnabled ? parseDouble(bottleStorageCtrl.text) : null,
+          bottleEnabled ? tryParseDouble(bottleStorageCtrl.text) : null,
       kegEnabled: kegEnabled,
-      kegCarbonationTempC: kegEnabled ? parseDouble(kegCarbCtrl.text) : null,
-      kegStorageTempC: kegEnabled ? parseDouble(kegStorageCtrl.text) : null,
-      kegVolumeLiters: kegEnabled ? parseDouble(volumeCtrl.text) : null,
+      kegCarbonationTempC: kegEnabled ? tryParseDouble(kegCarbCtrl.text) : null,
+      kegStorageTempC: kegEnabled ? tryParseDouble(kegStorageCtrl.text) : null,
+      kegVolumeLiters: kegEnabled ? tryParseDouble(volumeCtrl.text) : null,
       hasCo2: hasCo2,
       hasNitro: hasNitro,
       isDefault: isDefault,
@@ -416,11 +417,7 @@ class _PackagingProfileManagerPageState
     }
   }
 
-  double? parseDouble(String value) {
-    final cleaned = value.trim();
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned.replaceAll(',', '.'));
-  }
+
 
   Future<void> deleteProfile(PackagingProfile profile) async {
     if (profile.id == null) return;
