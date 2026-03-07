@@ -5,3 +5,10 @@
 Telemetry cache restored from disk.
 Proxy listening on http://localhost:3000
 [Scheduler] Next telemetry refresh scheduled in 19 minutes.
+[Scheduler] Starting hourly telemetry refresh...
+[Scheduler] No active session in current cache. Skipping backup to preserve previous active state.
+[Proxy] Requesting new RAPT token...
+[Proxy] New RAPT token received (expires in 3600s).
+[DEBUG] refreshTelemetryCache for d8913455-a9a0-42c0-9357-7f07fb64c006: active=false, override=2026-02-09T12:55:00.000Z, cachedRows=2533
+[Scheduler] Hourly refresh completed.
+[Scheduler] Next telemetry refresh scheduled in 60 minutes.
