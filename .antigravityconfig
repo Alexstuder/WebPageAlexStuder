@@ -1,0 +1,8 @@
+{
+  "knowledge_base": {
+    "path": "./.antigravity",
+    "preload": true,
+    "index_depth": 3,
+    "watch": true
+  }
+}
