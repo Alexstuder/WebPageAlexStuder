@@ -42,8 +42,6 @@ flutter:
     - assets/icon_small.png
     - assets/Brewfather_logo.png
     - prompt/rezept_basis
-    - prompt/freitext_rezept_basis
-    - prompt/freitext_response_template.json
     - prompt/freitext_rezept_basis2
     - prompt/freitext_response_template2.json
 
